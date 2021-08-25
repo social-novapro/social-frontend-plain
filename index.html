@@ -6,7 +6,6 @@
         <link rel="icon" type="image/png" href="/img/favicon.png">
         <link rel="stylesheet" type="text/css" href="/style.css">
         <script src="/script.js" defer></script>
-        <script src="/fillFeed.js" defer></script>
         <meta property="og:image" content="/apple-touch-icon.png">
         <meta property="og:title" content="Nova Productions">
 	    <meta property="og:description" content="Modern Ideas. Modern Content. Nova Productions is a productions company aimed to put good quality products on the online market."/>
@@ -17,8 +16,15 @@
         <meta name="Description" content="Nova Productions: Modern Ideas. Modern Content. Nova Productions is a productions company aimed to put good quality products on the online market.">
         <meta name="twitter:title" content="Nova Productions">
     </head>
-	<body">
-       <h1>Welcome to Interact!</h1>
-       <div class="main-feed">Loading Feed...</div>
+	<body>
+        <div class="main-header">
+            <h1>Welcome to <a onclick="test()">Interact!</a></h1>
+            <p>Created by <i><a href="https://novapro.net/">Nova Productions</a></i></p>
+        </div>
+        <a onclick="debugModeSwitch()">Dev Mode</a>
+        <div class="search">
+            <input type="text" id="myInput" onkeyup="searchSocial()" placeholder="Search for Posts and Users..">
+        </div>
+       <div id="mainFeed" class="main-feed">Loading Feed...</div>
 	</body>
 </html\>

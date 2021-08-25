@@ -1,74 +1,59 @@
-const feedAPIURl = 'https://interact-api.novapro.net/v1/get/allPosts'
-//const feedAPIURl = 'http://localhost:5002/v1/get/allPosts'
-getFeed()
-async function getFeed() {
-    const response = await fetch(feedAPIURl)
-    console.log(response)
-    buildView(response)
+
+const baseURL = `http://localhost:5002/v1`
+//const baseURL = `https://interact-api.novapro.net/v1`
+
+const headers = {
+    'Content-Type': 'application/json',
+    "devtoken" : "6292d8ae-8c33-4d46-a617-4ac048bd6f11",
+    "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421"
 }
 
 
-function buildView(posts) {
-    console.log(posts)
-    document.getElementById("all-versions").innerHTML = `
+async function getFeed() {
+    console.log("run")
+    const response = await fetch(`${baseURL}/get/allPosts`)
+    const data = await response.json()
+    buildView(data)
+}
+
+function test() {
+    document.getElementById("mainFeed").innerHTML = `
         <div class="main-feed">
-            <div>
-                ${versionHistory.map(function(mainVersion) {
-                    mainVersion.versions.map(function(version) {
-                        totalUpdates = totalUpdates + 1
+            <div class="mainNameEasterEgg"> 
+                <h1>You pressed the logo!!</h1>
+                <p>You pressed the header name, thats pretty cool of you! Thank you for checking out interact!</p>
+                <p>Press the button below to go back!</p>
+                <a onclick="getFeed()">Main Feed!</a>
+            </div>
+        </div>
+    `
+}
 
-                        version.updates.map(function(update) {
-                            totalFeatures = totalFeatures + 1    
-                        })
-                    })
-                }).join(" ")}
-                <a>
-                    Main Updates: ${versionHistory.length}<br>
-                    Total Builds: ${totalUpdates}<br>
-                    Total Features: ${totalFeatures}
-                </a>
-            </div>
-            <div>
-                <h1 class="main-heading"><u>Version History:</u></h1>
-                <a class="history-order">Lastest - Oldest</a>  
-            </div>
-            <div class="history-shortcuts">
-                <h1><u class="heading">Shortcuts:</u></h1>
+function buildView(posts) {
+    document.getElementById("mainFeed").innerHTML = `
+        <div class="main-feed">
+            ${posts.map(function(post) {
+                console.log(post)
+                var userData
+                // displayName
+                // username
 
-                <ul class="versions-shortcut">
-                    ${versionHistory.map(function(mainVersion) {
-                        return `
-                        <li class="version-num-shortcut">
-                            <a href="#${mainVersion.id}" class="version-shortcut">Version ${mainVersion.mainUpdate}: ${mainVersion.landmark}</a>
-                        </li>
-                        `
-                    }).join(" ")}
-                </ul>
-            </div>
-            ${versionHistory.map(function(mainVersion) {
                 return `
-                    <div id="${mainVersion.id}" class="version-info-main">
-                        <h1>Version ${mainVersion.mainUpdate}: ${mainVersion.landmark}</h1>
-                        <a>${mainVersion.headline}</a>
-                    </div>
-                    <div class="history-div2">
-                        ${mainVersion.versions.map(function(version){
-                                return `
-                                    <div class="version-num-history">
-                                        <h1>${version.version} (${version.build})</h1>
-                                        <a>
-                                            ${version.updates.map(function(update){
-                                                return `
-                                                    ${update}<br>
-                                                `
-                                            }).join(" ")}
-                                        </a>
-                                    </div>
-                                `
-                        }).join(" ")}
+                    <div class="publicPost">
+                        <p>${post.content}</p>
+                        <p class="debug debugPostID">${post._id}</p>
+                        <a>like</a> | <a>repost</a> | <a>reply</a>
                     </div>
                 `
             }).join(" ")}
         </div>
     `
+}
+
+async function getUserData(userID) {
+    const response = await fetch(`${baseURL}/get/user/${userID}`, {
+        method: 'GET',
+        headers,
+    });
+    return response.json()
 }
