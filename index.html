@@ -21,10 +21,18 @@
             <h1>Welcome to <a onclick="test()">Interact!</a></h1>
             <p>Created by <i><a href="https://novapro.net/">Nova Productions</a></i></p>
         </div>
-        <a onclick="debugModeSwitch()">Dev Mode</a>
-        <div class="search">
-            <input type="text" id="myInput" onkeyup="searchSocial()" placeholder="Search for Posts and Users..">
+        <div class="mainButtons publicPost">
+            <div class="mainButton">
+                <a onclick="debugModeSwitch()">Dev Mode</a>
+            </div>
+            <div id="profileButton" class="mainButton">
+                <a onclick="profile()">Profile</a>
+            </div>
+            <div class="mainButton">
+                <a onclick="createPost()">Create Post</a>
+            </div>
         </div>
-       <div id="mainFeed" class="main-feed">Loading Feed...</div>
+        <div id="searchBar"></div>
+        <div id="mainFeed" class="main-feed"><p class="publicPost">Loading...</div>
 	</body>
 </html\>

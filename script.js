@@ -1,17 +1,33 @@
 const baseURL = `http://localhost:5002/v1`
 //const baseURL = `https://interact-api.novapro.net/v1`
+
 var headers = {
     'Content-Type': 'application/json',
     "devtoken" : "6292d8ae-8c33-4d46-a617-4ac048bd6f11",
     "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421"
 }
-var searching
 
+var currentUserLogin = {
+    "accesstoken" : "d023ed40-95ff-42aa-962b-e19475ebd317",
+    "userid" : "d825813d-95d2-46eb-868a-ae2e850eab92"
+}
+
+var searching
 var currentFeed 
 
 const LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 // let loginUserToken = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
 let loginUserToken = true
+
+/*
+    Login user token layout
+    { 
+        "usertoken"
+        "apptoken"
+        "accesstoken"
+        "userid"
+    }
+*/
 
 var debug = false
 
@@ -24,9 +40,10 @@ async function checkLogin() {
     if (!loginUserToken) {
         document.getElementById("mainFeed").innerHTML = `
             <div class="main-feed">
-                <div class="publicPost">
+                <div class="publicPost signInDiv">
                     <h1>Your not signed in!</h1>
                     <p>Please sign into Interact to proceed!</p>
+                    <a onclick="login()">Log into your account</a>
                 </div>
             </div>
         `
@@ -36,6 +53,72 @@ async function checkLogin() {
     }
 }
 
+// USER LOGIN PAGE 
+function login() {
+    document.getElementById("mainFeed").innerHTML = `
+        <div class="main-feed">
+            <h1>Dummy login page</h1>
+        </div>
+    `
+}
+
+// CHANGES MAIN FEED BUTTON TO PROFILE
+function goBackFeedFromProfile() {
+    document.getElementById("profileButton").innerHTML = `
+        <a onclick="profile()">Profile</a>
+    ` 
+    getFeed()
+}
+
+// USER PROFILE PAGE
+function profile() {
+    removeSearchBar()
+
+    document.getElementById("profileButton").innerHTML = `
+        <a onclick="goBackFeedFromProfile()">Main Feed</a>
+    `
+
+    document.getElementById("mainFeed").innerHTML = `
+        <div class="search">
+            <input type="text" id="usernameProfile" placeholder="Your username">
+        </div>
+            <div class="search">
+            <input type="text" id="displaynameProfile" placeholder="Your displayname">
+        </div>
+    `
+}
+
+// MAKES SEARCH BAR APPEAR
+function searchBar() {
+    document.getElementById("searchBar").innerHTML = `
+        <div class="search">
+            <input type="text" id="myInput" onkeyup="searchSocial()" placeholder="Search for Posts and Users..">
+        </div>
+    `
+}
+
+// MAKES SEARCHBAR DISAPPEAR
+function removeSearchBar() {
+    document.getElementById("searchBar").innerHTML = ``
+}
+
+// SIGN UP PAGE
+async function signupSocial() {
+    document.getElementById("mainFeed").innerHTML = `
+        <div class="signup">
+            <div class="main-feed">
+                <h1>Dummy signup page</h1>
+            </div>
+            <div class="search">
+                <input type="text" id="usernameProfile" placeholder="Your username">
+            </div>
+                <div class="search">
+                <input type="text" id="displaynameProfile" placeholder="Your displayname">
+            </div>
+        </div>
+    `
+}
+
 function saveLoginUserToken(userLoginToken) {
     localStorage.setItem(LOCAL_STORAGE_LOGIN_USER_TOKEN, JSON.stringify(userLoginToken))
 }
@@ -43,22 +126,26 @@ function saveLoginUserToken(userLoginToken) {
 // DEBUGGING MODE
 function devMode() {
     debug = getCookie("debugMode");
+
     if (debug == "true") addDebug()
     else removeDebug()
 }
 
+// ADDING DEBUG INFO TO EVERYTHING
 function addDebug() {
     for (debugging of document.getElementsByClassName("debug")) {
         debugging.classList.add("debug-shown"); 
     }
 }
 
+// REMOVES DEBUG INFO FROM EVERYTHING
 function removeDebug() {
     for (debugging of document.getElementsByClassName("debug")) {
         debugging.classList.remove("debug-shown"); 
     }
 }
 
+// SWITCHING DEBUGGING MODE
 function debugModeSwitch() {
     if(!debug) {
         setCookie("debugMode", true, 365);
@@ -71,8 +158,10 @@ function debugModeSwitch() {
     }
 }
 
+// CHECK DEBUG COOKIE
 function checkCookie() {
     var showmenu = getCookie("debugMode");
+
     if (showmenu == "true") {
         openSideBar()
         return;
@@ -92,6 +181,8 @@ function setCookie(cname,cvalue,exdays) {
     var expires = "expires=" + d.toGMTString();
     document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
 }
+
+// GET REQUESTED COOKIE
 function getCookie(cname) {
     var name = cname + "=";
     var decodedCookie = decodeURIComponent(document.cookie);
@@ -105,11 +196,14 @@ function getCookie(cname) {
             return c.substring(name.length, c.length);
         }
     }
+
     return "";
 }
 
 // GET DATA FROM API FOR MAIN FEED
 async function getFeed() {
+    searchBar()
+
     if (currentFeed) {
         return buildView(currentFeed)
     }
@@ -119,8 +213,9 @@ async function getFeed() {
     const response = await fetch(`${baseURL}/get/allPosts`)
     var data = await response.json()
 
+    /* ADD USERDATA (not needed anymore)
     var allPostsWithUserData = []
-   // /*
+
     for (post of data) {
         if (searching) return 
         if (post.userID != '0001') {
@@ -136,12 +231,15 @@ async function getFeed() {
             allPostsWithUserData.push(newPost)
         }
     }
-    currentFeed = allPostsWithUserData
-    buildView(allPostsWithUserData)
+    */
+   
+    currentFeed = data
+    buildView(data)
 }
 
 // EASTER EGG
 function test() {
+    removeSearchBar()
     document.getElementById("mainFeed").innerHTML = `
         <div class="main-feed">
             <div class="mainNameEasterEgg"> 
@@ -159,14 +257,27 @@ function test() {
 function buildView(posts) {
     document.getElementById("mainFeed").innerHTML = `
         <div class="main-feed">
-            ${posts.map(function(post) {
+            ${posts.map(function(postArray) {
+                const post = postArray.postData
+                const user = postArray.userData
                // console.log(post.userData)
+
+                if (!user) {
+                    return `
+                        <div class="publicPost">
+                            <h2>Unknown User</h2>
+                            <p>${post.content}</p>
+                            <p class="debug">${post._id} - from (${post.userID})</p>
+                            <a onclick="blankFunction()">like</a> | <a onclick="blankFunction()">repost</a> | <a onclick="blankFunction()">reply</a>
+                        </div>
+                    `
+                }
                 return `
                     <div class="publicPost">
-                        <h2>${post.userData.displayName} @${post.userData.username}</h2>
+                        <h2>${user.displayName} @${user.username}</h2>
                         <p>${post.content}</p>
                         <p class="debug">${post._id} - from (${post.userID})</p>
-                        <a>like</a> | <a>repost</a> | <a>reply</a>
+                        <a onclick="blankFunction()">like</a> | <a onclick="blankFunction()">repost</a> | <a onclick="blankFunction()">reply</a>
                     </div>
                 `
             }).join(" ")}
@@ -186,6 +297,7 @@ async function getUserData(userID) {
 }
 
 var currentSearch
+
 // SEARCHING
 async function searchSocial() {
     input = document.getElementById('myInput').value;
@@ -224,17 +336,62 @@ async function searchSocial() {
                     </div>
                 `
             }).join(" ")}
-            ${data.postsFound.map(function(post) {
-                return `
-                    <div class="publicPost searchUser">
-                        <h2>Pretend this is user data</h2>
-                        <p> ${post.content}</p>
-                        <p class="debug">${post._id}</p>
-                    </div>
-                `
+            ${data.postsFound.map(function(postArray) {
+                var post = postArray.postData
+                var user = postArray.userData
+
+                if (!postArray.type.user) {
+                    return `
+                        <div class="publicPost searchUser">
+                            <h2>Unknown User</h2>
+                            <p>${post.content}</p>
+                            <p class="debug">${post._id}</p>
+                        </div>
+                    `
+                }
+                else {
+                    return `
+                        <div class="publicPost searchUser">
+                            <h2>${user.displayName} @${user.username}</h2>
+                            <p> ${post.content}</p>
+                            <p class="debug">${post._id}</p>
+                        </div>
+                    `
+                }
             }).join(" ")}
         </div>
     `
+
     devMode()
     searching = false
+}
+
+// BASE FOR CREATING POSTS (posts when you press create post)
+async function createPost() {
+    const data = { 
+        "userID" : currentUserLogin.userid, 
+        "content" : "testing posting from frontend! not first" 
+    };
+
+    if (debug) console.log(currentUserLogin) 
+    if (debug) console.log(data)
+
+    const response = await fetch(`${baseURL}/post/createPost`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data)
+    });
+
+    if (debug) console.log(response.json())
+
+    document.getElementById("mainFeed").innerHTML = `
+        <div class="main-feed">
+            <h1>Your post was sent!</h1>
+        </div>
+    `
+}
+
+// BLANK FUNCTION FOR LATER BUTTONS TO LIKE / REPLY / REPOST
+function blankFunction() {
+    console.log("an action was taken for posts.")
 }
