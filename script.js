@@ -71,19 +71,26 @@ function goBackFeedFromProfile() {
 }
 
 // USER PROFILE PAGE
-function profile() {
+async function profile() {
     removeSearchBar()
-
+    
     document.getElementById("profileButton").innerHTML = `
         <a onclick="goBackFeedFromProfile()">Main Feed</a>
     `
+    const response = await fetch(`${baseURL}/get/user/${currentUserLogin.userid}`, {
+        method: 'GET',
+        headers,
+    })
+    
+    const userData = response.json()
+    userData.then(console.log(userData))
 
     document.getElementById("mainFeed").innerHTML = `
         <div class="search">
-            <input type="text" id="usernameProfile" placeholder="Your username">
+            <input type="text" id="usernameProfile" placeholder="Your username: ${userData.username}">
         </div>
             <div class="search">
-            <input type="text" id="displaynameProfile" placeholder="Your displayname">
+            <input type="text" id="displaynameProfile" placeholder="Your displayname: ${userData.displayName}">
         </div>
     `
 }
@@ -92,7 +99,16 @@ function profile() {
 function searchBar() {
     document.getElementById("searchBar").innerHTML = `
         <div class="search">
-            <input type="text" id="myInput" onkeyup="searchSocial()" placeholder="Search for Posts and Users..">
+            <input type="text" id="searchBarArea" onkeyup="searchSocial()" placeholder="Search for Posts and Users...">
+        </div>
+    `
+}
+
+function postBar() {
+    document.getElementById("postBar").innerHTML = `
+        <div class="search">
+            <input type="text" id="postBarArea" placeholder="Type out your next update...">
+            <a onclick="postbarPublish()">Publish Update</a>
         </div>
     `
 }
@@ -126,7 +142,6 @@ function saveLoginUserToken(userLoginToken) {
 // DEBUGGING MODE
 function devMode() {
     debug = getCookie("debugMode");
-
     if (debug == "true") addDebug()
     else removeDebug()
 }
@@ -203,36 +218,15 @@ function getCookie(cname) {
 // GET DATA FROM API FOR MAIN FEED
 async function getFeed() {
     searchBar()
+    postBar()
 
-    if (currentFeed) {
-        return buildView(currentFeed)
-    }
+    if (currentFeed) return buildView(currentFeed)
 
     if (debug) console.log("loading feed")
 
     const response = await fetch(`${baseURL}/get/allPosts`)
     var data = await response.json()
 
-    /* ADD USERDATA (not needed anymore)
-    var allPostsWithUserData = []
-
-    for (post of data) {
-        if (searching) return 
-        if (post.userID != '0001') {
-            var newPost = post
-            var userData = await getUserData(newPost.userID)
-            newPost.userData = userData
-            allPostsWithUserData.push(newPost)
-        }
-        else {
-            var newPost = post
-            var userData = { }
-            newPost.userData = userData
-            allPostsWithUserData.push(newPost)
-        }
-    }
-    */
-   
     currentFeed = data
     buildView(data)
 }
@@ -260,7 +254,6 @@ function buildView(posts) {
             ${posts.map(function(postArray) {
                 const post = postArray.postData
                 const user = postArray.userData
-               // console.log(post.userData)
 
                 if (!user) {
                     return `
@@ -268,24 +261,25 @@ function buildView(posts) {
                             <h2>Unknown User</h2>
                             <p>${post.content}</p>
                             <p class="debug">${post._id} - from (${post.userID})</p>
-                            <a onclick="blankFunction()">like</a> | <a onclick="blankFunction()">repost</a> | <a onclick="blankFunction()">reply</a>
+                            <a onclick="blankFunction('like')">like</a> | <a onclick="blankFunction('repost')">repost</a> | <a onclick="blankFunction('reply')">reply</a>
                         </div>
                     `
                 }
-                return `
-                    <div class="publicPost">
-                        <h2>${user.displayName} @${user.username}</h2>
-                        <p>${post.content}</p>
-                        <p class="debug">${post._id} - from (${post.userID})</p>
-                        <a onclick="blankFunction()">like</a> | <a onclick="blankFunction()">repost</a> | <a onclick="blankFunction()">reply</a>
-                    </div>
-                `
+                else {
+                    return `
+                        <div class="publicPost">
+                            <h2>${user.displayName} @${user.username}</h2>
+                            <p>${post.content}</p>
+                            <p class="debug">${post._id} - from (${post.userID})</p>
+                            <a onclick="blankFunction('like')">like</a> | <a onclick="blankFunction('repost')">repost</a> | <a onclick="blankFunction('reply')">reply</a>
+                        </div>
+                    `
+                }
             }).join(" ")}
         </div>
     `
     devMode()
 }
-
 
 // USER DATA FOR FEED
 async function getUserData(userID) {
@@ -300,7 +294,7 @@ var currentSearch
 
 // SEARCHING
 async function searchSocial() {
-    input = document.getElementById('myInput').value;
+    var input = document.getElementById('searchBarArea').value;
     searching = false
 
     if (!input) {
@@ -390,8 +384,33 @@ async function createPost() {
         </div>
     `
 }
+async function postbarPublish() {
+    var input = document.getElementById('postBarArea').value;
+
+    const data = { 
+        "userID" : currentUserLogin.userid, 
+        "content" : input 
+    };
+
+    if (debug) console.log(currentUserLogin) 
+    if (debug) console.log(data)
+
+    const response = await fetch(`${baseURL}/post/createPost`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data)
+    });
+
+    if (debug) console.log(response.json())
+
+    document.getElementById("mainFeed").innerHTML = `
+        <div class="main-feed">
+            <h1>Your post was sent!</h1>
+        </div>
+    `
+}
 
 // BLANK FUNCTION FOR LATER BUTTONS TO LIKE / REPLY / REPOST
-function blankFunction() {
-    console.log("an action was taken for posts.")
+function blankFunction(action) {
+    console.log(`a dummy ${action} was requested`)
 }
