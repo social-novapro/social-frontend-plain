@@ -19,6 +19,44 @@ const LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 // let loginUserToken = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
 let loginUserToken = true
 
+checkURLParams()
+
+function checkURLParams() {
+    const params = new URLSearchParams(window.location.search)
+    const ifUsername = params.has('username')
+    const ifPostID = params.has("postID")
+
+    if (ifUsername) {
+        const usernameSearch = params.get('username')
+
+        return userPage(usernameSearch)
+    }
+    else if (ifPostID) {
+        const usernameSearch = params.get('postID')
+        // return userPage(usernameSearch)
+    }
+}
+
+async function userPage(username) {
+    searching = true
+
+    const response = await fetch(`${baseURL}/get/username/${username}`, {
+        method: 'GET',
+        headers,
+    })
+    
+    const userData = await response.json()
+    console.log(userData)
+    document.getElementById("mainFeed").innerHTML = `
+        <div class="main-feed">
+            <div class="publicPost signInDiv">
+                <h1>${userData.displayName} - @${userData.username}</h1>
+                <p>${userData.description}</p>
+            </div>
+        </div>
+    `
+}
+
 /*
     Login user token layout
     { 
@@ -54,12 +92,24 @@ async function checkLogin() {
 }
 
 // USER LOGIN PAGE 
-function login() {
+async function login() {
     document.getElementById("mainFeed").innerHTML = `
         <div class="main-feed">
-            <h1>Dummy login page</h1>
+            <h1>Please Login!</h1>
+            <div class="search">
+                <input type="text" id="usernameProfile" placeholder="Your username: ${userData.username}">
+            </div>
+                <div class="search">
+                <input type="text" id="displaynameProfile" placeholder="Your displayname: ${userData.displayName}">
+            </div>
         </div>
     `
+    const response = await fetch(`${baseURL}/get/user/${currentUserLogin.userid}`, {
+        method: 'GET',
+        headers,
+    })
+    
+    const userData = await response.json()
 }
 
 // CHANGES MAIN FEED BUTTON TO PROFILE
@@ -82,9 +132,8 @@ async function profile() {
         headers,
     })
     
-    const userData = response.json()
-    userData.then(console.log(userData))
-
+    const userData = await response.json()
+    
     document.getElementById("mainFeed").innerHTML = `
         <div class="search">
             <input type="text" id="usernameProfile" placeholder="Your username: ${userData.username}">
@@ -234,6 +283,7 @@ async function getFeed() {
 // EASTER EGG
 function test() {
     removeSearchBar()
+
     document.getElementById("mainFeed").innerHTML = `
         <div class="main-feed">
             <div class="mainNameEasterEgg"> 
@@ -249,6 +299,8 @@ function test() {
 
 // BUILDING MAIN FEED
 function buildView(posts) {
+    if (searching) return
+
     document.getElementById("mainFeed").innerHTML = `
         <div class="main-feed">
             ${posts.map(function(postArray) {
@@ -384,6 +436,8 @@ async function createPost() {
         </div>
     `
 }
+
+// PUBLISH WRITTEN POST
 async function postbarPublish() {
     var input = document.getElementById('postBarArea').value;
 
