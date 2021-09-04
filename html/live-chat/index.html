@@ -1,0 +1,21 @@
+<!DOCTYPE HTML>
+<!--BASE IDEA OF CODE FROM https://www.tutorialspoint.com/html5/html5_websocket.htm-->
+<html>
+   <head>
+        <title>Live Chat - Interact</title>  
+        <script src="./script.js" defer></script>
+        <link rel="stylesheet" type="text/css" href="./style.css">
+   </head>
+   <body>
+        <div>
+            <h1>Interact Live Chat</h1>
+            <p id="actiondescription">Action</p>
+            <div class="search">
+                <input type="text" id="messageBar" placeholder="Type you message">
+                <a onclick="sendmessage()">Send message</a>
+            </div>
+        </div>
+        <div id="messages" class="allMessages"></div>
+   </body>
+</html>
+

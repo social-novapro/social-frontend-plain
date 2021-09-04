@@ -1,5 +1,5 @@
-// const baseURL = `http://localhost:5002/v1`
-const baseURL = `https://interact-api.novapro.net/v1`
+const baseURL = `http://10.232.152.37:5002/v1`
+// const baseURL = `https://interact-api.novapro.net/v1`
 
 var headers = {
     'Content-Type': 'application/json',
@@ -47,12 +47,11 @@ async function userPage(username) {
     
     const userData = await response.json()
     console.log(userData)
+
     document.getElementById("mainFeed").innerHTML = `
-        <div class="main-feed">
-            <div class="publicPost signInDiv">
-                <h1>${userData.displayName} - @${userData.username}</h1>
-                <p>${userData.description}</p>
-            </div>
+        <div class="publicPost signInDiv">
+            <h1>${userData.displayName} - @${userData.username}</h1>
+            <p>${userData.description}</p>
         </div>
     `
 }
@@ -77,12 +76,10 @@ async function checkLogin() {
 
     if (!loginUserToken) {
         document.getElementById("mainFeed").innerHTML = `
-            <div class="main-feed">
-                <div class="publicPost signInDiv">
-                    <h1>Your not signed in!</h1>
-                    <p>Please sign into Interact to proceed!</p>
-                    <a onclick="login()">Log into your account</a>
-                </div>
+            <div class="publicPost signInDiv">
+                <h1>Your not signed in!</h1>
+                <p>Please sign into Interact to proceed!</p>
+                <a onclick="login()">Log into your account</a>
             </div>
         `
     }
@@ -94,14 +91,12 @@ async function checkLogin() {
 // USER LOGIN PAGE 
 async function login() {
     document.getElementById("mainFeed").innerHTML = `
-        <div class="main-feed">
-            <h1>Please Login!</h1>
+        <h1>Please Login!</h1>
+        <div class="search">
+            <input type="text" id="usernameProfile" placeholder="Your username: ${userData.username}">
+        </div>
             <div class="search">
-                <input type="text" id="usernameProfile" placeholder="Your username: ${userData.username}">
-            </div>
-                <div class="search">
-                <input type="text" id="displaynameProfile" placeholder="Your displayname: ${userData.displayName}">
-            </div>
+            <input type="text" id="displaynameProfile" placeholder="Your displayname: ${userData.displayName}">
         </div>
     `
     const response = await fetch(`${baseURL}/get/user/${currentUserLogin.userid}`, {
@@ -117,13 +112,16 @@ function goBackFeedFromProfile() {
     document.getElementById("profileButton").innerHTML = `
         <a onclick="profile()">Profile</a>
     ` 
+    searching = false
+
     getFeed()
 }
 
 // USER PROFILE PAGE
 async function profile() {
     removeSearchBar()
-    
+    searching = true
+
     document.getElementById("profileButton").innerHTML = `
         <a onclick="goBackFeedFromProfile()">Main Feed</a>
     `
@@ -135,6 +133,9 @@ async function profile() {
     const userData = await response.json()
     
     document.getElementById("mainFeed").innerHTML = `
+        <div class="search">
+            <a onclick="editUser()">Edit Profile</a>
+        </div>
         <div class="search">
             <input type="text" id="usernameProfile" placeholder="Your username: ${userData.username}">
         </div>
@@ -285,13 +286,11 @@ function test() {
     removeSearchBar()
 
     document.getElementById("mainFeed").innerHTML = `
-        <div class="main-feed">
-            <div class="mainNameEasterEgg"> 
-                <h1>You pressed the logo!!</h1>
-                <p>You pressed the header name, thats pretty cool of you! Thank you for checking out interact!</p>
-                <p>Press the button below to go back!</p>
-                <a onclick="getFeed()">Main Feed!</a>
-            </div>
+        <div class="mainNameEasterEgg"> 
+            <h1>You pressed the logo!!</h1>
+            <p>You pressed the header name, thats pretty cool of you! Thank you for checking out interact!</p>
+            <p>Press the button below to go back!</p>
+            <a onclick="getFeed()">Main Feed!</a>
         </div>
     `
 }
@@ -302,33 +301,31 @@ function buildView(posts) {
     if (searching) return
 
     document.getElementById("mainFeed").innerHTML = `
-        <div class="main-feed">
-            ${posts.map(function(postArray) {
-                const post = postArray.postData
-                const user = postArray.userData
+        ${posts.map(function(postArray) {
+            const post = postArray.postData
+            const user = postArray.userData
 
-                if (!user) {
-                    return `
-                        <div class="publicPost">
-                            <h2>Unknown User</h2>
-                            <p>${post.content}</p>
-                            <p class="debug">${post._id} - from (${post.userID})</p>
-                            <a onclick="blankFunction('like')">like</a> | <a onclick="blankFunction('repost')">repost</a> | <a onclick="blankFunction('reply')">reply</a>
-                        </div>
-                    `
-                }
-                else {
-                    return `
-                        <div class="publicPost">
-                            <h2>${user.displayName} @${user.username}</h2>
-                            <p>${post.content}</p>
-                            <p class="debug">${post._id} - from (${post.userID})</p>
-                            <a onclick="blankFunction('like')">like</a> | <a onclick="blankFunction('repost')">repost</a> | <a onclick="blankFunction('reply')">reply</a>
-                        </div>
-                    `
-                }
-            }).join(" ")}
-        </div>
+            if (!user) {
+                return `
+                    <div class="publicPost">
+                        <h2>Unknown User</h2>
+                        <p>${post.content}</p>
+                        <p class="debug">${post._id} - from (${post.userID})</p>
+                        <a onclick="blankFunction('like')">like</a> | <a onclick="blankFunction('repost')">repost</a> | <a onclick="blankFunction('reply')">reply</a>
+                    </div>
+                `
+            }
+            else {
+                return `
+                    <div class="publicPost">
+                        <h2>${user.displayName} @${user.username}</h2>
+                        <p>${post.content}</p>
+                        <p class="debug">${post._id} - from (${post.userID})</p>
+                        <a onclick="blankFunction('like')">like</a> | <a onclick="blankFunction('repost')">repost</a> | <a onclick="blankFunction('reply')">reply</a>
+                    </div>
+                `
+            }
+        }).join(" ")}
     `
     devMode()
 }
@@ -372,40 +369,38 @@ async function searchSocial() {
     if (debug) console.log("loading search")
 
     document.getElementById("mainFeed").innerHTML = `
-        <div class="main-feed">
-            ${data.usersFound.map(function(user) {
+        ${data.usersFound.map(function(user) {
+            return `
+                <div class="publicPost searchUser">
+                    <h2>${user.displayName} @${user.username}</h2>
+                    <p> Following: ${user.followingCount} | Followers: ${user.followerCount}</p>
+                    <p class="debug">${user._id}</p>
+                </div>
+            `
+        }).join(" ")}
+        ${data.postsFound.map(function(postArray) {
+            var post = postArray.postData
+            var user = postArray.userData
+
+            if (!postArray.type.user) {
+                return `
+                    <div class="publicPost searchUser">
+                        <h2>Unknown User</h2>
+                        <p>${post.content}</p>
+                        <p class="debug">${post._id}</p>
+                    </div>
+                `
+            }
+            else {
                 return `
                     <div class="publicPost searchUser">
                         <h2>${user.displayName} @${user.username}</h2>
-                        <p> Following: ${user.followingCount} | Followers: ${user.followerCount}</p>
-                        <p class="debug">${user._id}</p>
+                        <p> ${post.content}</p>
+                        <p class="debug">${post._id}</p>
                     </div>
                 `
-            }).join(" ")}
-            ${data.postsFound.map(function(postArray) {
-                var post = postArray.postData
-                var user = postArray.userData
-
-                if (!postArray.type.user) {
-                    return `
-                        <div class="publicPost searchUser">
-                            <h2>Unknown User</h2>
-                            <p>${post.content}</p>
-                            <p class="debug">${post._id}</p>
-                        </div>
-                    `
-                }
-                else {
-                    return `
-                        <div class="publicPost searchUser">
-                            <h2>${user.displayName} @${user.username}</h2>
-                            <p> ${post.content}</p>
-                            <p class="debug">${post._id}</p>
-                        </div>
-                    `
-                }
-            }).join(" ")}
-        </div>
+            }
+        }).join(" ")}
     `
 
     devMode()
@@ -431,9 +426,7 @@ async function createPost() {
     if (debug) console.log(response.json())
 
     document.getElementById("mainFeed").innerHTML = `
-        <div class="main-feed">
-            <h1>Your post was sent!</h1>
-        </div>
+        <h1>Your post was sent!</h1>
     `
 }
 
@@ -458,13 +451,58 @@ async function postbarPublish() {
     if (debug) console.log(response.json())
 
     document.getElementById("mainFeed").innerHTML = `
-        <div class="main-feed">
-            <h1>Your post was sent!</h1>
-        </div>
+        <h1>Your post was sent!</h1>
     `
 }
 
 // BLANK FUNCTION FOR LATER BUTTONS TO LIKE / REPLY / REPOST
 function blankFunction(action) {
     console.log(`a dummy ${action} was requested`)
+}
+
+function removeEditUser() {
+    document.getElementById("mainFeed").innerHTML = ``
+    document.getElementById("resultEditUsername").innerHTML = ``
+}
+
+function editUser() {
+    document.getElementById("mainFeed").innerHTML = `
+        <div class="username">
+            <input id="newUsername"></input>
+            <div id="resultEditUsername"></div>
+            <a onclick=renameUsername()>Edit Username</a>
+        </div>
+    `
+}
+
+// EDIT DISPLAY NAME
+async function renameUsername() {
+    const newUsername = document.getElementById('newUsername').value;
+    console.log(newUsername)
+    // editUsernameFrontend
+    if (!newUsername) {
+        document.getElementById("resultEditUsername").innerHTML = `
+            <p>You did not enter a new username</p>
+        `
+    }
+    else {
+        const data = {
+            userID: currentUserLogin.userid,
+            newUsername
+        }   
+    
+        const response = await fetch(`${baseURL}/put/editUsername`, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify(data)
+        });
+        console.log(response)
+        const newData = await response.json()
+        console.log(newData)
+    
+        document.getElementById("resultEditUsername").innerHTML = `
+            <p>Changed username! from ${newData.before.username} to ${newData.new.username}</p>
+        `
+    }
+    
 }

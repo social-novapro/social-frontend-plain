@@ -1,0 +1,10 @@
+.myMessage {
+    color: blue
+}
+.allMessages {
+    height: 50vh; 
+    width: 50vw; 
+    border: solid;
+    border-color: red;
+    overflow-y: scroll;
+}
