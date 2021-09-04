@@ -1,3 +1,55 @@
+
+:root {
+    /* MAIN ROOT ONLY */
+    font-size: 16px;
+    --transition-speed: 250ms ease;
+    /* Main Backgrounds (x1) */
+    --main-body-color: rgb(28, 28, 30);     
+    /* Button Backgrounds (x2) */
+    --main-button-color: rgb(44, 44, 46);
+    --main-nav-color: rgb(44, 44, 46);
+    --hover-button-color: rgb(60,60,60);
+    --hover-nav-color: rgb(60,60,60);
+    /* shadow Colors (x3) */
+    --main-shadow-color: 0px 0px 15px rgba(17, 17, 18, 0.9);
+    --navbar-box-shadow:  
+        rgb(0, 0, 0) 12px 12px 15px,
+        rgb(0, 0, 0) 12px 12px -15px, 
+        rgb(0, 0, 0) 12px -12px 15px, 
+        rgb(0, 0, 0) 12px -12px -15px;
+    --nav-link-shadow: 0px 0px 20px 0px rgba(0, 0, 0, 0.56) ;
+    /* Border Colors (x2) */
+    --main-border-color:rgb(107, 107, 107);
+    --hover-border-color: rgba(39, 113, 240, 0.9);
+    /* Border Divider (x2) */
+    --main-divider: 2px solid #bbb;
+    /* Text Colors (x6) */
+    --hover-box-text-color: rgb(209, 209, 209);
+    --main-h1-color: #e6e6e6; 
+    --main-h2-color: #d4d4d4; 
+    --main-a-color: rgb(218, 218, 218); 
+    --main-p-color: rgb(201, 201, 201); 
+    --fa-secondary-colour:  rgb(184, 184, 184);;
+}
+h1 {
+    color: var(--main-h1-color)
+}
+*, *::before, *::after {
+    margin: 0px;
+    padding: 0px;
+}
+p {
+    color:rgb(107, 107, 107)
+}
+html {
+    font-family: "Helvetica neue", sans-serif;
+    scroll-behavior: smooth;
+}
+body {
+    color: black;
+    background-color: var(--main-body-color);
+    padding-bottom: 20px;
+}
 .myMessage {
     color: blue
 }
@@ -7,4 +59,18 @@
     border: solid;
     border-color: red;
     overflow-y: scroll;
+}
+.sendButton {
+    background-color: gray;
+    padding: 10px;
+    border-radius: 15px;
+}
+.messageType {
+    border-color: red;
+    background-color: gray;
+    padding: 10px;
+    border-radius: 15px; 
+}
+.mainArea {
+    padding-bottom: 20px;
 }

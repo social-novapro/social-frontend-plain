@@ -10,7 +10,7 @@ function checkWebSocket() {
         `
 
         // Let us open a web socket
-        ws = new WebSocket("ws://localhost:5004");  
+        ws = new WebSocket("ws://interact-api.novapro.net");  
         console.log(ws)
 
     } else {
