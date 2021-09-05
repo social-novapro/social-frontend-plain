@@ -8,10 +8,13 @@
    </head>
    <body>
         <div>
-            <h1>Interact Live Chat</h1>
+            <h1 class="main-header">Interact Live Chat</h1>
+            <p id="userCount">Current User Count: 0</p>
             <p id="actiondescription">Action</p>
             <div class="mainArea">
-                <input class="messageType" type="text" id="messageBar" placeholder="Type your message!">
+                <div class="messageType">
+                    <input type="text" id="messageBar" placeholder="Type your message!">
+                </div>
                 <a class="sendButton" onclick="sendmessage()">Send message</a>
             </div>
         </div>

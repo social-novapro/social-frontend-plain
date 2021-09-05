@@ -9,12 +9,10 @@ function checkWebSocket() {
             WebSocket is supported by your Browser
         `
 
-        // Let us open a web socket
         ws = new WebSocket("wss://interact-api.novapro.net");  
-        console.log(ws)
+        // ws = new WebSocket("ws://localhost:5002/");  
 
     } else {
-        // The browser doesn't support WebSocket
         document.getElementById("actiondescription").innerHTML = `
             WebSocket NOT supported by your Browser!
         `
@@ -32,17 +30,35 @@ ws.onopen = function() {
 */
     
 function addToList(message, user) {
-    document.getElementById("messages").innerHTML+=`<p>${message}</p>`;
+    document.getElementById("messages").innerHTML+=`<p class="message ${user}">${message}</p>`;
     var objDiv = document.getElementById("messages");
-        console.log(objDiv)
 
     objDiv.scrollTop = objDiv.scrollHeight;
 }
 
 ws.onmessage = function (evt) { 
-    var received_msg = evt.data;
-    console.log(received_msg)
-    addToList(received_msg)
+    const data = JSON.parse(evt.data)
+    console.log(data)
+    
+    if (data.type == 06) {
+        addToList(data.userJoin.content, data.userJoin.user)
+        console.log("someone joined")
+        console.log(data.userJoin.currentUsers)
+        changeUserCount(data.userJoin.currentUsers)
+    }
+    else if (data.type == 02) {
+        console.log(data)
+        addToList(data.message.content, data.message.user )
+    }
+    else if (data.type == 07) {
+        addToList(data.userLeave.content, data.userLeave.user)
+        console.log("someone left")
+        changeUserCount(data.userLeave.currentUsers)
+
+    }
+    else {
+        addToList("un-handled event occurred")
+    }
 };
     
 ws.onclose = function() {  
@@ -61,7 +77,21 @@ function sendmessage() {
         return 
     }
 
-    document.getElementById('messageBar').value = ''
+    const messageSend = {
+        type: 02,
+        apiVersion: "1.0",
+        message: {
+            content: input	
+        }
+    }
 
-    ws.send(input);
+    ws.send(JSON.stringify(messageSend))
+
+    document.getElementById('messageBar').value = ''
+}
+
+function changeUserCount(newUserCount) {
+    document.getElementById("userCount").innerHTML = `
+        Current User Count: ${newUserCount}
+    `  
 }
