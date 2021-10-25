@@ -1,4 +1,4 @@
-const baseURL = `http://10.232.152.37:5002/v1`
+const baseURL = `http://localhost:5002/v1`
 // const baseURL = `https://interact-api.novapro.net/v1`
 
 var headers = {
@@ -20,6 +20,12 @@ const LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 let loginUserToken = true
 
 checkURLParams()
+
+// CHANGES URL OF BROWSER
+function changeHeader(newLink) {
+    let stateObj = { id: "100" };
+    window.history.replaceState(stateObj, "Socket", "/" + newLink);
+}
 
 function checkURLParams() {
     const params = new URLSearchParams(window.location.search)

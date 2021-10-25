@@ -116,3 +116,14 @@ input {
     padding: 12px;
     border-radius: 15px;
 }
+.subheaderMessage {
+    font-size: smaller;
+    padding: 3px
+}
+.contentMessage {
+    font-size: medium;
+    padding: 3px;
+}
+.messageImage {
+    width: 40px;
+}
