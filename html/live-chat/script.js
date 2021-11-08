@@ -23,8 +23,8 @@ function checkWebSocket() {
             WebSocket is supported by your Browser
         `
 
-        ws = new WebSocket("wss://interact-api.novapro.net");  
-       // ws = new WebSocket("ws://localhost:5002/");  
+        //ws = new WebSocket("wss://interact-api.novapro.net");  
+        ws = new WebSocket("ws://localhost:5002/");  
       //ws = new WebSocket("ws://10.232.151.148:5002/");  
        //10.232.151.148:5500
     } else {

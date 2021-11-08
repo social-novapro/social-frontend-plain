@@ -1,5 +1,5 @@
-//const baseURL = `http://localhost:5002/v1`
-const baseURL = `https://interact-api.novapro.net/v1`
+const baseURL = `http://localhost:5002/v1`
+//const baseURL = `https://interact-api.novapro.net/v1`
 
 var headers = {
     'Content-Type': 'application/json',
@@ -7,17 +7,20 @@ var headers = {
     "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421"
 }
 
-var currentUserLogin = {
+/*var currentUserLogin = {
     "accesstoken" : "d023ed40-95ff-42aa-962b-e19475ebd317",
     "userid" : "d825813d-95d2-46eb-868a-ae2e850eab92"
-}
+}*/
+
+
+// need usertoken, and userid for sending
 
 var searching
 var currentFeed 
 
 const LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 // let loginUserToken = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
-let loginUserToken = true
+let loginUserToken = false
 
 checkURLParams()
 
@@ -84,8 +87,10 @@ async function checkLogin() {
         document.getElementById("mainFeed").innerHTML = `
             <div class="publicPost signInDiv">
                 <h1>Your not signed in!</h1>
-                <p>Please sign into Interact to proceed!</p>
-                <a onclick="login()">Log into your account</a>
+                <p>Please Sign into Interact to Proceed!</p>
+                <a onclick="login()">Log into Your Account</a>
+                <a onclick="login()">Create an Account</a>
+
             </div>
         `
     }
@@ -98,19 +103,49 @@ async function checkLogin() {
 async function login() {
     document.getElementById("mainFeed").innerHTML = `
         <h1>Please Login!</h1>
-        <div class="search">
-            <input type="text" id="usernameProfile" placeholder="Your username: ${userData.username}">
+        <div> 
+            <p>Enter your Username</p>
+            <input type="text" id="userUsernameLogin" placeholder="Username">
+
         </div>
-            <div class="search">
-            <input type="text" id="displaynameProfile" placeholder="Your displayname: ${userData.displayName}">
+        <div> 
+            <p>Enter Your Password</p>
+            <input type="text" id="userPasswordLogin" placeholder="Password">
         </div>
+        <a onclick="sendLoginRequest()">Sign in</a>
     `
+    /*
     const response = await fetch(`${baseURL}/get/user/${currentUserLogin.userid}`, {
         method: 'GET',
         headers,
     })
     
     const userData = await response.json()
+    */
+}
+
+async function sendLoginRequest() {
+    var usernameLogin = document.getElementById('userUsernameLogin').value;
+    var passwordLogin = document.getElementById('userPasswordLogin').value;
+
+    headers.username = usernameLogin
+    headers.password = passwordLogin
+    
+    const response = await fetch(`${baseURL}Priv/get/userLogin/`, {
+        method: 'GET',
+        headers,
+    })
+
+    const userData = await response.json()
+    console.log(userData)
+    currentUserLogin = userData.accessToken
+
+    // save user token to cookie
+    // setCookie(currentUser,cvalue,exdays) {}
+
+    if (userData.login === true) {
+        return await getFeed()
+    }
 }
 
 // CHANGES MAIN FEED BUTTON TO PROFILE
@@ -300,7 +335,6 @@ function test() {
         </div>
     `
 }
-
 
 // BUILDING MAIN FEED
 function buildView(posts) {
@@ -510,5 +544,4 @@ async function renameUsername() {
             <p>Changed username! from ${newData.before.username} to ${newData.new.username}</p>
         `
     }
-    
 }
