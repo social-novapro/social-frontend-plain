@@ -17,27 +17,24 @@
         <meta name="twitter:title" content="Interact">
     </head>
 	<body>
-        <div class="main-header">
-            <h1>Welcome to <a onclick="test()">Interact!</a></h1>
-            <p>Created by <i><a href="https://novapro.net/">Nova Productions</a></i></p>
+        <div class="nav"id="nav">
+            <a onclick="switchNav(1)" id="page1">Live Chat</a>
+            <a onclick="switchNav(2)" id="page2">Profile</a>
+            <a onclick="switchNav(3)" id="page3">DevMode</a>
+            <a onclick="switchNav(4)" id="page4">Create Post</a>
         </div>
-        <!--
-            <a <onclick="changeHeader('live-chat')>">Go to Live Chat</a>
-        -->
-        <a href="./live-chat/">Go to Live Chat</a>
-        <div class="mainButtons publicPost">
-            <div class="mainButton">
-                <a onclick="debugModeSwitch()">Dev Mode</a>
+        <div class='mainArea'>
+            <div class="main-header">
+                <h1>Welcome to <a onclick="test()">Interact!</a></h1>
+                <p>Created by <i><a href="https://novapro.net/">Nova Productions</a></i></p>
             </div>
-            <div id="profileButton" class="mainButton">
-                <a onclick="profile()">Profile</a>
-            </div>
-            <div class="mainButton">
-                <a onclick="createPost()">Create Post</a>
-            </div>
+            <!--
+                <a <onclick="changeHeader('live-chat')>">Go to Live Chat</a>
+            -->
+            <div id="mainSelections"></div>
+            <div id="postBar"></div>
+            <div id="searchBar"></div>
+            <div id="mainFeed" class="main-feed"><p class="publicPost">Loading...</div>
         </div>
-        <div id="postBar"></div>
-        <div id="searchBar"></div>
-        <div id="mainFeed" class="main-feed"><p class="publicPost">Loading...</div>
 	</body>
 </html\>

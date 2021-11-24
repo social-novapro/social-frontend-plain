@@ -197,3 +197,33 @@ a {
         var(--main-shadow-color);
     transition: transform 400ms, border-color 400ms, background-color 400ms;
 }
+
+
+
+.nav { 
+    background-color: rgb(44, 44, 46, 0.95);
+    padding: 20px;
+    width: 100%;
+    border-bottom: 2px solid rgba(39, 113, 240, 0.9);
+    top: 0;
+    position: fixed;
+    display: block;
+    text-align: center;
+    height: 40px;
+}
+.nav a {
+    float: left;
+    display: block;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;    
+}
+.nav a:hover {
+    color:rgba(39, 113, 240, 0.9);
+}
+.activeNav {
+    color:red;
+}
+.mainArea {
+    padding-top: 80px;
+}

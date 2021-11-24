@@ -34,6 +34,8 @@ function checkURLParams() {
     const params = new URLSearchParams(window.location.search)
     const ifUsername = params.has('username')
     const ifPostID = params.has("postID")
+    const ifLoginRequest = params.has("login")
+    const ifNewAccountLogin = params.has("newAccount")
 
     if (ifUsername) {
         const usernameSearch = params.get('username')
@@ -44,6 +46,30 @@ function checkURLParams() {
         const usernameSearch = params.get('postID')
         // return userPage(usernameSearch)
     }
+    else if (ifLoginRequest) {
+        return loginPage()
+    }
+    else if (ifNewAccountLogin) {
+        return loginSplashScreen()
+    }
+}
+function mainSelectionsAdd(){
+    document.getElementById('mainSelections').innerHTML=`
+        <div class="mainButtons publicPost">
+            <div class="mainButton">
+                <a onclick="debugModeSwitch()">Dev Mode</a>
+            </div>
+            <div id="profileButton" class="mainButton">
+                <a onclick="profile()">Profile</a>
+            </div>
+            <div class="mainButton">
+                <a onclick="createPost()">Create Post</a>
+            </div>
+        </div>
+    `
+}
+function mainSelectionsRemove() {
+    document.getElementById('mainSelections').innerHTML=``
 }
 
 async function userPage(username) {
@@ -79,28 +105,42 @@ var debug = false
 
 checkLogin()
 
+async function switchNav(pageVal) {
+    switch (pageVal) {
+        // SEARCH
+        case 1:
+            window.location.href="./live-chat"
+            break;
+    
+        default:
+            break;
+    }
+}
+
 // LOGIN INFO 
 async function checkLogin() {
     if (debug) console.log(loginUserToken)
 
-    if (!loginUserToken) {
-        document.getElementById("mainFeed").innerHTML = `
-            <div class="publicPost signInDiv">
-                <h1>Your not signed in!</h1>
-                <p>Please Sign into Interact to Proceed!</p>
-                <a onclick="login()">Log into Your Account</a>
-                <a onclick="login()">Create an Account</a>
-
-            </div>
-        `
-    }
+    if (!loginUserToken) return loginSplashScreen()
     else {
         await getFeed()
     }
 }
 
+// USER LOGIN SPLASH SCREEN 
+async function loginSplashScreen() {
+    document.getElementById("mainFeed").innerHTML = `
+        <div class="publicPost signInDiv">
+            <h1>Your not signed in!</h1>
+            <p>Please Sign into Interact to Proceed!</p>
+            <a onclick="loginPage()">Log into Your Account</a>
+            <a onclick="loginPage()">Create an Account</a>
+        </div>
+    `
+}
+
 // USER LOGIN PAGE 
-async function login() {
+async function loginPage() {
     document.getElementById("mainFeed").innerHTML = `
         <h1>Please Login!</h1>
         <div> 
@@ -135,7 +175,7 @@ async function sendLoginRequest() {
         method: 'GET',
         headers,
     })
-
+ //   if (response.status != 200) 
     const userData = await response.json()
     console.log(userData)
     currentUserLogin = userData.accessToken
@@ -155,7 +195,7 @@ function goBackFeedFromProfile() {
     ` 
     searching = false
 
-    getFeed()
+    checkLogin()
 }
 
 // USER PROFILE PAGE
@@ -310,6 +350,7 @@ function getCookie(cname) {
 async function getFeed() {
     searchBar()
     postBar()
+    mainSelectionsAdd()
 
     if (currentFeed) return buildView(currentFeed)
 
@@ -445,6 +486,10 @@ async function searchSocial() {
 
     devMode()
     searching = false
+}
+
+async function createPostPage() {
+
 }
 
 // BASE FOR CREATING POSTS (posts when you press create post)
