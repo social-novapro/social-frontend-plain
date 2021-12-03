@@ -53,24 +53,6 @@ function checkURLParams() {
         return loginSplashScreen()
     }
 }
-function mainSelectionsAdd(){
-    document.getElementById('mainSelections').innerHTML=`
-        <div class="mainButtons publicPost">
-            <div class="mainButton">
-                <a onclick="debugModeSwitch()">Dev Mode</a>
-            </div>
-            <div id="profileButton" class="mainButton">
-                <a onclick="profile()">Profile</a>
-            </div>
-            <div class="mainButton">
-                <a onclick="createPost()">Create Post</a>
-            </div>
-        </div>
-    `
-}
-function mainSelectionsRemove() {
-    document.getElementById('mainSelections').innerHTML=``
-}
 
 async function userPage(username) {
     searching = true
@@ -111,7 +93,12 @@ async function switchNav(pageVal) {
         case 1:
             window.location.href="./live-chat"
             break;
-    
+        case 2:
+            profile()
+            break;
+        case 3:
+            debugModeSwitch()
+            break;
         default:
             break;
     }
@@ -133,8 +120,8 @@ async function loginSplashScreen() {
         <div class="publicPost signInDiv">
             <h1>Your not signed in!</h1>
             <p>Please Sign into Interact to Proceed!</p>
-            <a onclick="loginPage()">Log into Your Account</a>
-            <a onclick="loginPage()">Create an Account</a>
+            <button class="buttonStyled" onclick="loginPage()">Log into Your Account</button>
+            <button class="buttonStyled" onclick="loginPage()">Create an Account</button>
         </div>
     `
 }
@@ -152,7 +139,7 @@ async function loginPage() {
             <p>Enter Your Password</p>
             <input type="text" id="userPasswordLogin" placeholder="Password">
         </div>
-        <a onclick="sendLoginRequest()">Sign in</a>
+        <button class="buttonStyled" onclick="sendLoginRequest()">Sign in</button>
     `
     /*
     const response = await fetch(`${baseURL}/get/user/${currentUserLogin.userid}`, {
@@ -191,20 +178,21 @@ async function sendLoginRequest() {
 // CHANGES MAIN FEED BUTTON TO PROFILE
 function goBackFeedFromProfile() {
     document.getElementById("profileButton").innerHTML = `
-        <a onclick="profile()">Profile</a>
+        <button class="buttonStyled" onclick="profile()">Profile</button>
     ` 
     searching = false
 
-    checkLogin()
+    return checkLogin()
 }
 
 // USER PROFILE PAGE
 async function profile() {
+    checkLogin()
     removeSearchBar()
     searching = true
 
     document.getElementById("profileButton").innerHTML = `
-        <a onclick="goBackFeedFromProfile()">Main Feed</a>
+        <button class="buttonStyled" onclick="goBackFeedFromProfile()">Main Feed</button
     `
     const response = await fetch(`${baseURL}/get/user/${currentUserLogin.userid}`, {
         method: 'GET',
@@ -215,7 +203,7 @@ async function profile() {
     
     document.getElementById("mainFeed").innerHTML = `
         <div class="search">
-            <a onclick="editUser()">Edit Profile</a>
+            <button class="buttonStyled" onclick="editUser()">Edit Profile</button>
         </div>
         <div class="search">
             <input type="text" id="usernameProfile" placeholder="Your username: ${userData.username}">
@@ -239,7 +227,7 @@ function postBar() {
     document.getElementById("postBar").innerHTML = `
         <div class="search">
             <input type="text" id="postBarArea" placeholder="Type out your next update...">
-            <a onclick="postbarPublish()">Publish Update</a>
+            <button class="buttonStyled" onclick="postbarPublish()">Publish Update</button>
         </div>
     `
 }
@@ -348,9 +336,9 @@ function getCookie(cname) {
 
 // GET DATA FROM API FOR MAIN FEED
 async function getFeed() {
+    document.getElementById('mainFeed').innerHTML=``
     searchBar()
     postBar()
-    mainSelectionsAdd()
 
     if (currentFeed) return buildView(currentFeed)
 
@@ -372,7 +360,7 @@ function test() {
             <h1>You pressed the logo!!</h1>
             <p>You pressed the header name, thats pretty cool of you! Thank you for checking out interact!</p>
             <p>Press the button below to go back!</p>
-            <a onclick="getFeed()">Main Feed!</a>
+            <button class="buttonStyled" onclick="getFeed()">Main Feed!</button>
         </div>
     `
 }
@@ -392,7 +380,7 @@ function buildView(posts) {
                         <h2>Unknown User</h2>
                         <p>${post.content}</p>
                         <p class="debug">${post._id} - from (${post.userID})</p>
-                        <a onclick="blankFunction('like')">like</a> | <a onclick="blankFunction('repost')">repost</a> | <a onclick="blankFunction('reply')">reply</a>
+                        <button class="buttonStyled" onclick="blankFunction('like')">like</button> | <button class="buttonStyled" onclick="blankFunction('repost')">repost</button> | <button class="buttonStyled" onclick="blankFunction('reply')">reply</button>
                     </div>
                 `
             }
@@ -402,7 +390,7 @@ function buildView(posts) {
                         <h2>${user.displayName} @${user.username}</h2>
                         <p>${post.content}</p>
                         <p class="debug">${post._id} - from (${post.userID})</p>
-                        <a onclick="blankFunction('like')">like</a> | <a onclick="blankFunction('repost')">repost</a> | <a onclick="blankFunction('reply')">reply</a>
+                        <button class="buttonStyled" onclick="blankFunction('like')">like</button> | <button class="buttonStyled" onclick="blankFunction('repost')">repost</button> | <button class="buttonStyled" onclick="blankFunction('reply')">reply</button>
                     </div>
                 `
             }
@@ -555,7 +543,7 @@ function editUser() {
         <div class="username">
             <input id="newUsername"></input>
             <div id="resultEditUsername"></div>
-            <a onclick=renameUsername()>Edit Username</a>
+            <button class="buttonStyled" onclick=renameUsername()>Edit Username</button>
         </div>
     `
 }
