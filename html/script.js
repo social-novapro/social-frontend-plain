@@ -162,13 +162,19 @@ async function sendLoginRequest() {
         method: 'GET',
         headers,
     })
- //   if (response.status != 200) 
+
+    // if (response.status != 200) 
+    console.log(response)
     const userData = await response.json()
     console.log(userData)
     currentUserLogin = userData.accessToken
 
     // save user token to cookie
     // setCookie(currentUser,cvalue,exdays) {}
+
+    if (response.ok) return await getFeed()
+
+    else return alert(`Error: ${userData.code}\n${userData.msg}`)
 
     if (userData.login === true) {
         return await getFeed()
