@@ -121,7 +121,7 @@ async function loginSplashScreen() {
             <h1>Your not signed in!</h1>
             <p>Please Sign into Interact to Proceed!</p>
             <button class="buttonStyled" onclick="loginPage()">Log into Your Account</button>
-            <button class="buttonStyled" onclick="loginPage()">Create an Account</button>
+            <button class="buttonStyled" onclick="createUserPage()">Create an Account</button>
         </div>
     `
 }
@@ -133,7 +133,6 @@ async function loginPage() {
         <div> 
             <p>Enter your Username</p>
             <input type="text" id="userUsernameLogin" placeholder="Username">
-
         </div>
         <div> 
             <p>Enter Your Password</p>
@@ -169,10 +168,11 @@ async function sendLoginRequest() {
     console.log(userData)
     currentUserLogin = userData.accessToken
 
-    // save user token to cookie
-    // setCookie(currentUser,cvalue,exdays) {}
-
-    if (response.ok) return await getFeed()
+    if (response.ok) {
+        // save user token to cookie
+        // setCookie(currentUser,cvalue,exdays) {}
+        return await getFeed()
+    }
 
     else return alert(`Error: ${userData.code}\n${userData.msg}`)
 
@@ -180,6 +180,64 @@ async function sendLoginRequest() {
         return await getFeed()
     }
 }
+
+function createUserPage() {
+    document.getElementById('mainFeed').innerHTML=`
+        <div> 
+            <p>Enter Your New Username</p>
+            <input type="text" id="usernameCreate" placeholder="Username">
+        </div>
+        <div> 
+            <p>Enter Your New Displayname</p>
+            <input type="text" id="displaynameCreate" placeholder="Username">
+        </div>
+        <div> 
+            <p>Enter Your New Password</p>
+            <input type="text" id="passwordCreate" placeholder="Password">
+        </div>
+        <div> 
+            <p>Enter Your Description</p>
+            <input type="text" id="descriptionCreate" placeholder="Password">
+        </div>
+        <div> 
+            <p>Enter Your Pronouns</p>
+            <input type="text" id="pronounsCreate" placeholder="Password">
+        </div>
+        <p id="errorMessage"></p> 
+        <button class="buttonStyled" onclick="createNewUserRequest()">Create New Account</button>
+    `
+}
+
+async function createNewUserRequest() {
+    var usernameCreate = document.getElementById('usernameCreate').value;
+    var displaynameCreate = document.getElementById('displaynameCreate').value;
+    var passwordCreate = document.getElementById('passwordCreate').value;
+    var descriptionCreate = document.getElementById('descriptionCreate').value;
+    var pronounsCreate = document.getElementById('pronounsCreate').value;
+
+    const data = { 
+        "username" : usernameCreate, 
+        "displayName" : displaynameCreate,
+        "password" : passwordCreate,
+        "description": descriptionCreate,
+        "pronouns": pronounsCreate
+    };
+
+    if (debug) console.log(currentUserLogin) 
+    if (debug) console.log(data)
+
+    const response = await fetch(`${baseURL}Priv/post/newUser`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data)
+    });
+    console.log(response)
+    const responseParsed = await response.json()
+    console.log(responseParsed)
+    if (!response.ok) document.getElementById('errorMessage').innerHTML=`Error: ${responseParsed.code}, ${responseParsed.msg}`
+    else document.getElementById('errorMessage').innerHTML='well done.'
+}
+
 
 // CHANGES MAIN FEED BUTTON TO PROFILE
 function goBackFeedFromProfile() {
