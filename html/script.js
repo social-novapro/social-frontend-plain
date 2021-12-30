@@ -130,24 +130,19 @@ async function loginSplashScreen() {
 async function loginPage() {
     document.getElementById("mainFeed").innerHTML = `
         <h1>Please Login!</h1>
-        <div> 
-            <p>Enter your Username</p>
-            <input type="text" id="userUsernameLogin" placeholder="Username">
-        </div>
-        <div> 
-            <p>Enter Your Password</p>
-            <input type="text" id="userPasswordLogin" placeholder="Password">
-        </div>
-        <button class="buttonStyled" onclick="sendLoginRequest()">Sign in</button>
+        <form onsubmit="sendLoginRequest()" id="signInForm">
+            <div>
+                <p>Enter Username:</p>
+                <p><input id="userUsernameLogin" placeholder="Username" type="text"></p>
+            </div>
+            <div>
+                <p>Enter Password</p>
+                <p><input id="userPasswordLogin" placeholder="Password" type="text"></p>
+            </div>
+            <input class="buttonStyled" type="submit">
+        </form>
     `
-    /*
-    const response = await fetch(`${baseURL}/get/user/${currentUserLogin.userid}`, {
-        method: 'GET',
-        headers,
-    })
-    
-    const userData = await response.json()
-    */
+        document.getElementById("signInForm").addEventListener("submit", function (e) { e.preventDefault()})
 }
 
 async function sendLoginRequest() {
@@ -182,30 +177,33 @@ async function sendLoginRequest() {
 }
 
 function createUserPage() {
-    document.getElementById('mainFeed').innerHTML=`
-        <div> 
-            <p>Enter Your New Username</p>
-            <input type="text" id="usernameCreate" placeholder="Username">
-        </div>
-        <div> 
-            <p>Enter Your New Displayname</p>
-            <input type="text" id="displaynameCreate" placeholder="Username">
-        </div>
-        <div> 
-            <p>Enter Your New Password</p>
-            <input type="text" id="passwordCreate" placeholder="Password">
-        </div>
-        <div> 
-            <p>Enter Your Description</p>
-            <input type="text" id="descriptionCreate" placeholder="Password">
-        </div>
-        <div> 
-            <p>Enter Your Pronouns</p>
-            <input type="text" id="pronounsCreate" placeholder="Password">
-        </div>
-        <p id="errorMessage"></p> 
-        <button class="buttonStyled" onclick="createNewUserRequest()">Create New Account</button>
+    document.getElementById("mainFeed").innerHTML = `
+        <h1>Please Login!</h1>
+        <form onsubmit="createNewUserRequest()" id="createUserForm">
+            <div> 
+                <p>Enter Your New Username:</p>
+                <input type="text" id="usernameCreate" placeholder="Username">
+            </div>
+            <div> 
+                <p>Enter Your New Displayname:</p>
+                <input type="text" id="displaynameCreate" placeholder="Displayname">
+            </div>
+            <div> 
+                <p>Enter Your New Password:</p>
+                <input type="text" id="passwordCreate" placeholder="Password">
+            </div>
+            <div> 
+                <p>Enter Your Description:</p>
+                <input type="text" id="descriptionCreate" placeholder="Description">
+            </div>
+            <div> 
+                <p>Enter Your Pronouns:</p>
+                <input type="text" id="pronounsCreate" placeholder="Pronouns">
+            </div>
+            <input class="buttonStyled" type="submit">
+        </form>
     `
+    document.getElementById("createUserForm").addEventListener("submit", function (e) { e.preventDefault()})
 }
 
 async function createNewUserRequest() {
