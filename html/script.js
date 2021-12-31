@@ -133,11 +133,11 @@ async function loginPage() {
         <form onsubmit="sendLoginRequest()" id="signInForm">
             <div>
                 <p>Enter Username:</p>
-                <p><input id="userUsernameLogin" placeholder="Username" type="text"></p>
+                <p><input id="userUsernameLogin" placeholder="Username" type="text" name="username"></p>
             </div>
             <div>
                 <p>Enter Password</p>
-                <p><input id="userPasswordLogin" placeholder="Password" type="text"></p>
+                <p><input id="userPasswordLogin" placeholder="Password" type="password" name="password"></p>
             </div>
             <input class="buttonStyled" type="submit">
         </form>
@@ -178,11 +178,12 @@ async function sendLoginRequest() {
 
 function createUserPage() {
     document.getElementById("mainFeed").innerHTML = `
-        <h1>Please Login!</h1>
+        <h1>Please Create an Account!</h1>
+        <p id="errorMessage"></p>
         <form onsubmit="createNewUserRequest()" id="createUserForm">
             <div> 
                 <p>Enter Your New Username:</p>
-                <input type="text" id="usernameCreate" placeholder="Username">
+                <input type="text" id="usernameCreate" placeholder="Username" type="text" name="username">
             </div>
             <div> 
                 <p>Enter Your New Displayname:</p>
@@ -190,7 +191,7 @@ function createUserPage() {
             </div>
             <div> 
                 <p>Enter Your New Password:</p>
-                <input type="text" id="passwordCreate" placeholder="Password">
+                <input id="passwordCreate" placeholder="Password" type="password" name="password">
             </div>
             <div> 
                 <p>Enter Your Description:</p>
@@ -232,8 +233,12 @@ async function createNewUserRequest() {
     console.log(response)
     const responseParsed = await response.json()
     console.log(responseParsed)
-    if (!response.ok) document.getElementById('errorMessage').innerHTML=`Error: ${responseParsed.code}, ${responseParsed.msg}`
-    else document.getElementById('errorMessage').innerHTML='well done.'
+    if (response.ok) {
+        // save user token to cookie
+        // setCookie(currentUser,cvalue,exdays) {}
+        return await getFeed()
+    }
+    else return document.getElementById('errorMessage').innerHTML=`Error: ${responseParsed.code}, ${responseParsed.msg}`
 }
 
 
