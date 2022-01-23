@@ -22,7 +22,8 @@ const LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 // let loginUserToken = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
 let loginUserToken = false
 
-checkURLParams()
+var debug = false
+checkLogin()
 
 // CHANGES URL OF BROWSER
 function changeHeader(newLink) {
@@ -30,7 +31,11 @@ function changeHeader(newLink) {
     window.history.replaceState(stateObj, "Socket", "/" + newLink);
 }
 
-function checkURLParams() {
+async function checkURLParams() {
+    var paramsInfo = {
+        paramsFound: false
+    }
+
     const params = new URLSearchParams(window.location.search)
     const ifUsername = params.has('username')
     const ifPostID = params.has("postID")
@@ -38,20 +43,26 @@ function checkURLParams() {
     const ifNewAccountLogin = params.has("newAccount")
 
     if (ifUsername) {
+        paramsFound = true
         const usernameSearch = params.get('username')
-
-        return userPage(usernameSearch)
+        userPage(usernameSearch)
     }
     else if (ifPostID) {
+        paramsFound = true
         const usernameSearch = params.get('postID')
         // return userPage(usernameSearch)
     }
     else if (ifLoginRequest) {
-        return loginPage()
+        paramsFound = true
+        loginPage()
     }
     else if (ifNewAccountLogin) {
-        return loginSplashScreen()
+        paramsFound = true
+        loginSplashScreen()
     }
+   
+    return paramsInfo
+
 }
 
 async function userPage(username) {
@@ -62,15 +73,44 @@ async function userPage(username) {
         headers,
     })
     
-    const userData = await response.json()
-    console.log(userData)
+    const userData = await response.json() 
+    if (userData.displayName) document.title = `${userData.displayName} | Interact`
+
+    if (userData.code) {
+        return document.getElementById("mainFeed").innerHTML = `
+            <div class="publicPost signInDiv" id="userAccountPage">The user you requested to view does not exist.</div>
+        `   
+    }
 
     document.getElementById("mainFeed").innerHTML = `
-        <div class="publicPost signInDiv">
-            <h1>${userData.displayName} - @${userData.username}</h1>
-            <p>${userData.description}</p>
-        </div>
+        <div class="publicPost signInDiv" id="userAccountPage"></div>
     `
+    if (userData.displayName && userData.username) {
+        document.getElementById("userAccountPage").innerHTML += `
+            <h1>${userData.displayName} - @${userData.username}</h1>
+        `
+    }
+    else if (userData.displayName && !userData.username) {
+        document.getElementById("userAccountPage").innerHTML += `
+            <h1>${userData.displayName} - @(unknown))</h1>
+        `
+    }
+    else if (!userData.displayName && userData.username) {
+        document.getElementById("userAccountPage").innerHTML / `
+            <h1>(unknown) - @${userData.username}</h1>
+        `
+    }
+
+    if (userData.description) {
+        document.getElementById("userAccountPage").innerHTML += `
+            <p>${userData.description}</p>
+        `
+    }
+    else {
+        document.getElementById("userAccountPage").innerHTML += `
+            <p>There is no description for this user.</p>
+        `
+    }
 }
 
 /*
@@ -83,9 +123,6 @@ async function userPage(username) {
     }
 */
 
-var debug = false
-
-checkLogin()
 
 async function switchNav(pageVal) {
     switch (pageVal) {
@@ -109,9 +146,7 @@ async function checkLogin() {
     if (debug) console.log(loginUserToken)
 
     if (!loginUserToken) return loginSplashScreen()
-    else {
-        await getFeed()
-    }
+    else await getFeed()
 }
 
 // USER LOGIN SPLASH SCREEN 
@@ -408,14 +443,17 @@ async function getFeed() {
     postBar()
 
     if (currentFeed) return buildView(currentFeed)
-
     if (debug) console.log("loading feed")
 
     const response = await fetch(`${baseURL}/get/allPosts`)
     var data = await response.json()
 
     currentFeed = data
-    buildView(data)
+
+    const params = await checkURLParams()
+
+    if (params.paramsFound == false) return buildView(data)
+    else return
 }
 
 // EASTER EGG
