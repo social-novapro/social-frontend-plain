@@ -46,7 +46,6 @@
     text-align: center;
     padding: 15px;
     border-radius: 15px;
-      
     box-shadow: 
         var(--main-shadow-color);
     transition: transform 400ms, border-color 400ms, background-color 400ms;
@@ -230,4 +229,69 @@ button {
 }
 .mainArea {
     padding-top: 80px;
+}
+.modalContainer {
+    background-color: rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    opacity: 0;
+    pointer-events: none;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 100vw;
+    transition: opacity 0.3s ease;
+}
+.modalContainer.showModal {
+    pointer-events: auto;
+    opacity: 1;
+}
+.modal {
+    background-color: var(--main-button-color);
+    border-radius: 15px;
+    border: 2px solid rgba(39, 113, 240, 0.9);
+    box-shadow: var(--main-shadow-color);
+    padding: 20px;
+    width: 700px;
+    max-height: 50%;
+    max-width: 100%;
+    text-align: center;
+}
+.modal .buttonStyled {
+    background-color:  var(--main-button-color);
+    border: 2px solid var(--main-border-color);
+    overflow-wrap: break-word;
+    margin-left: 20%;
+    margin-right: 20%;
+    margin-top: 20px;
+    /*
+    display: inline-block;
+    */
+    text-decoration: none;
+    color: var(--main-a-color);
+    text-align: center;
+    padding: 15px;
+    border-radius: 15px;
+    box-shadow: 
+        var(--main-shadow-color);
+    transition: transform 400ms, border-color 400ms, background-color 400ms;    
+}
+.modalContainer .buttonStyled:hover {
+    border-color:rgba(39, 113, 240, 0.9);
+}
+.modal h1 {
+    font-size: 30px;
+}
+.modal p {
+    font-size: 15px;
+}
+.postTextArea {
+    width: 70%;
+    height: 400px;
+    background-color: var(--main-body-color);
+    color: var(--main-p-color);
+    padding: 10px;
+    font-size: 16px;
 }

@@ -7,6 +7,7 @@ var headers = {
     "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421"
 }
 
+var currentUserLogin = { }
 /*var currentUserLogin = {
     "accesstoken" : "d023ed40-95ff-42aa-962b-e19475ebd317",
     "userid" : "d825813d-95d2-46eb-868a-ae2e850eab92"
@@ -136,9 +137,33 @@ async function switchNav(pageVal) {
         case 3:
             debugModeSwitch()
             break;
+        case 4:
+            await showModal(`
+                <h1>Create a new Post</h1>
+                <textarea class="postTextArea" id="newPostTextArea"></textarea>
+                <button class="buttonStyled" onclick="createPost()">Upload Post</button>
+            `)
         default:
             break;
     }
+}
+
+async function showModal(html, showClose) {
+    document.getElementById('modalContainer').classList.add("showModal");
+    document.getElementById('modal').innerHTML = html
+
+    if (showClose == "hide") return
+    else return showModalClose()
+}
+
+async function showModalClose() {
+    document.getElementById('modal').innerHTML+=`
+        <button class="buttonStyled" onclick="closeModal()">Close</button>
+    `
+}
+
+async function closeModal() {
+    document.getElementById('modalContainer').classList.remove("showModal")    
 }
 
 // LOGIN INFO 
@@ -196,8 +221,8 @@ async function sendLoginRequest() {
     console.log(response)
     const userData = await response.json()
     console.log(userData)
-    currentUserLogin = userData.accessToken
-
+   //  currentUserLogin = userData.accessToken
+    currentUserLogin.userid = userData.public._id
     if (response.ok) {
         // save user token to cookie
         // setCookie(currentUser,cvalue,exdays) {}
@@ -440,7 +465,7 @@ function getCookie(cname) {
 async function getFeed() {
     document.getElementById('mainFeed').innerHTML=``
     searchBar()
-    postBar()
+    // postBar()
 
     if (currentFeed) return buildView(currentFeed)
     if (debug) console.log("loading feed")
@@ -585,13 +610,15 @@ async function createPostPage() {
 
 }
 
+/*
 // BASE FOR CREATING POSTS (posts when you press create post)
 async function createPost() {
     const data = { 
         "userID" : currentUserLogin.userid, 
-        "content" : "testing posting from frontend! not first" 
+        "content" : document.getElementById('newPostTextArea').value
     };
 
+    
     if (debug) console.log(currentUserLogin) 
     if (debug) console.log(data)
 
@@ -607,15 +634,19 @@ async function createPost() {
         <h1>Your post was sent!</h1>
     `
 }
-
+*/
 // PUBLISH WRITTEN POST
-async function postbarPublish() {
-    var input = document.getElementById('postBarArea').value;
+async function createPost() {
+  //   var input = document.getElementById('postBarArea').value;
+    var input = document.getElementById('newPostTextArea').value
 
+    console.log(currentUserLogin)
     const data = { 
         "userID" : currentUserLogin.userid, 
         "content" : input 
     };
+
+    closeModal()
 
     if (debug) console.log(currentUserLogin) 
     if (debug) console.log(data)
@@ -626,11 +657,12 @@ async function postbarPublish() {
         body: JSON.stringify(data)
     });
 
-    if (debug) console.log(response.json())
+    const postData = await response.json()
+    if (debug) console.log(postData)
 
-    document.getElementById("mainFeed").innerHTML = `
-        <h1>Your post was sent!</h1>
-    `
+    if (response.ok) return showModal(`<h1>Your post was sent!</h1> <p>${postData.content}</p>`)
+    else return showModal(`<h1>something went wrong.</h1> <p>${postData.code}\n${postData.msg}</p>`)
+
 }
 
 // BLANK FUNCTION FOR LATER BUTTONS TO LIKE / REPLY / REPOST
