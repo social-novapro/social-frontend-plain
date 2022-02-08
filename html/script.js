@@ -13,7 +13,7 @@ var currentUserLogin = { }
     "userid" : "d825813d-95d2-46eb-868a-ae2e850eab92"
 }*/
 
-
+var currentPage
 // need usertoken, and userid for sending
 
 var searching
@@ -222,14 +222,15 @@ async function sendLoginRequest() {
     const userData = await response.json()
     console.log(userData)
    //  currentUserLogin = userData.accessToken
-    currentUserLogin.userid = userData.public._id
     if (response.ok) {
+        if (userData.public._id) currentUserLogin.userid = userData.public._id
+
         // save user token to cookie
         // setCookie(currentUser,cvalue,exdays) {}
         return await getFeed()
     }
 
-    else return alert(`Error: ${userData.code}\n${userData.msg}`)
+    else return showModal(`<p>Error: ${userData.code}\n${userData.msg}</p>`)
 
     if (userData.login === true) {
         return await getFeed()
@@ -304,9 +305,7 @@ async function createNewUserRequest() {
 
 // CHANGES MAIN FEED BUTTON TO PROFILE
 function goBackFeedFromProfile() {
-    document.getElementById("profileButton").innerHTML = `
-        <button class="buttonStyled" onclick="profile()">Profile</button>
-    ` 
+    document.getElementById("page2").innerHTML = `Profile` 
     searching = false
 
     return checkLogin()
@@ -318,9 +317,6 @@ async function profile() {
     removeSearchBar()
     searching = true
 
-    document.getElementById("profileButton").innerHTML = `
-        <button class="buttonStyled" onclick="goBackFeedFromProfile()">Main Feed</button
-    `
     const response = await fetch(`${baseURL}/get/user/${currentUserLogin.userid}`, {
         method: 'GET',
         headers,
@@ -339,6 +335,9 @@ async function profile() {
             <input type="text" id="displaynameProfile" placeholder="Your displayname: ${userData.displayName}">
         </div>
     `
+    currentPage = "profile"
+    document.getElementById("page2").innerHTML = `Home`
+
 }
 
 // MAKES SEARCH BAR APPEAR
