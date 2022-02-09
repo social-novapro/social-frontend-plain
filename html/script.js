@@ -21,7 +21,6 @@ var currentFeed
 
 const LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 // let loginUserToken = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
-let loginUserToken = false
 
 var debug = false
 checkLogin()
@@ -170,6 +169,15 @@ async function closeModal() {
 async function checkLogin() {
     if (debug) console.log(loginUserToken)
 
+    var loginUserToken = false
+
+    const userStorageLogin = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
+    if (userStorageLogin) {
+        currentUserLogin = userStorageLogin
+        loginUserToken = true
+    }
+    
+
     if (!loginUserToken) return loginSplashScreen()
     else await getFeed()
 }
@@ -225,6 +233,7 @@ async function sendLoginRequest() {
     if (response.ok) {
         if (userData.public._id) currentUserLogin.userid = userData.public._id
 
+        saveLoginUser(userData)
         // save user token to cookie
         // setCookie(currentUser,cvalue,exdays) {}
         return await getFeed()
@@ -380,9 +389,14 @@ async function signupSocial() {
     `
 }
 
-function saveLoginUserToken(userLoginToken) {
+function saveLoginUser(userLoginToken) {
     localStorage.setItem(LOCAL_STORAGE_LOGIN_USER_TOKEN, JSON.stringify(userLoginToken))
 }
+function checkLoginUser() {
+    console.log(localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN))
+   //  localStorage.setItem(LOCAL_STORAGE_LOGIN_USER_TOKEN, JSON.stringify(userLoginToken))
+}
+
 
 // DEBUGGING MODE
 function devMode() {
