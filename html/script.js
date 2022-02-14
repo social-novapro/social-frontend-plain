@@ -1,3 +1,46 @@
+/*
+    new idea
+        have a basic feed page, without likes, comments, etc.
+        once you login, you can choose to see 
+            - discover feed (default when not logged in)
+            - custom feed (default when logged in)
+            - following feed (just people you follow)
+
+// function that checks if user is logged in
+if (checkLoginUser()) {
+    // if user is logged in, show the logout button
+    document.getElementById("logoutButton").innerHTML = `
+        <button class="buttonStyled" onclick="logout()">Logout</button>
+    `
+} else {
+    // if user is not logged in, show the login button
+    document.getElementById("logoutButton").innerHTML = `
+        <button class="buttonStyled" onclick="login()">Login</button>
+    `
+}
+
+// if user is logged in, show the post button
+if (checkLoginUser()) {
+    document.getElementById("postButton").innerHTML = `
+        <button class="buttonStyled" onclick="postbar()">Post</button>
+    `
+} else {
+    document.getElementById("postButton").innerHTML = ``
+}
+
+// Ping server to see if user is logged in
+async function checkLoginUser() {
+    const headers = {
+        'Authorization': 'Bearer my-token',
+        'My-Custom-Header': 'foobar'
+    };
+
+    const checkLogin = await axios.get(`${APIv1}/check/login`, { headers })
+    return checkLogin.data
+}
+*/
+
+
 const baseURL = `http://localhost:5002/v1`
 //const baseURL = `https://interact-api.novapro.net/v1`
 
@@ -62,7 +105,6 @@ async function checkURLParams() {
     }
    
     return paramsInfo
-
 }
 
 async function userPage(username) {

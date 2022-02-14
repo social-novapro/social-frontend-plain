@@ -13,9 +13,12 @@
             <p id="actiondescription">Action</p>
             <div class="mainArea">
                 <div class="messageType">
-                    <input type="text" id="messageBar" placeholder="Type your message!">
+                    <form onsubmit="sendmessage()" id="messageTypingForm">
+                        <input type="text" id="messageBar" placeholder="Type your message!">
+                    </form>
                 </div>
                 <a class="sendButton" onclick="sendmessage()">Send message</a>
+
             </div>
         </div>
         <div id="messages" class="allMessages"></div>

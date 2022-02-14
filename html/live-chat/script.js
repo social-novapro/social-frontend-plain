@@ -2,9 +2,27 @@ var websocketenabled
 var ws
 var roomID
 var defaultRoomID = "0001"
+var loginUserToken = false
+var currentUserLogin = { }
+const LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 
-checkWebSocket()
-checkRoomID()
+// LOGIN INFO 
+checkLogin()
+document.getElementById("messageTypingForm").addEventListener("submit", function (e) { e.preventDefault()})
+
+async function checkLogin() {
+    const userStorageLogin = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
+    if (userStorageLogin) {
+        currentUserLogin = JSON.parse(userStorageLogin)
+        loginUserToken = true
+    }
+
+    if (!loginUserToken) return window.location.href = "../index.html";
+    else return checkWebSocket()
+}
+
+// checkWebSocket()
+// checkRoomID()
 
 function checkRoomID() {
     const paramsData = checkURLParams()
@@ -24,7 +42,39 @@ function checkWebSocket() {
         `
 
         //ws = new WebSocket("wss://interact-api.novapro.net");  
-        ws = new WebSocket("ws://localhost:5002/");  
+        ws = new WebSocket(`ws://localhost:5002/?userID=${currentUserLogin.public._id}`);  
+
+        ws.onmessage = function (evt) { 
+            const data = JSON.parse(evt.data)
+
+            if (data.type == 02) {
+                if (!data.message) return
+                if (!data.message.user) addToList(data.message.content, data.message.userID, data.message.timeStamp )
+                else addToList(data.message.content, data.message.user)
+            }
+            else if (data.type == 06) {
+                if (!data.userJoin) return
+                if (!data.userJoin.user) addToList(data.userJoin.content, data.userJoin.userID, data.userJoin.timeStamp)
+                else addToList(data.userJoin.content, data.userJoin.user)
+                changeUserCount(data.userJoin.currentUsers)
+            }
+            else if (data.type == 07) {
+                if (!data.userLeave) return
+                if (!data.userLeave.user) addToList(data.userLeave.content, data.userLeave.userID, data.userLeave.timeStamp)
+                else addToList(data.userLeave.content, data.userLeave.user, )
+                changeUserCount(data.userLeave.currentUsers)
+            }
+            else {
+                addToList("un-handled event occurred")
+            }
+        };
+            
+        ws.onclose = function() {  
+            // websocket is closed.
+            document.getElementById("actiondescription").innerHTML = `
+                Connection is closed...
+            `
+        };
       //ws = new WebSocket("ws://10.232.151.148:5002/");  
        //10.232.151.148:5500
     } else {
@@ -43,17 +93,56 @@ ws.onopen = function() {
     `
 };
 */
-    
-function addToList(content, user, timeStamp) {
-    const timesince = checkDate(timeStamp)
+   
+function addToListNew(message) {
+    const timesince = checkDate(message.timeStamp)
     const imageContent = checkForImage(content)
+
+    var userStyle
+
+    if (user = currentUserLogin.public._id) userStyle = "ownUser"
+    else if (user == "ownUser" || user == "otherUser") userStyle=user
+    else userStyle = "otherUser"
 
     document.getElementById("messages").innerHTML+=`
         <div class="message" id="messageID(later)">
-            <p class="subheaderMessage ${user}">${timesince}</p>
-            <p class="contentMessage ${user}">${imageContent.content}</p>
+            <p class="subheaderMessage ${userStyle}">${timesince}</p>
+            <p class="contentMessage ${userStyle}">${imageContent.content}</p>
         </div>
     `;
+
+    var objDiv = document.getElementById("messages");
+    objDiv.scrollTop = objDiv.scrollHeight;
+}
+
+function addToList(content, user, timeStamp) {
+    var timesince
+    if (timeStamp) timesince = checkDate(timeStamp)
+    
+   // const timesince = checkDate(timeStamp)
+    const imageContent = checkForImage(content)
+
+    var userStyle
+
+    if (user == currentUserLogin.public._id) userStyle = "ownUser"
+    else userStyle = "otherUser"
+
+    if (!timeStamp){
+        document.getElementById("messages").innerHTML+=`
+            <div class="message" id="messageID(later)">
+                <p class="subheaderMessage ${userStyle}">unknown</p>
+                <p class="contentMessage ${userStyle}">${imageContent.content}</p>
+            </div>
+        `;
+    }
+    else {
+        document.getElementById("messages").innerHTML+=`
+            <div class="message" id="messageID(later)">
+                <p class="subheaderMessage ${userStyle}">${timesince}</p>
+                <p class="contentMessage ${userStyle}">${imageContent.content}</p>
+            </div>
+        `;
+    }
 
     var objDiv = document.getElementById("messages");
 
@@ -112,37 +201,6 @@ function timeSinceEpoch(diff) {
     else return `${years}y ${days}d ${hours}h ${minutes}m ${seconds}s`
 }
 
-ws.onmessage = function (evt) { 
-    const data = JSON.parse(evt.data)
-    if (data.type == 02) {
-        if (!data.message) return
-        if (data.message.timeStamp) addToList(data.message.content, data.message.user, data.message.timeStamp)
-        else addToList(data.message.content, data.message.user )
-    }
-    else if (data.type == 06) {
-        if (!data.userJoin) return
-        if (data.userJoin.timeStamp) addToList(data.userJoin.content, data.userJoin.user, data.userJoin.timeStamp)
-        else addToList(data.userJoin.content, data.userJoin.user)
-        changeUserCount(data.userJoin.currentUsers)
-    }
-    else if (data.type == 07) {
-        if (!data.userLeave) return
-        if (data.userLeave.timeStamp) addToList(data.userLeave.content, data.userLeave.user, data.userLeave.timeStamp)
-        else addToList(data.userLeave.content, data.userLeave.user, )
-        changeUserCount(data.userLeave.currentUsers)
-    }
-    else {
-        addToList("un-handled event occurred")
-    }
-};
-    
-ws.onclose = function() {  
-    // websocket is closed.
-    document.getElementById("actiondescription").innerHTML = `
-        Connection is closed...
-    `
-};
-
 function sendmessage() {
     var input = document.getElementById('messageBar').value;
     if (!input) {
@@ -157,6 +215,7 @@ function sendmessage() {
         apiVersion: "1.0",
     //    roomID,
         message: {
+            userID: currentUserLogin.public._id,
             content: input	
         }
     }
