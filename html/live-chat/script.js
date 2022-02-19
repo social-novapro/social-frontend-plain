@@ -47,25 +47,34 @@ function checkWebSocket() {
         ws.onmessage = function (evt) { 
             const data = JSON.parse(evt.data)
 
-            if (data.type == 02) {
-                if (!data.message) return
-                if (!data.message.user) addToList(data.message.content, data.message.userID, data.message.timeStamp )
-                else addToList(data.message.content, data.message.user)
-            }
-            else if (data.type == 06) {
-                if (!data.userJoin) return
-                if (!data.userJoin.user) addToList(data.userJoin.content, data.userJoin.userID, data.userJoin.timeStamp)
-                else addToList(data.userJoin.content, data.userJoin.user)
-                changeUserCount(data.userJoin.currentUsers)
-            }
-            else if (data.type == 07) {
-                if (!data.userLeave) return
-                if (!data.userLeave.user) addToList(data.userLeave.content, data.userLeave.userID, data.userLeave.timeStamp)
-                else addToList(data.userLeave.content, data.userLeave.user, )
-                changeUserCount(data.userLeave.currentUsers)
-            }
-            else {
-                addToList("un-handled event occurred")
+            switch (data.type) {
+                case 01:
+                    
+                    break;
+                case 02:
+                    if (!data.message) return
+                    if (!data.message.user) addToList(data, data.message.content, data.user, data.message.timeStamp )
+                    else addToList(data.message.content, data.message.user)
+                    break;
+                case 03:
+                    removeFromList(data)
+                    break;
+                case 06:
+                    if (!data.userJoin) return
+                    if (!data.userJoin.user) addToList(data, data.userJoin.content, data.user, data.userJoin.timeStamp)
+                    else addToList(data, data.userJoin.content, data.userJoin.user)
+                    changeUserCount(data.userJoin.currentUsers)
+                    break;
+                case 07:
+                    if (!data.userLeave) return
+                    if (!data.userLeave.user) addToList(data, data.userLeave.content, data.user, data.userLeave.timeStamp)
+                    else addToList(data, data.userLeave.content, data.userLeave.user )
+                    changeUserCount(data.userLeave.currentUsers)
+                    break;
+                    
+                default:
+                    alert("unhandled event occured")
+                    break;
             }
         };
             
@@ -93,60 +102,58 @@ ws.onopen = function() {
     `
 };
 */
-   
-function addToListNew(message) {
-    const timesince = checkDate(message.timeStamp)
-    const imageContent = checkForImage(content)
 
-    var userStyle
-
-    if (user = currentUserLogin.public._id) userStyle = "ownUser"
-    else if (user == "ownUser" || user == "otherUser") userStyle=user
-    else userStyle = "otherUser"
-
-    document.getElementById("messages").innerHTML+=`
-        <div class="message" id="messageID(later)">
-            <p class="subheaderMessage ${userStyle}">${timesince}</p>
-            <p class="contentMessage ${userStyle}">${imageContent.content}</p>
-        </div>
-    `;
-
-    var objDiv = document.getElementById("messages");
-    objDiv.scrollTop = objDiv.scrollHeight;
-}
-
-function addToList(content, user, timeStamp) {
+function addToList(data, content, user, timeStamp, message) {
+// function addToList(message) {
     var timesince
     if (timeStamp) timesince = checkDate(timeStamp)
     
    // const timesince = checkDate(timeStamp)
     const imageContent = checkForImage(content)
 
-    var userStyle
-
-    if (user == currentUserLogin.public._id) userStyle = "ownUser"
-    else userStyle = "otherUser"
-
-    if (!timeStamp){
+   // if (user._id == currentUserLogin.public._id) {
         document.getElementById("messages").innerHTML+=`
-            <div class="message" id="messageID(later)">
-                <p class="subheaderMessage ${userStyle}">unknown</p>
-                <p class="contentMessage ${userStyle}">${imageContent.content}</p>
+            <div class="message" id="${data._id}">
+                <p class="subheaderMessage ${user._id == currentUserLogin.public._id ? "ownUser" : "otherUser"}">${user.displayName} @${user.username} | ${timesince}</p>
+                <p class="contentMessage" id="contentArea_${data._id}">${imageContent.content}</p>
+                ${data.type==2 && user._id == currentUserLogin.public._id  ? `<a onclick="deleteMessage('${data._id}')">Delete</a>` : ``}
+                ${data.type==2 && user._id == currentUserLogin.public._id ? `<a onclick="editMessage('${data._id}')">Edit</a>` : ``}
             </div>
-        `;
-    }
+        `;  
+    /*}
     else {
         document.getElementById("messages").innerHTML+=`
-            <div class="message" id="messageID(later)">
-                <p class="subheaderMessage ${userStyle}">${timesince}</p>
-                <p class="contentMessage ${userStyle}">${imageContent.content}</p>
+            <div class="message" id="${data._id}">
+                <p class="subheaderMessage otherUser">${user.displayName} @${user.username} | ${timesince}</p>
+                <p class="contentMessage" id="contentArea_${data._id}">${imageContent.content}</p>
             </div>
         `;
-    }
+    }*/
 
     var objDiv = document.getElementById("messages");
 
     objDiv.scrollTop = objDiv.scrollHeight;
+}
+
+function deleteMessage(id) {
+    const messageSend = {
+        type: 03,
+        apiVersion: "1.0",
+        userID: currentUserLogin.public._id,
+        messageToDelete: id,
+    }
+
+    ws.send(JSON.stringify(messageSend))
+}
+
+function removeFromList(data) {
+    const { _id } = data
+    document.getElementById(_id).remove()
+}
+
+function editFromList(data) {
+    const { _id } = data
+    document.getElementById(`contentArea_${_id}`).innerHTML = ``
 }
 
 function checkDate(time){
@@ -203,12 +210,7 @@ function timeSinceEpoch(diff) {
 
 function sendmessage() {
     var input = document.getElementById('messageBar').value;
-    if (!input) {
-        document.getElementById("actiondescription").innerHTML = `
-            There is no text included
-        `        
-        return 
-    }
+    if (!input) return document.getElementById("actiondescription").innerHTML = `There is no text included`        
 
     const messageSend = {
         type: 02,
@@ -226,9 +228,7 @@ function sendmessage() {
 }
 
 function changeUserCount(newUserCount) {
-    document.getElementById("userCount").innerHTML = `
-        Current User Count: ${newUserCount}
-    `  
+    document.getElementById("userCount").innerHTML = `Current User Count: ${newUserCount}`  
 }
 
 function checkURLParams() {

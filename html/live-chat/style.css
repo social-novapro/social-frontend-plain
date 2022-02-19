@@ -100,10 +100,10 @@ input {
     padding-bottom: 20px;
 }
 .ownUser {
-    color: var(--hover-border-color)
+    color: rgb(81, 144, 251);
 }
 .otherUser {
-    color: rgb(107, 107, 107)
+    color: rgb(146, 146, 146)
 }
 .message {
     border: 2px solid var(--main-border-color);
