@@ -1,7 +1,6 @@
 
 :root {
     /* MAIN ROOT ONLY */
-    font-size: 16px;
     --transition-speed: 250ms ease;
     /* Main Backgrounds (x1) */
     --main-body-color: rgb(28, 28, 30);     
@@ -39,21 +38,8 @@ h1 {
     padding-top: 20px;
     padding-bottom: 10px;
 }
-*, *::before, *::after {
-    margin: 0px;
-    padding: 0px;
-}
 p {
     color:rgb(107, 107, 107)
-}
-html {
-    font-family: "Helvetica neue", sans-serif;
-    scroll-behavior: smooth;
-}
-body {
-    color: black;
-    background-color: var(--main-body-color);
-    padding-bottom: 20px;
 }
 .myMessage {
     color: blue

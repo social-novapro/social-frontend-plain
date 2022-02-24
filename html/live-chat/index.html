@@ -4,14 +4,19 @@
    <head>
         <title>Live Chat - Interact</title>  
         <script src="./script.js" defer></script>
+        <script src="/nav.js" defer></script>
         <link rel="stylesheet" type="text/css" href="./style.css">
+        <link rel="stylesheet" type="text/css" href="/style.css">
+
    </head>
    <body>
         <div>
-            <h1 class="main-header">Interact Live Chat</h1>
-            <p id="userCount">Current User Count: 0</p>
-            <p id="actiondescription">Action</p>
+            <div id="navArea"></div>
             <div class="mainArea">
+                <h1 class="main-header">Interact Live Chat</h1>
+                <p id="userCount">Current User Count: 0</p>
+                <p id="actiondescription">Action</p>
+                
                 <div class="messageType">
                     <form onsubmit="sendmessage()" id="messageTypingForm">
                         <input type="text" id="messageBar" placeholder="Type your message!">
@@ -19,9 +24,9 @@
                 </div>
                 <a class="sendButton" onclick="sendmessage()">Send message</a>
 
+                <div id="messages" class="allMessages"></div>
             </div>
         </div>
-        <div id="messages" class="allMessages"></div>
    </body>
 </html>
 

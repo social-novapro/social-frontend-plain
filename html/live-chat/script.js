@@ -17,7 +17,7 @@ async function checkLogin() {
         loginUserToken = true
     }
 
-    if (!loginUserToken) return window.location.href = "../index.html";
+    if (!loginUserToken) return window.location.href = "/begin/?live-chat";
     else return checkWebSocket()
 }
 

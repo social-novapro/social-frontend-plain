@@ -550,19 +550,53 @@ function test() {
     `
 }
 
+
+function checkDate(time){
+    var timeNum = 0
+    if (!isNaN(time)) timeNum = parseFloat(time)
+    else timeNum = time
+    const date = dateFromEpoch(timeNum)
+    
+    return date
+}
+
+function dateFromEpoch(time) {
+   // console.log(time)
+    const date = new Date(time)
+    const year = date.getFullYear()
+    const day = date.getDate()
+    const month = date.getMonth()
+    const monthReadable = checkMonth(month)
+
+    return `${monthReadable} ${day}, ${year}`
+}
+
+function checkMonth(month) {
+    var months = [ "January", "February", "March", "April", "May", "June", 
+    "July", "August", "September", "October", "November", "December" ];
+
+    var monthSelected = months[month];
+    return monthSelected
+}
+
 // BUILDING MAIN FEED
 function buildView(posts) {
     if (searching) return
+
 
     document.getElementById("mainFeed").innerHTML = `
         ${posts.map(function(postArray) {
             const post = postArray.postData
             const user = postArray.userData
 
+            var timesince
+            if (post.timePosted) timesince = checkDate(post.timePosted)
+
             if (!user) {
                 return `
                     <div class="publicPost">
                         <h2>Unknown User</h2>
+                        <p>${timesince}</p>
                         <p>${post.content}</p>
                         <p class="debug">${post._id} - from (${post.userID})</p>
                         <button class="buttonStyled" onclick="blankFunction('like')">like</button> | <button class="buttonStyled" onclick="blankFunction('repost')">repost</button> | <button class="buttonStyled" onclick="blankFunction('reply')">reply</button>
@@ -573,6 +607,7 @@ function buildView(posts) {
                 return `
                     <div class="publicPost">
                         <h2>${user.displayName} @${user.username}</h2>
+                        <p>${timesince}</p>
                         <p>${post.content}</p>
                         <p class="debug">${post._id} - from (${post.userID})</p>
                         <button class="buttonStyled" onclick="blankFunction('like')">like</button> | <button class="buttonStyled" onclick="blankFunction('repost')">repost</button> | <button class="buttonStyled" onclick="blankFunction('reply')">reply</button>
