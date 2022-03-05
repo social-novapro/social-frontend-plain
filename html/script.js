@@ -1,3 +1,5 @@
+// add option to have searching put in address bar (so it doesnt spam history), look for places that uses changeHeader()
+
 /*
     new idea
         have a basic feed page, without likes, comments, etc.
@@ -82,6 +84,7 @@ async function checkURLParams() {
     const params = new URLSearchParams(window.location.search)
     const ifUsername = params.has('username')
     const ifPostID = params.has("postID")
+    const ifSearch = params.has("search")
     const ifLoginRequest = params.has("login")
     const ifNewAccountLogin = params.has("newAccount")
 
@@ -94,6 +97,12 @@ async function checkURLParams() {
         paramsFound = true
         const usernameSearch = params.get('postID')
         // return userPage(usernameSearch)
+    }
+    else if (ifSearch) {
+        paramsFound = true
+        const searchSearching = params.get('search')
+        searchResult(searchSearching)
+        addWritingToSeachBar(searchSearching)
     }
     else if (ifLoginRequest) {
         paramsFound = true
@@ -165,30 +174,17 @@ async function userPage(username) {
     }
 */
 
+// /*
 
-async function switchNav(pageVal) {
-    switch (pageVal) {
-        // SEARCH
-        case 1:
-            window.location.href="./live-chat"
-            break;
-        case 2:
-            profile()
-            break;
-        case 3:
-            debugModeSwitch()
-            break;
-        case 4:
-            await showModal(`
-                <h1>Create a new Post</h1>
-                <textarea class="postTextArea" id="newPostTextArea"></textarea>
-                <button class="buttonStyled" onclick="createPost()">Upload Post</button>
-            `)
-        default:
-            break;
-    }
+async function createPostModal() {
+    await showModal(`
+        <h1>Create a new Post</h1>
+        <textarea class="postTextArea" id="newPostTextArea"></textarea>
+        <button class="buttonStyled" onclick="createPost()">Upload Post</button>
+    `)
 }
 
+/*
 async function showModal(html, showClose) {
     document.getElementById('modalContainer').classList.add("showModal");
     document.getElementById('modal').innerHTML = html
@@ -206,6 +202,7 @@ async function showModalClose() {
 async function closeModal() {
     document.getElementById('modalContainer').classList.remove("showModal")    
 }
+*/
 
 // LOGIN INFO 
 async function checkLogin() {
@@ -214,30 +211,37 @@ async function checkLogin() {
     var loginUserToken = false
 
     const userStorageLogin = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
+    
     if (userStorageLogin) {
-        currentUserLogin = userStorageLogin
+        currentUserLogin = JSON.parse(userStorageLogin)
+
+        headers.accesstoken = userStorageLogin.accessToken
+        headers.usertoken = userStorageLogin.userToken
+        headers.userid = userStorageLogin.userID
+
         loginUserToken = true
     }
     
-
     if (!loginUserToken) return loginSplashScreen()
     else await getFeed()
 }
 
 // USER LOGIN SPLASH SCREEN 
 async function loginSplashScreen() {
-    document.getElementById("mainFeed").innerHTML = `
+    return window.location.href='/begin'
+    /*document.getElementById("mainFeed").innerHTML = `
         <div class="publicPost signInDiv">
             <h1>Your not signed in!</h1>
             <p>Please Sign into Interact to Proceed!</p>
             <button class="buttonStyled" onclick="loginPage()">Log into Your Account</button>
             <button class="buttonStyled" onclick="createUserPage()">Create an Account</button>
         </div>
-    `
+    `*/
 }
 
 // USER LOGIN PAGE 
 async function loginPage() {
+
     document.getElementById("mainFeed").innerHTML = `
         <h1>Please Login!</h1>
         <form onsubmit="sendLoginRequest()" id="signInForm">
@@ -368,7 +372,7 @@ async function profile() {
     removeSearchBar()
     searching = true
 
-    const response = await fetch(`${baseURL}/get/user/${currentUserLogin.userid}`, {
+    const response = await fetch(`${baseURL}/get/user/${currentUserLogin.userID}`, {
         method: 'GET',
         headers,
     })
@@ -634,9 +638,17 @@ var currentSearch
 async function searchSocial() {
     var input = document.getElementById('searchBarArea').value;
     searching = false
+    searchResult(input)
+}
+async function addWritingToSeachBar(input) {
+    document.getElementById('searchBarArea').value = input
+}
 
+async function searchResult(input) {
     if (!input) {
         if (debug) console.log("returning to feed")
+        changeHeader('')
+
         return getFeed()
     }
     if (currentSearch == input){
@@ -648,6 +660,8 @@ async function searchSocial() {
     searching = true
     headers.lookupkey = input
 
+    changeHeader(`?search=${input}`)
+
     const response = await fetch(`${baseURL}/get/search/`, {
         method: 'GET',
         headers,
@@ -657,12 +671,17 @@ async function searchSocial() {
 
     if (debug) console.log("loading search")
 
+    console.log(data)
+    
+    if (!data.postsFound[0] && !data.usersFound[0]) return document.getElementById("mainFeed").innerHTML= `<div class="publicPost searchUser"><p>no results were found, try to seach something else.</div>`
+    else console.log(data.postsFound)
+
     document.getElementById("mainFeed").innerHTML = `
         ${data.usersFound.map(function(user) {
             return `
                 <div class="publicPost searchUser">
                     <h2>${user.displayName} @${user.username}</h2>
-                    <p> Following: ${user.followingCount} | Followers: ${user.followerCount}</p>
+                    <p>Following: ${user.followingCount} | Followers: ${user.followerCount}</p>
                     <p class="debug">${user._id}</p>
                 </div>
             `
@@ -671,10 +690,14 @@ async function searchSocial() {
             var post = postArray.postData
             var user = postArray.userData
 
+            var timesince
+            if (post.timePosted) timesince = checkDate(post.timePosted)
+
             if (!postArray.type.user) {
                 return `
                     <div class="publicPost searchUser">
                         <h2>Unknown User</h2>
+                        <p>${timesince}</p>
                         <p>${post.content}</p>
                         <p class="debug">${post._id}</p>
                     </div>
@@ -684,6 +707,7 @@ async function searchSocial() {
                 return `
                     <div class="publicPost searchUser">
                         <h2>${user.displayName} @${user.username}</h2>
+                        <p>${timesince}</p>
                         <p> ${post.content}</p>
                         <p class="debug">${post._id}</p>
                     </div>
@@ -732,7 +756,7 @@ async function createPost() {
 
     console.log(currentUserLogin)
     const data = { 
-        "userID" : currentUserLogin.userid, 
+        "userID" : currentUserLogin.userID, 
         "content" : input 
     };
 
@@ -752,7 +776,6 @@ async function createPost() {
 
     if (response.ok) return showModal(`<h1>Your post was sent!</h1> <p>${postData.content}</p>`)
     else return showModal(`<h1>something went wrong.</h1> <p>${postData.code}\n${postData.msg}</p>`)
-
 }
 
 // BLANK FUNCTION FOR LATER BUTTONS TO LIKE / REPLY / REPOST
@@ -774,7 +797,7 @@ function editUser() {
         </div>
     `
 }
-
+console.log(currentUserLogin)
 // EDIT DISPLAY NAME
 async function renameUsername() {
     const newUsername = document.getElementById('newUsername').value;
@@ -787,7 +810,7 @@ async function renameUsername() {
     }
     else {
         const data = {
-            userID: currentUserLogin.userid,
+            userID: currentUserLogin.userID,
             newUsername
         }   
     

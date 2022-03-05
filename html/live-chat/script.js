@@ -42,7 +42,7 @@ function checkWebSocket() {
         `
 
         //ws = new WebSocket("wss://interact-api.novapro.net");  
-        ws = new WebSocket(`ws://localhost:5002/?userID=${currentUserLogin.public._id}`);  
+        ws = new WebSocket(`ws://localhost:5002/?userID=${currentUserLogin.userID}`);  
 
         ws.onmessage = function (evt) { 
             const data = JSON.parse(evt.data)
@@ -114,10 +114,10 @@ function addToList(data, content, user, timeStamp, message) {
    // if (user._id == currentUserLogin.public._id) {
         document.getElementById("messages").innerHTML+=`
             <div class="message" id="${data._id}">
-                <p class="subheaderMessage ${user._id == currentUserLogin.public._id ? "ownUser" : "otherUser"}">${user.displayName} @${user.username} | ${timesince}</p>
+                <p class="subheaderMessage ${user._id == currentUserLogin.userID ? "ownUser" : "otherUser"}">${user.displayName} @${user.username} | ${timesince}</p>
                 <p class="contentMessage" id="contentArea_${data._id}">${imageContent.content}</p>
-                ${data.type==2 && user._id == currentUserLogin.public._id  ? `<a onclick="deleteMessage('${data._id}')">Delete</a>` : ``}
-                ${data.type==2 && user._id == currentUserLogin.public._id ? `<a onclick="editMessage('${data._id}')">Edit</a>` : ``}
+                ${data.type==2 && user._id == currentUserLogin.userID  ? `<a onclick="deleteMessage('${data._id}')">Delete</a>` : ``}
+                ${data.type==2 && user._id == currentUserLogin.userID? `<a onclick="editMessage('${data._id}')">Edit</a>` : ``}
             </div>
         `;  
     /*}
@@ -139,7 +139,7 @@ function deleteMessage(id) {
     const messageSend = {
         type: 03,
         apiVersion: "1.0",
-        userID: currentUserLogin.public._id,
+        userID: currentUserLogin.userID,
         messageToDelete: id,
     }
 
@@ -217,7 +217,7 @@ function sendmessage() {
         apiVersion: "1.0",
     //    roomID,
         message: {
-            userID: currentUserLogin.public._id,
+            userID: currentUserLogin.userID,
             content: input	
         }
     }

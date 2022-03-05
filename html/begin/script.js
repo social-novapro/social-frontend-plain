@@ -21,12 +21,11 @@ async function checkURLParams() {
     const ifRedirect = params.has('redirect')
 
     if (ifRedirect) {
-        paramsFound = true
         const redirectSearch = params.get('redirect')
-        if (redirectSearch == '/' || redirectSearch == '/live-chat') redirectURL == redirectSearch
+        if (redirectSearch == 'live-chat') redirectURL += redirectSearch
         else console.log('redirect not found')
     }
-   
+    
     return checkLogin()
 }
 
@@ -89,7 +88,8 @@ async function sendLoginRequest() {
     headers.username = usernameLogin
     headers.password = passwordLogin
     
-    const response = await fetch(`${baseURL}Priv/get/userLogin/`, {
+    // const response = await fetch(`${baseURL}Priv/get/userLogin/`, {
+    const response = await fetch(`${baseURL}/auth/userLogin/`, {
         method: 'GET',
         headers,
     })
@@ -98,24 +98,27 @@ async function sendLoginRequest() {
     console.log(response)
     const userData = await response.json()
     console.log(userData)
-   //  currentUserLogin = userData.accessToken
-    if (response.ok) {
-        if (userData.public._id) currentUserLogin.userid = userData.public._id
 
-        saveLoginUser(userData)
-        // save user token to cookie
-        // setCookie(currentUser,cvalue,exdays) {}
-    }
-
+    if (response.ok) saveLoginUser(userData.userID, userData.userToken, userData.accessToken)
     else return showModal(`<p>Error: ${userData.code}\n${userData.msg}</p>`)
 
     if (userData.login === true) return redirection()
 }
 
-function saveLoginUser(userLoginToken) {
-    localStorage.setItem(LOCAL_STORAGE_LOGIN_USER_TOKEN, JSON.stringify(userLoginToken))
+function saveLoginUser(userID, userToken, accessToken) {
+    localStorage.setItem(LOCAL_STORAGE_LOGIN_USER_TOKEN, JSON.stringify({ userID, userToken, accessToken}))
 }
-function checkLoginUser() {
+
+async function checkLoginUser() {
+    const response = await fetch(`${baseURL}/auth/checkToken`, {
+        method: 'GET',
+        headers,
+    })
+
+    console.log(response)
+    const userData = await response.json()
+    console.log(userData)
+
     console.log(localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN))
    //  localStorage.setItem(LOCAL_STORAGE_LOGIN_USER_TOKEN, JSON.stringify(userLoginToken))
 }

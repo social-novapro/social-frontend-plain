@@ -2,9 +2,9 @@
 <!--BASE IDEA OF CODE FROM https://www.tutorialspoint.com/html5/html5_websocket.htm-->
 <html>
    <head>
-        <title>Live Chat - Interact</title>  
-        <script src="./script.js" defer></script>
+        <title>Live Chat - Interact</title>
         <script src="/nav.js" defer></script>
+        <script src="./script.js" defer></script>
         <link rel="stylesheet" type="text/css" href="./style.css">
         <link rel="stylesheet" type="text/css" href="/style.css">
 
@@ -16,6 +16,7 @@
                 <h1 class="main-header">Interact Live Chat</h1>
                 <p id="userCount">Current User Count: 0</p>
                 <p id="actiondescription">Action</p>
+                <div class="modalContainer" id="modalContainer"><div class="modal" id="modal"></div></div>
                 
                 <div class="messageType">
                     <form onsubmit="sendmessage()" id="messageTypingForm">
