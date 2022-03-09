@@ -292,6 +292,7 @@ async function sendLoginRequest() {
     }
 }
 
+/*
 function createUserPage() {
     document.getElementById("mainFeed").innerHTML = `
         <h1>Please Create an Account!</h1>
@@ -322,6 +323,7 @@ function createUserPage() {
     `
     document.getElementById("createUserForm").addEventListener("submit", function (e) { e.preventDefault()})
 }
+
 
 async function createNewUserRequest() {
     var usernameCreate = document.getElementById('usernameCreate').value;
@@ -356,7 +358,7 @@ async function createNewUserRequest() {
     }
     else return document.getElementById('errorMessage').innerHTML=`Error: ${responseParsed.code}, ${responseParsed.msg}`
 }
-
+*/
 
 // CHANGES MAIN FEED BUTTON TO PROFILE
 function goBackFeedFromProfile() {

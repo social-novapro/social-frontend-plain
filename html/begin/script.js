@@ -47,6 +47,7 @@ async function checkLogin() {
     
     if (!loginUserToken) return loginSplashScreen()
 }
+
 // USER LOGIN SPLASH SCREEN 
 async function loginSplashScreen() {
     console.log('-- login splash screen')
@@ -151,7 +152,7 @@ function createUserPage() {
             <input class="buttonStyled" type="submit">
         </form>
     `
-   // document.getElementById("createUserForm").addEventListener("submit", function (e) { e.preventDefault()})
+    document.getElementById("createUserForm").addEventListener("submit", function (e) { e.preventDefault()})
 }
 
 async function createNewUserRequest() {
@@ -161,27 +162,23 @@ async function createNewUserRequest() {
     var descriptionCreate = document.getElementById('descriptionCreate').value;
     var pronounsCreate = document.getElementById('pronounsCreate').value;
 
-    const data = { 
-        "username" : usernameCreate, 
-        "displayName" : displaynameCreate,
-        "password" : passwordCreate,
-        "description": descriptionCreate,
-        "pronouns": pronounsCreate
-    };
+    var data = {}
+    if (usernameCreate) data.username = usernameCreate
+    if (displaynameCreate) data.displayName = displaynameCreate
+    if (passwordCreate) data.password = passwordCreate
+    if (descriptionCreate) data.description = descriptionCreate
+    if (pronounsCreate) data.pronouns = pronounsCreate
 
     const response = await fetch(`${baseURL}Priv/post/newUser`, {
         method: 'POST',
         headers,
         body: JSON.stringify(data)
     });
+  
+    const userData = await response.json()
+    
+    if (response.ok) saveLoginUser(userData.userID, userData.userToken, userData.accessToken)
+    else return showModal(`<p>Error: ${userData.code}\n${userData.msg}</p>`)
 
-    console.log(response)
-    const responseParsed = await response.json()
-    console.log(responseParsed)
-    if (response.ok) {
-        // save user token to cookie
-        // setCookie(currentUser,cvalue,exdays) {}
-      //  return await getFeed()
-    }
-    else return document.getElementById('errorMessage').innerHTML=`Error: ${responseParsed.code}, ${responseParsed.msg}`
+    if (userData.login === true) return redirection()
 }

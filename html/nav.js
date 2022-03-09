@@ -29,7 +29,9 @@ function addTitle() {
 async function signOut() {
     console.log(pathArray)
     localStorage.removeItem(LOCAL_STORAGE_LOGIN_USER_TOKEN);
-    window.location.href = `/begin/${pathArray[1] != "" ? `?redirect=${pathArray[1]}` : ""}`;
+    
+    if (pathArray[0] == "" || "begin") window.location.href = `/begin`
+    else window.location.href = `/begin?redirect=${pathArray[1]}`
 }
 
 async function checkLogin() {
