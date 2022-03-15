@@ -3,8 +3,8 @@ const LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 
 // var redirectURL = `http://localhost:5500/`
 // const baseURL = `http://localhost:5002/v1`
-var redirectURL = `http://interact.novapro.net/`
-const baseURL = `http://interact-api.novapro.net/v1`
+var redirectURL = `https://interact.novapro.net/`
+const baseURL = `https://interact-api.novapro.net/v1`
 
 // checkLogin()
 checkURLParams()
