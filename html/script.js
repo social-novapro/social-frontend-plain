@@ -43,8 +43,8 @@ async function checkLoginUser() {
 */
 
 
-const baseURL = `http://localhost:5002/v1`
-//const baseURL = `https://interact-api.novapro.net/v1`
+// const baseURL = `http://localhost:5002/v1`
+const baseURL = `https://interact-api.novapro.net/v1`
 
 var headers = {
     'Content-Type': 'application/json',
@@ -215,9 +215,9 @@ async function checkLogin() {
     if (userStorageLogin) {
         currentUserLogin = JSON.parse(userStorageLogin)
 
-        headers.accesstoken = userStorageLogin.accessToken
-        headers.usertoken = userStorageLogin.userToken
-        headers.userid = userStorageLogin.userID
+        headers.accesstoken = currentUserLogin.accessToken
+        headers.usertoken = currentUserLogin.userToken
+        headers.userid = currentUserLogin.userID
 
         loginUserToken = true
     }
@@ -531,7 +531,7 @@ async function getFeed() {
     if (currentFeed) return buildView(currentFeed)
     if (debug) console.log("loading feed")
 
-    const response = await fetch(`${baseURL}/get/allPosts`)
+    const response = await fetch(`${baseURL}/get/allPosts`, { method: 'GET', headers})
     var data = await response.json()
 
     currentFeed = data
