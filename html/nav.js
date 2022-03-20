@@ -14,10 +14,10 @@ function addNavigation() {
     document.getElementById('navArea').innerHTML = `
         <div class="nav"id="nav">
             <div id="page1Nav">${pathArray[1] != "" ? `<button class="buttonStyled"  onclick="switchNav(5)" id="page1">Feed</button>` : `<button class="buttonStyled"  onclick="switchNav(1)" id="page1">Live Chat</button>`}</div>
-            <div id="page2Nav"><button class="buttonStyled"  onclick="switchNav(2)" id="page2">Profile</button>
-            <div id="page3Nav"><button class="buttonStyled"  onclick="switchNav(3)" id="page3">DevMode</button>
-            <div id="page4Nav"><button class="buttonStyled"  onclick="createPostModal()" id="page4Nav">Create Post</button>
-            <div id="page5Nav"><button class="buttonStyled"  onclick="signOut()" id="page5">Sign Out</button>
+            <div id="page2Nav"><button class="buttonStyled"  onclick="switchNav(2)" id="page2">Profile</button></div>
+            <div id="page3Nav"><button class="buttonStyled"  onclick="switchNav(3)" id="page3">DevMode</button></div>
+            <div id="page4Nav"><button class="buttonStyled"  onclick="createPostModal()" id="page4Nav">Create Post</button></div>
+            <div id="page5Nav"><button class="buttonStyled"  onclick="signOut()" id="page5">Sign Out</button></div>
         </div>
     `
 }

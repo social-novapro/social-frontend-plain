@@ -6,26 +6,25 @@
         <script src="/nav.js" defer></script>
         <script src="./script.js" defer></script>
         <link rel="stylesheet" type="text/css" href="./style.css">
-        <link rel="stylesheet" type="text/css" href="/style.css">
-
+        <link rel="stylesheet" type="text/css" href="/mainStyle.css">
    </head>
    <body>
-        <div>
+        <div class="allArea">
             <div id="navArea"></div>
             <div class="mainArea">
                 <h1 class="main-header">Interact Live Chat</h1>
                 <p id="userCount">Current User Count: 0</p>
                 <p id="actiondescription">Action</p>
                 <div class="modalContainer" id="modalContainer"><div class="modal" id="modal"></div></div>
-                
                 <div class="messageType">
-                    <form onsubmit="sendmessage()" id="messageTypingForm">
+                    <form onsubmit="sendmessage()" onkeyup="clientUserType()" id="messageTypingForm">
                         <input type="text" id="messageBar" placeholder="Type your message!">
                     </form>
                 </div>
                 <a class="sendButton" onclick="sendmessage()">Send message</a>
-
+                <div id="userTyping"></div>
                 <div id="messages" class="allMessages"></div>
+                <div id="onlinePeople" class="onlinePeople"></div>
             </div>
         </div>
    </body>

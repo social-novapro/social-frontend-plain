@@ -1,14 +1,26 @@
-var websocketenabled
+// var websocketenabled
 var ws
 var roomID
 var defaultRoomID = "0001"
 var loginUserToken = false
 var currentUserLogin = { }
 const LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
-
+var sendTypeStop
+var amountTyping
 // LOGIN INFO 
 checkLogin()
 document.getElementById("messageTypingForm").addEventListener("submit", function (e) { e.preventDefault()})
+
+var clientTypingAct = {
+    typing: false,
+    typingTime: 0,
+}
+
+function getTime() {
+    const d = new Date();
+    const currentTime = d.getTime()
+    return currentTime
+}
 
 async function checkLogin() {
     const userStorageLogin = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
@@ -35,18 +47,20 @@ function checkRoomID() {
     return defaultRoomID
 }
 
+
 function checkWebSocket() {
     if ("WebSocket" in window) {
         document.getElementById("actiondescription").innerHTML = `
             WebSocket is supported by your Browser
         `
 
-        //ws = new WebSocket("wss://interact-api.novapro.net");  
-        // ws = new WebSocket(`ws://localhost:5002/?userID=${currentUserLogin.userID}`);  
-        ws = new WebSocket(`wss://interact-api.novapro.net/?userID=${currentUserLogin.userID}`);  
+        ws = new WebSocket(`ws://localhost:5002/?userID=${currentUserLogin.userID}`);  
+        // ws = new WebSocket(`wss://interact-api.novapro.net/?userID=${currentUserLogin.userID}`);  
 
         ws.onmessage = function (evt) { 
             const data = JSON.parse(evt.data)
+            //console.log(data)
+            //console.log(data.type)
 
             switch (data.type) {
                 case 01:
@@ -60,6 +74,9 @@ function checkWebSocket() {
                 case 03:
                     removeFromList(data)
                     break;
+                case 05:
+                    editFromList(data)
+                    break;
                 case 06:
                     if (!data.userJoin) return
                     if (!data.userJoin.user) addToList(data, data.userJoin.content, data.user, data.userJoin.timeStamp)
@@ -72,7 +89,14 @@ function checkWebSocket() {
                     else addToList(data, data.userLeave.content, data.userLeave.user )
                     changeUserCount(data.userLeave.currentUsers)
                     break;
-                    
+                case 08:
+                    if (data.user._id == currentUserLogin.userID) return
+                    else userTyping(data)
+                    break;
+                case 09:
+                    if (data.user._id == currentUserLogin.userID) return
+                    else userTyping(data)
+                    break;
                 default:
                     alert("unhandled event occured")
                     break;
@@ -85,8 +109,6 @@ function checkWebSocket() {
                 Connection is closed...
             `
         };
-      //ws = new WebSocket("ws://10.232.151.148:5002/");  
-       //10.232.151.148:5500
     } else {
         document.getElementById("actiondescription").innerHTML = `
             WebSocket NOT supported by your Browser!
@@ -94,46 +116,124 @@ function checkWebSocket() {
     }
 }
 
-/*
-ws.onopen = function() {
-    ws.send("Message to send");
+function clientStopTyping(typingTime) {
+    if (clientTypingAct.typingTime != typingTime) return console.log('/')
 
-    document.getElementById("actiondescription").innerHTML = `
-        Message is sent...
-    `
-};
-*/
+    const messageSend = {
+        type: 09,
+        apiVersion: "1.0",
+        userID: currentUserLogin.userID,
+        typing: false,
+    }
+
+    ws.send(JSON.stringify(messageSend))
+}
+
+function clientUserType() {
+    const input = document.getElementById('messageBar').value
+    if (sendTypeStop) clearTimeout(sendTypeStop)
+    
+    if (!input) {
+        clientTypingAct.typing = false
+        clientTypingAct.typingTime = 0
+
+        const messageSend = {
+            type: 09,
+            apiVersion: "1.0",
+            userID: currentUserLogin.userID,
+            typing: false,
+        }
+    
+        return ws.send(JSON.stringify(messageSend))
+    }
+    
+    const messageSend = {
+        type: 08,
+        apiVersion: "1.0",
+        userID: currentUserLogin.userID,
+        userTyping: true,
+    }
+
+    const timeTyping = getTime()
+
+    clientTypingAct.typing = true
+    clientTypingAct.typingTime = timeTyping
+
+    ws.send(JSON.stringify(messageSend))
+
+    sendTypeStop = setTimeout(function() { clientStopTyping(timeTyping); }, 4000)
+}
+
+function userTyping(data) {
+    if (data.type==08) {
+        var addUser = `<p id="userTyping-${data.user._id}">${data.user.username}</p>`//<p id="typingMainText"> is typing...</p>
+        if (document.getElementById(`userTyping-${data.user._id}`)) return console.log("user is already typing")
+        else document.getElementById("userTyping").innerHTML += addUser
+    }
+    if (data.type==09) {
+        var removeUser = document.getElementById(`userTyping-${data.user._id}`)
+        if (removeUser) removeUser.remove()
+    }
+}
 
 function addToList(data, content, user, timeStamp, message) {
-// function addToList(message) {
     var timesince
     if (timeStamp) timesince = checkDate(timeStamp)
     
-   // const timesince = checkDate(timeStamp)
     const imageContent = checkForImage(content)
 
-   // if (user._id == currentUserLogin.public._id) {
-        document.getElementById("messages").innerHTML+=`
-            <div class="message" id="${data._id}">
-                <p class="subheaderMessage ${user._id == currentUserLogin.userID ? "ownUser" : "otherUser"}">${user.displayName} @${user.username} | ${timesince}</p>
+    document.getElementById("messages").innerHTML+=`
+        <div class="message" id="${data._id}">
+            <p class="subheaderMessage ${user._id == currentUserLogin.userID ? "ownUser" : "otherUser"}">${user.displayName} @${user.username} | ${timesince}</p>
+            <div id="contentMainArea_${data._id}">
                 <p class="contentMessage" id="contentArea_${data._id}">${imageContent.content}</p>
-                ${data.type==2 && user._id == currentUserLogin.userID  ? `<a onclick="deleteMessage('${data._id}')">Delete</a>` : ``}
-                ${data.type==2 && user._id == currentUserLogin.userID? `<a onclick="editMessage('${data._id}')">Edit</a>` : ``}
+                ${data.message ? data.message.edited ? '<p class="edited"><i>(edited)</i></p>' : '' : ''}
             </div>
-        `;  
-    /*}
-    else {
-        document.getElementById("messages").innerHTML+=`
-            <div class="message" id="${data._id}">
-                <p class="subheaderMessage otherUser">${user.displayName} @${user.username} | ${timesince}</p>
-                <p class="contentMessage" id="contentArea_${data._id}">${imageContent.content}</p>
-            </div>
-        `;
-    }*/
+            ${data.type==2 && user._id == currentUserLogin.userID  ?  `
+                <div class="messageActions">
+                    <p id="deleteButton_${data._id}"><a onclick="deleteMessage('${data._id}')">Delete</a><p>
+                    <p id="editButton_${data._id}"><a onclick="editMessage('${data._id}')">Edit</a><p>
+                </div>
+            ` : `` }
+        </div>
+    `;
 
     var objDiv = document.getElementById("messages");
 
     objDiv.scrollTop = objDiv.scrollHeight;
+}
+
+function editMessage(id) {
+    const oldMessage = document.getElementById(`contentArea_${id}`).innerHTML
+    document.getElementById(`editButton_${id}`).innerHTML = ''
+    document.getElementById(`contentArea_${id}`).innerHTML = `
+        <form onsubmit="submitEditedMessage('${id}')" id="editArea_${id}">
+            <input type="text" class="contentMessage"id="editMessageBar_${id}" placeholder="${oldMessage}">
+        </form>
+    `
+    document.getElementById(`editMessageBar_${id}`).focus()
+}
+
+function submitEditedMessage(id) {
+    const newEdit = document.getElementById(`editMessageBar_${id}`).value
+    if (!newEdit) return document.getElementById('actiondescription').innerHTML="no new edits"
+    if (!id) return document.getElementById('actiondescription').innerHTML="no id"
+
+    const messageSend = {
+        type: 05,
+        apiVersion: "1.0",
+        userID: currentUserLogin.userID,
+        editMessage: {
+            postID: id,
+            content: newEdit,
+            timeStamp: getTime(),
+        }
+    }
+
+    ws.send(JSON.stringify(messageSend))
+
+    document.getElementById(`editButton_${id}`).innerHTML=`<a onclick="editMessage('${id}')">Edit</a>`
+    document.getElementById(`contentMainArea_${id}`).innerHTML = `<p class="contentMessage" id="contentArea_${id}">${messageSend.editMessage.content}</p><p class="edited"><i>(edited)</i></p>`
 }
 
 function deleteMessage(id) {
@@ -154,7 +254,7 @@ function removeFromList(data) {
 
 function editFromList(data) {
     const { _id } = data
-    document.getElementById(`contentArea_${_id}`).innerHTML = ``
+    document.getElementById(`contentMainArea_${_id}`).innerHTML = `<p class="contentMessage" id="contentArea_${_id}">${data.newMessage.content}</p><p class="edited"><i>(edited)</i></p>`
 }
 
 function checkDate(time){
@@ -162,11 +262,6 @@ function checkDate(time){
     if (!isNaN(time)) timeNum = parseFloat(time)
     else timeNum = time
     
-    function getTime() {
-        const d = new Date();
-        const currentTime = d.getTime()
-        return currentTime
-    }
     var currentTime = getTime()
 
     const diff = (currentTime - timeNum)
@@ -177,7 +272,6 @@ function checkDate(time){
 }
 
 function dateFromEpoch(time) {
-   // console.log(time)
     const date = new Date(time)
     const year = date.getFullYear()
     const day = date.getDate()

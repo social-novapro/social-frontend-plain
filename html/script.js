@@ -43,8 +43,8 @@ async function checkLoginUser() {
 */
 
 
-// const baseURL = `http://localhost:5002/v1`
-const baseURL = `https://interact-api.novapro.net/v1`
+const baseURL = `http://localhost:5002/v1`
+// const baseURL = `https://interact-api.novapro.net/v1`
 
 var headers = {
     'Content-Type': 'application/json',
@@ -392,9 +392,9 @@ async function profile() {
             <input type="text" id="displaynameProfile" placeholder="Your displayname: ${userData.displayName}">
         </div>
     `
-    currentPage = "profile"
-    document.getElementById("page2").innerHTML = `Home`
 
+    currentPage = "profile"
+    document.getElementById("page2Nav").innerHTML = `<div id="page2Nav"><button class="buttonStyled"  onclick="switchNav(5)" id="page2">Home</button>`
 }
 
 // MAKES SEARCH BAR APPEAR
@@ -587,6 +587,7 @@ function checkMonth(month) {
 
 // BUILDING MAIN FEED
 function buildView(posts) {
+    posts.reverse()
     if (searching) return
 
 
@@ -598,31 +599,31 @@ function buildView(posts) {
             var timesince
             if (post.timePosted) timesince = checkDate(post.timePosted)
 
-            if (!user) {
+          
                 return `
                     <div class="publicPost">
-                        <h2>Unknown User</h2>
+                        <h2>${user ? `${user.displayName} @${user.username}` : 'Unknown User'}</h2>
                         <p>${timesince}</p>
                         <p>${post.content}</p>
                         <p class="debug">${post._id} - from (${post.userID})</p>
-                        <button class="buttonStyled" onclick="blankFunction('like')">like</button> | <button class="buttonStyled" onclick="blankFunction('repost')">repost</button> | <button class="buttonStyled" onclick="blankFunction('reply')">reply</button>
+                        <button class="buttonStyled" id="${post._id}" onclick="blankFunction('like')">like</button> | <button class="buttonStyled" onclick="blankFunction('repost')">repost</button> | <button class="buttonStyled" onclick="blankFunction('reply')">reply</button>
                     </div>
                 `
-            }
-            else {
-                return `
-                    <div class="publicPost">
-                        <h2>${user.displayName} @${user.username}</h2>
-                        <p>${timesince}</p>
-                        <p>${post.content}</p>
-                        <p class="debug">${post._id} - from (${post.userID})</p>
-                        <button class="buttonStyled" onclick="blankFunction('like')">like</button> | <button class="buttonStyled" onclick="blankFunction('repost')">repost</button> | <button class="buttonStyled" onclick="blankFunction('reply')">reply</button>
-                    </div>
-                `
-            }
         }).join(" ")}
     `
     devMode()
+}
+
+async function likePost(postID) {
+    if (debug) console.log("liking post")
+    const response = await fetch(`${baseURL}/put/likePost/${postID}`, { method: 'PUT', headers})
+    const data = await response.json()
+
+    if (debug) console.log(data)
+
+    if (data.ok) {
+        getFeed()
+    }
 }
 
 // USER DATA FOR FEED

@@ -44,6 +44,7 @@ p {
 .myMessage {
     color: blue
 }
+
 .allMessages {
     overflow-wrap: break-word;
     height: 50vh; 
@@ -61,6 +62,11 @@ p {
     border-radius: 15px;
     box-shadow: var(--main-shadow-color);
 }
+.messageActions {
+    display: inline-block;
+    text-align: center;
+
+}
 .messageType {
     background-color:  var(--main-button-color);
     border: 2px solid var(--main-border-color);
@@ -73,7 +79,7 @@ p {
     box-shadow: var(--main-shadow-color);
 }
 input {
-    width: 100%;
+    width: 100vh;
     height: 100%;
     color: var(--main-a-color);
     width: 90%;
@@ -113,3 +119,41 @@ input {
 .messageImage {
     width: 40px;
 }
+.allArea { 
+    height: 100%;
+    width: 100%;
+}
+.edited i {
+    color: var(--hover-border-color)
+}
+.userTyping {
+    display:inline-flex
+}
+/* SMALL SCREEN
+@media only screen and (max-width: 600px) {
+    .allMessages {
+        overflow-wrap: break-word;
+        height: 50vh; 
+        width: 100vw;     
+        overflow-y: scroll;
+    }
+}
+    BIG SCREENS 
+@media only screen and (min-width: 601px) {
+    .allMessages {
+        justify-content: center;
+        height: 50vh; 
+        width: 40vw;     
+        overflow-y: scroll;
+        display:inline-block;
+
+    }
+    .onlinePeople {
+        overflow-wrap: break-word;
+        height: 50vh; 
+        width: 40vw;     
+        overflow-y: scroll;
+        display:inline-block;
+    }
+}
+*/
