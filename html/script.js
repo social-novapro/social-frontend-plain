@@ -43,8 +43,8 @@ async function checkLoginUser() {
 */
 
 
-const baseURL = `http://localhost:5002/v1`
-// const baseURL = `https://interact-api.novapro.net/v1`
+// const baseURL = `http://localhost:5002/v1`
+const baseURL = `https://interact-api.novapro.net/v1`
 
 var headers = {
     'Content-Type': 'application/json',

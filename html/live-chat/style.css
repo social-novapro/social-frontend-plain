@@ -63,9 +63,10 @@ p {
     box-shadow: var(--main-shadow-color);
 }
 .messageActions {
-    display: inline-block;
-    text-align: center;
-
+    display: flex;
+}
+.messageActions p{
+    padding: 2px
 }
 .messageType {
     background-color:  var(--main-button-color);

@@ -54,8 +54,8 @@ function checkWebSocket() {
             WebSocket is supported by your Browser
         `
 
-        ws = new WebSocket(`ws://localhost:5002/?userID=${currentUserLogin.userID}`);  
-        // ws = new WebSocket(`wss://interact-api.novapro.net/?userID=${currentUserLogin.userID}`);  
+        // ws = new WebSocket(`ws://localhost:5002/?userID=${currentUserLogin.userID}`);  
+        ws = new WebSocket(`wss://interact-api.novapro.net/?userID=${currentUserLogin.userID}`);  
 
         ws.onmessage = function (evt) { 
             const data = JSON.parse(evt.data)
