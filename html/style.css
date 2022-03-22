@@ -17,6 +17,10 @@
         var(--main-shadow-color);
     transition: transform 400ms, border-color 400ms, background-color 400ms;
 }
+.areaPost p {
+    padding: 10px;
+    text-align: left;
+}
 .search input {
     color: var(--main-a-color);
     width: 90%;
@@ -43,11 +47,30 @@
         var(--main-shadow-color);
     transition: transform 400ms, border-color 400ms, background-color 400ms;
 }
-
 .mainButton {
     display: inline-block;
 }
-
+.debug {
+    font-size: smaller;
+    color: rgb(112, 112, 112);
+}
+.easteregg {
+    padding: 15px;
+}
+.ownUser {
+    color: rgb(81, 144, 251);
+}
+.otherUser {
+    color: rgb(146, 146, 146)
+}
+.subheaderMessage {
+    font-size: smaller;
+    padding: 3px
+}
+.contentMessage {
+    font-size: medium;
+    padding: 3px;
+}
 .mainButtons .buttonStyled {
     background-color:  var(--main-button-color);
     border: 2px solid var(--main-border-color);
@@ -63,7 +86,6 @@
         var(--main-shadow-color);
     transition: transform 400ms, border-color 400ms, background-color 400ms;
 }
-
 .signInDiv .buttonStyled {
     background-color:  var(--main-button-color);
     border: 2px solid var(--main-border-color);
@@ -119,12 +141,59 @@
         var(--main-shadow-color);
     transition: transform 400ms, border-color 400ms, background-color 400ms;
 }
-
+.actionOptions {
+    display: flex;
+}
 .postTextArea {
     width: 70%;
-    height: 400px;
+    height: 200px;
     background-color: var(--main-body-color);
     color: var(--main-p-color);
     padding: 10px;
     font-size: 16px;
+}
+.postModalActions p {
+    display: flex;
+    background-color:  var(--main-button-color);
+    border: 2px solid var(--main-border-color);
+    word-wrap: normal;
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    margin: 10px;
+    text-decoration: none;
+    color: var(--main-a-color);
+    text-align: center;
+    padding: 15px;
+    border-radius: 15px;  
+    box-shadow: 
+        var(--main-shadow-color);
+    transition: transform 400ms, border-color 400ms, background-color 400ms;
+}
+/* without box
+.postContent {
+    overflow-wrap: break-word;
+    text-decoration: none;
+    color: var(--main-a-color);
+    text-align: left;
+    transition: transform 400ms, border-color 400ms, background-color 400ms;
+}
+*/
+.postContent {
+    background-color:  rgba(44, 44, 44, 0.548);
+    border: 2px solid var(--main-border-color);
+    overflow-wrap: break-word;
+    margin-left: 15px;
+    margin-right: 15px;
+    margin-top: 15px;
+    margin-bottom: 15px;
+    text-decoration: none;
+    color: var(--main-a-color);
+    text-align: left;
+    padding: 15px;
+    border-radius: 15px;
+    transition: transform 400ms, border-color 400ms, background-color 400ms;
+}
+.searchUser p{
+    padding: 5px;
 }

@@ -1,13 +1,23 @@
-console.log("hello")
 const LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 
-// var redirectURL = `http://localhost:5500/`
-// const baseURL = `http://localhost:5002/v1`
-var redirectURL = `https://interact.novapro.net/`
-const baseURL = `https://interact-api.novapro.net/v1`
+var redirectURL
+var baseURL
+
+fetch('/config.json').then(response => response.json()).then(data => {
+    console.log(data.current)
+    if (data.current == "dev") {
+        redirectURL = data.dev.hosted_url
+        baseURL = data.dev.api_url
+    }
+    else {
+        redirectURL = data.prod.hosted_url
+        baseURL = data.prod.api_url
+    }
+
+    checkURLParams();
+})
 
 // checkLogin()
-checkURLParams()
 
 var headers = {
     'Content-Type': 'application/json',

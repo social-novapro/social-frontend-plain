@@ -7,8 +7,19 @@ var currentUserLogin = { }
 const LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 var sendTypeStop
 var amountTyping
-// LOGIN INFO 
-checkLogin()
+var baseURL
+
+console.log('running')
+fetch('/config.json').then(async response => response.json()).then(async data => {
+    if (data.current == "dev") baseURL = data.dev.websocket_url
+    else baseURL = data.prod.websocket_url
+    console.log('running 2')
+
+    checkLogin()
+    console.log('running 3')
+
+})
+
 document.getElementById("messageTypingForm").addEventListener("submit", function (e) { e.preventDefault()})
 
 var clientTypingAct = {
@@ -23,11 +34,15 @@ function getTime() {
 }
 
 async function checkLogin() {
+    console.log('running 3')
+
     const userStorageLogin = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
+    console.log(userStorageLogin)
     if (userStorageLogin) {
         currentUserLogin = JSON.parse(userStorageLogin)
         loginUserToken = true
     }
+    console.log('running 4')
 
     if (!loginUserToken) return window.location.href = "/begin/?live-chat";
     else return checkWebSocket()
@@ -49,13 +64,14 @@ function checkRoomID() {
 
 
 function checkWebSocket() {
+    console.log('running 5')
+
     if ("WebSocket" in window) {
         document.getElementById("actiondescription").innerHTML = `
             WebSocket is supported by your Browser
         `
 
-        // ws = new WebSocket(`ws://localhost:5002/?userID=${currentUserLogin.userID}`);  
-        ws = new WebSocket(`wss://interact-api.novapro.net/?userID=${currentUserLogin.userID}`);  
+        ws = new WebSocket(`${baseURL}?userID=${currentUserLogin.userID}`)
 
         ws.onmessage = function (evt) { 
             const data = JSON.parse(evt.data)
@@ -185,9 +201,9 @@ function addToList(data, content, user, timeStamp, message) {
     document.getElementById("messages").innerHTML+=`
         <div class="message" id="${data._id}">
             <p class="subheaderMessage ${user._id == currentUserLogin.userID ? "ownUser" : "otherUser"}">${user.displayName} @${user.username} | ${timesince}</p>
-            <div id="contentMainArea_${data._id}">
+            <div class="contentMainArea" id="contentMainArea_${data._id}">
                 <p class="contentMessage" id="contentArea_${data._id}">${imageContent.content}</p>
-                ${data.message ? data.message.edited ? '<p class="edited"><i>(edited)</i></p>' : '' : ''}
+                ${data.message ? data.message.edited ? '<p class="edited contentMessage"><i>(edited)</i></p>' : '' : ''}
             </div>
             ${data.type==2 && user._id == currentUserLogin.userID  ?  `
                 <div class="messageActions">
@@ -203,14 +219,21 @@ function addToList(data, content, user, timeStamp, message) {
     objDiv.scrollTop = objDiv.scrollHeight;
 }
 
+/*
+function cancelEdit(id) {
+    document.getElementById(`contentMainArea_${id}`).innerHTML = `<p class="contentMessage" id="contentArea_${id}">${messageSend.editMessage.content}</p><p class="edited"><i>(edited)</i></p>`
+}
+*/
 function editMessage(id) {
     const oldMessage = document.getElementById(`contentArea_${id}`).innerHTML
     document.getElementById(`editButton_${id}`).innerHTML = ''
     document.getElementById(`contentArea_${id}`).innerHTML = `
-        <form onsubmit="submitEditedMessage('${id}')" id="editArea_${id}">
-            <input type="text" class="contentMessage"id="editMessageBar_${id}" placeholder="${oldMessage}">
+        <form class="contentMessage" onsubmit="submitEditedMessage('${id}')" id="editArea_${id}">
+            <input type="text" class="contentMessage" id="editMessageBar_${id}" placeholder="${oldMessage}">
         </form>
     `
+    // <a onclick="cancelEdit('${id}')">Cancel</a>
+
     document.getElementById(`editMessageBar_${id}`).focus()
 }
 

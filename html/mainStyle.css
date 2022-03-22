@@ -164,3 +164,11 @@ p {
 button {
     all: unset;
 }
+/* DIVIDER */
+hr.rounded {
+    border: var(--main-divider);
+    border-radius: 2px;
+    margin: 20px;
+    margin-left: 20%; 
+    margin-right: 20%; 
+}

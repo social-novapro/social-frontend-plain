@@ -3,12 +3,20 @@ var getUrl = window.location;
 var baseUrl = getUrl .protocol + "//" + getUrl.host + "/" + getUrl.pathname.split('/')[1];
 var pathArray = window.location.pathname.split( '/' );
 
-
 console.log(baseUrl)
 console.log(pathArray)
 addNavigation()
 addTitle() 
 checkLogin()
+
+var apiURL
+
+fetch('/config.json').then(response => response.json()).then(data => {
+    console.log(data.current == "dev")
+    if (data.current == "dev") apiURL = data.dev.api_url
+    else apiURL = data.prod.api_url
+    checkLogin()
+})
 
 function addNavigation() {
     document.getElementById('navArea').innerHTML = `
@@ -38,6 +46,7 @@ async function checkLogin() {
     const LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 
     const userStorageLogin = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
+    console.log(userStorageLogin)
     if (userStorageLogin) {
         currentUserLogin = JSON.parse(userStorageLogin)
         loginUserToken = true

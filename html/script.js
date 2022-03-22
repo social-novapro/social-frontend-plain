@@ -42,9 +42,24 @@ async function checkLoginUser() {
 }
 */
 
+var baseURL
+var hostedURl
+
+fetch('/config.json').then(async response => response.json()).then(async data => {
+    if (data.current == "dev") {
+        baseURL = data.dev.api_url
+        mainBase = data.dev.hosted_url
+    }
+    else {
+        baseURL = data.prod.api_url
+        mainBase = data.prod.hosted_url
+    }
+
+    checkLogin()
+})
 
 // const baseURL = `http://localhost:5002/v1`
-const baseURL = `https://interact-api.novapro.net/v1`
+// const baseURL = `https://interact-api.novapro.net/v1`
 
 var headers = {
     'Content-Type': 'application/json',
@@ -68,7 +83,6 @@ const LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 // let loginUserToken = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
 
 var debug = false
-checkLogin()
 
 // CHANGES URL OF BROWSER
 function changeHeader(newLink) {
@@ -151,7 +165,6 @@ async function userPage(username) {
             <h1>(unknown) - @${userData.username}</h1>
         `
     }
-
     if (userData.description) {
         document.getElementById("userAccountPage").innerHTML += `
             <p>${userData.description}</p>
@@ -179,10 +192,23 @@ async function userPage(username) {
 async function createPostModal() {
     await showModal(`
         <h1>Create a new Post</h1>
+        <div class="postModalActions">
+            <p onclick="createPost()">Upload Post</p>
+            <p onclick="closeModal()">Close</p>
+        </div>
         <textarea class="postTextArea" id="newPostTextArea"></textarea>
-        <button class="buttonStyled" onclick="createPost()">Upload Post</button>
-    `)
+    `, "hide")
 }
+
+/*
+document.addEventListener('keypress', logKey);
+
+function logKey(e) {
+    if (e.key == '/') {
+        searchBar()
+        document.getElementById('searchBarArea').focus()
+    }
+}*/
 
 /*
 async function showModal(html, showClose) {
@@ -241,7 +267,6 @@ async function loginSplashScreen() {
 
 // USER LOGIN PAGE 
 async function loginPage() {
-
     document.getElementById("mainFeed").innerHTML = `
         <h1>Please Login!</h1>
         <form onsubmit="sendLoginRequest()" id="signInForm">
@@ -374,27 +399,79 @@ async function profile() {
     removeSearchBar()
     searching = true
 
-    const response = await fetch(`${baseURL}/get/user/${currentUserLogin.userID}`, {
+    userHtml(currentUserLogin.userID)
+        // editable after
+
+    currentPage = "profile"
+}
+
+async function userHtml(userID) {
+    const response = await fetch(`${baseURL}/get/user/${userID}`, {
         method: 'GET',
         headers,
     })
     
-    const userData = await response.json()
+    const profileData = await response.json()
     
-    document.getElementById("mainFeed").innerHTML = `
+    var timesince
+    if (profileData.userData.creationTimestamp) timesince = checkDate(profileData.userData.creationTimestamp)
+    
+    document.getElementById("mainFeed").innerHTML =  `
         <div class="search">
-            <button class="buttonStyled" onclick="editUser()">Edit Profile</button>
+            <p><b>Display Name</b></p>
+            <p>${profileData.userData.displayName}</p>
         </div>
         <div class="search">
-            <input type="text" id="usernameProfile" placeholder="Your username: ${userData.username}">
+            <p><b>Username</b></p>
+            <p>${profileData.userData.username}</p>
         </div>
+        <div class="search">
+            <p><b>Description</b></p>
+            <p>${profileData.userData.description}</p>
+        </div> 
+        ${profileData.userData.pronouns ? 
+            `
+                <div class="search"><p><b>Pronouns</b></p>
+                    <p>${profileData.userData.pronouns}</p>
+                </div>
+            ` : ``
+        }
+        ${profileData.userData.creationTimestamp ? 
+            `  
+                <div class="search">
+                    <p><b>Creation</b></p>
+                    <p>${timesince}</p>
+                </div>
+            `: ``
+        }
+        ${profileData.included.posts ? `
             <div class="search">
-            <input type="text" id="displaynameProfile" placeholder="Your displayname: ${userData.displayName}">
-        </div>
+                <p><b>Posts</b></p>
+                <p>${profileData.postData.length}</p>
+            </div>
+            <hr class="rounded">
+            ${profileData.postData.map(function(post) {
+                var timesincePost
+                if (post.timePosted) timesincePost = checkDate(post.timePosted)
+                
+                return `
+                    <div class="publicPost areaPost" id="postdiv_${post._id}">
+                        <p class="${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}"> ${timesince}</p>
+                        <div class="postContent"> <p>${post.content}</p></div>
+                        <p class="debug">${post._id} - from: ${post.userID}</p>
+                        <div class="actionOptions"> 
+                            <p>${post.totalLikes} likes</p>
+                            <p>${post.totalReplies} comments</p>
+                            ${post.userID == currentUserLogin.userID ? `<p onclick="deletePost('${post._id}')">delete post</p>` : '' }</p>
+                        </div>
+                    </div>
+                    
+                `
+            }).join(" ")}
+        ` : ``}
     `
 
-    currentPage = "profile"
-    document.getElementById("page2Nav").innerHTML = `<div id="page2Nav"><button class="buttonStyled"  onclick="switchNav(5)" id="page2">Home</button>`
+    return document.getElementById("page2Nav").innerHTML = `<div id="page2Nav"><button class="buttonStyled"  onclick="switchNav(5)" id="page2">Home</button>`
 }
 
 // MAKES SEARCH BAR APPEAR
@@ -534,7 +611,7 @@ async function getFeed() {
     const response = await fetch(`${baseURL}/get/allPosts`, { method: 'GET', headers})
     var data = await response.json()
 
-    currentFeed = data
+    currentFeed = data.reverse()
 
     const params = await checkURLParams()
 
@@ -551,7 +628,7 @@ function test() {
             <h1>You pressed the logo!!</h1>
             <p>You pressed the header name, thats pretty cool of you! Thank you for checking out interact!</p>
             <p>Press the button below to go back!</p>
-            <button class="buttonStyled" onclick="getFeed()">Main Feed!</button>
+            <button class="buttonStyled" onclick="switchNav(5)">Main Feed!</button>
         </div>
     `
 }
@@ -587,7 +664,6 @@ function checkMonth(month) {
 
 // BUILDING MAIN FEED
 function buildView(posts) {
-    posts.reverse()
     if (searching) return
 
 
@@ -599,19 +675,56 @@ function buildView(posts) {
             var timesince
             if (post.timePosted) timesince = checkDate(post.timePosted)
 
-          
-                return `
-                    <div class="publicPost">
-                        <h2>${user ? `${user.displayName} @${user.username}` : 'Unknown User'}</h2>
-                        <p>${timesince}</p>
-                        <p>${post.content}</p>
-                        <p class="debug">${post._id} - from (${post.userID})</p>
-                        <button class="buttonStyled" id="${post._id}" onclick="blankFunction('like')">like</button> | <button class="buttonStyled" onclick="blankFunction('repost')">repost</button> | <button class="buttonStyled" onclick="blankFunction('reply')">reply</button>
+            return `
+                <div class="publicPost areaPost" id="postdiv_${post._id}">
+                    <p class="${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'} | ${timesince}</p>
+                    <div class="postContent"> <p>${post.content}</p></div>
+                    <p class="debug">${post._id} - from: ${post.userID}</p>
+                    <div class="actionOptions"> 
+                        <p>${post.totalLikes} likes</p>
+                        <p>${post.totalReplies} comments</p>
+                        ${post.userID == currentUserLogin.userID ? `<p onclick="deletePost('${post._id}')">delete post</p>` : '' }</p>
                     </div>
-                `
+                </div>
+            `
+            /* 
+            return `
+                <div class="postArea">
+                    <div class="subheaderMessage">
+                        <p 
+                            ${user ? ` onclick="userHtml('${post.userID}')" 
+                            class="${user._id == currentUserLogin.userID ? "ownUser" : "otherUser"}"
+                        >
+                            ${user.displayName} @${user.username}` : '>Unknown User'} | ${timesince ? timesince : ""}</p> 
+                        </p>
+                    </div>
+                    <p class="contentMessage">${post.content}</p>
+                    <p class="debug">${post._id} - from: ${post.userID}</p>
+                </div>
+            `*/
+            
+            /* 
+            return `
+                <div class="publicPost">
+                    <h2 ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'}</h2>
+                    <p>${timesince}</p>
+                    <p>${post.content}</p>
+                    <p class="debug">${post._id} - from (${post.userID})</p>
+                    <button class="buttonStyled" id="${post._id}" onclick="blankFunction('like')">like</button> | <button class="buttonStyled" onclick="blankFunction('repost')">repost</button> | <button class="buttonStyled" onclick="blankFunction('reply')">reply</button>
+                </div>
+            `
+            */
+
         }).join(" ")}
     `
     devMode()
+}
+async function deletePost(postID) {
+    if (debug) console.log(`deleting post ${postID}`)
+    const response = await fetch(`${baseURL}/delete/removePost/${postID}`, { method: 'DELETE', headers})
+
+    if (response.status == 200) return document.getElementById(`postdiv_${postID}`).remove()
+    else return showModal("Error", "Something went wrong, please try again later")
 }
 
 async function likePost(postID) {
@@ -680,42 +793,46 @@ async function searchResult(input) {
     else console.log(data.postsFound)
 
     document.getElementById("mainFeed").innerHTML = `
-        ${data.usersFound.map(function(user) {
+        ${data.usersFound.reverse().map(function(user) {
+            var timesince
+            if (user.creationTimestamp) timesince = checkDate(user.creationTimestamp)
+            
             return `
                 <div class="publicPost searchUser">
-                    <h2>${user.displayName} @${user.username}</h2>
+                    <p class="${user._id == currentUserLogin.userID ? "ownUser" : "otherUser"}" onclick="userHtml('${user._id}')"> ${user.displayName} @${user.username} | ${user.creationTimestamp ? timesince : '' }</p>
+                    <p>${user.description ? user.description : "no description"}</p>
                     <p>Following: ${user.followingCount} | Followers: ${user.followerCount}</p>
                     <p class="debug">${user._id}</p>
                 </div>
             `
         }).join(" ")}
-        ${data.postsFound.map(function(postArray) {
+        ${data.postsFound.reverse().map(function(postArray) {
             var post = postArray.postData
             var user = postArray.userData
 
             var timesince
             if (post.timePosted) timesince = checkDate(post.timePosted)
-
-            if (!postArray.type.user) {
-                return `
-                    <div class="publicPost searchUser">
-                        <h2>Unknown User</h2>
-                        <p>${timesince}</p>
-                        <p>${post.content}</p>
-                        <p class="debug">${post._id}</p>
+          
+            return `
+                <div class="publicPost areaPost searchUser" id="postdiv_${post._id}">
+                    <p class="${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'} | ${timesince}</p>
+                    <div class="postContent"> <p>${post.content}</p></div>
+                    <p class="debug">${post._id} - from: ${post.userID}</p>
+                    <div class="actionOptions"> 
+                        <p>${post.totalLikes} likes</p>
+                        <p>${post.totalReplies} comments</p>
+                        ${post.userID == currentUserLogin.userID ? `<p onclick="deletePost('${post._id}')">delete post</p>` : '' }</p>
                     </div>
-                `
-            }
-            else {
-                return `
-                    <div class="publicPost searchUser">
-                        <h2>${user.displayName} @${user.username}</h2>
-                        <p>${timesince}</p>
-                        <p> ${post.content}</p>
-                        <p class="debug">${post._id}</p>
-                    </div>
-                `
-            }
+                </div>
+            `
+            /* old
+                <div class="publicPost searchUser">
+                    <h2>${user.displayName} @${user.username}</h2>
+                    <p>${timesince}</p>
+                    <p>${post.content}</p>
+                    <p class="debug">${post._id}</p>
+                </div>
+            */
         }).join(" ")}
     `
 
@@ -757,7 +874,6 @@ async function createPost() {
   //   var input = document.getElementById('postBarArea').value;
     var input = document.getElementById('newPostTextArea').value
 
-    console.log(currentUserLogin)
     const data = { 
         "userID" : currentUserLogin.userID, 
         "content" : input 
@@ -800,11 +916,10 @@ function editUser() {
         </div>
     `
 }
-console.log(currentUserLogin)
+
 // EDIT DISPLAY NAME
 async function renameUsername() {
     const newUsername = document.getElementById('newUsername').value;
-    console.log(newUsername)
     // editUsernameFrontend
     if (!newUsername) {
         document.getElementById("resultEditUsername").innerHTML = `
@@ -822,9 +937,8 @@ async function renameUsername() {
             headers,
             body: JSON.stringify(data)
         });
-        console.log(response)
+
         const newData = await response.json()
-        console.log(newData)
     
         document.getElementById("resultEditUsername").innerHTML = `
             <p>Changed username! from ${newData.before.username} to ${newData.new.username}</p>
