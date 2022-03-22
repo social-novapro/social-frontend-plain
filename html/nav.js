@@ -10,11 +10,17 @@ addTitle()
 checkLogin()
 
 var apiURL
+var hostedURL
 
 fetch('/config.json').then(response => response.json()).then(data => {
-    console.log(data.current == "dev")
-    if (data.current == "dev") apiURL = data.dev.api_url
-    else apiURL = data.prod.api_url
+    if (data.current == "dev") {
+        apiURL = data.dev.api_url
+        hostedURL = data.dev.hosted_url
+    }
+    else {
+        apiURL = data.prod.api_url
+        hostedURL = data.prod.hosted_url
+    }
     checkLogin()
 })
 
@@ -38,8 +44,8 @@ async function signOut() {
     console.log(pathArray)
     localStorage.removeItem(LOCAL_STORAGE_LOGIN_USER_TOKEN);
     
-    if (pathArray[0] == "" || "begin") window.location.href = `/begin`
-    else window.location.href = `/begin?redirect=${pathArray[1]}`
+    if (pathArray[0] == "" || "begin") window.location.href = `${hostedURL}begin`
+    else window.location.href = `${hostedURL}begin?redirect=${pathArray[1]}`
 }
 
 async function checkLogin() {
@@ -57,7 +63,7 @@ async function switchNav(pageVal) {
     switch (pageVal) {
         // SEARCH
         case 1:
-            window.location.href="/live-chat"
+            window.location.href = `${hostedURL}live-chat`
             break;
         case 2:
             profile()

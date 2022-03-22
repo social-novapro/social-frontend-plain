@@ -8,6 +8,6 @@
     "prod" : {
         "api_url" : "https://interact-api.novapro.net/v1",    
         "websocket_url" : "wss://interact-api.novapro.net/",
-        "hosted_url" : "https://inteact.novapro.net/"
+        "hosted_url" : "https://interact.novapro.net/"
     }
 }
