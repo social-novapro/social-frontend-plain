@@ -3,26 +3,18 @@ var getUrl = window.location;
 var baseUrl = getUrl .protocol + "//" + getUrl.host + "/" + getUrl.pathname.split('/')[1];
 var pathArray = window.location.pathname.split( '/' );
 
+var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
+
+var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
+var hostedURL = `${config ? `${config.current == "prod" ? config.prod.hosted_url : config.dev.hosted_url}` : 'https://interact-api.novapro.net/v1' }`
+console.log(hostedURL)
+
 console.log(baseUrl)
 console.log(pathArray)
 addNavigation()
 addTitle() 
 checkLogin()
 
-var apiURL
-var hostedURL
-
-fetch('/config.json').then(response => response.json()).then(data => {
-    if (data.current == "dev") {
-        apiURL = data.dev.api_url
-        hostedURL = data.dev.hosted_url
-    }
-    else {
-        apiURL = data.prod.api_url
-        hostedURL = data.prod.hosted_url
-    }
-    checkLogin()
-})
 
 function addNavigation() {
     document.getElementById('navArea').innerHTML = `
@@ -49,10 +41,8 @@ async function signOut() {
 }
 
 async function checkLogin() {
-    const LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
-
     const userStorageLogin = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
-    console.log(userStorageLogin)
+
     if (userStorageLogin) {
         currentUserLogin = JSON.parse(userStorageLogin)
         loginUserToken = true
@@ -63,7 +53,7 @@ async function switchNav(pageVal) {
     switch (pageVal) {
         // SEARCH
         case 1:
-            window.location.href = `${hostedURL}live-chat`
+            window.location.href = `/live-chat`
             break;
         case 2:
             profile()

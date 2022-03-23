@@ -1,23 +1,7 @@
-const LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
+var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 
-var redirectURL
-var baseURL
-
-fetch('/config.json').then(response => response.json()).then(data => {
-    console.log(data.current)
-    if (data.current == "dev") {
-        redirectURL = data.dev.hosted_url
-        baseURL = data.dev.api_url
-    }
-    else {
-        redirectURL = data.prod.hosted_url
-        baseURL = data.prod.api_url
-    }
-
-    checkURLParams();
-})
-
-// checkLogin()
+var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
+var redirectURL = `${config ? `${config.current == "prod" ? config.prod.hosted_url : config.dev.hosted_url}` : 'https://interact-api.novapro.net/v1' }`
 
 var headers = {
     'Content-Type': 'application/json',
@@ -26,6 +10,8 @@ var headers = {
 }
 
 var currentUserLogin = { }
+
+checkLogin()
 
 async function checkURLParams() {
     const params = new URLSearchParams(window.location.search)
@@ -101,7 +87,7 @@ async function sendLoginRequest() {
     headers.password = passwordLogin
     
     // const response = await fetch(`${baseURL}Priv/get/userLogin/`, {
-    const response = await fetch(`${baseURL}/auth/userLogin/`, {
+    const response = await fetch(`${apiURL}/auth/userLogin/`, {
         method: 'GET',
         headers,
     })
@@ -122,7 +108,7 @@ function saveLoginUser(userID, userToken, accessToken) {
 }
 
 async function checkLoginUser() {
-    const response = await fetch(`${baseURL}/auth/checkToken`, {
+    const response = await fetch(`${apiURL}/auth/checkToken`, {
         method: 'GET',
         headers,
     })
@@ -180,7 +166,7 @@ async function createNewUserRequest() {
     if (descriptionCreate) data.description = descriptionCreate
     if (pronounsCreate) data.pronouns = pronounsCreate
 
-    const response = await fetch(`${baseURL}Priv/post/newUser`, {
+    const response = await fetch(`${apiURL}Priv/post/newUser`, {
         method: 'POST',
         headers,
         body: JSON.stringify(data)

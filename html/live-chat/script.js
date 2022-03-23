@@ -4,21 +4,15 @@ var roomID
 var defaultRoomID = "0001"
 var loginUserToken = false
 var currentUserLogin = { }
-const LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
+var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 var sendTypeStop
 var amountTyping
 var baseURL
 
-console.log('running')
-fetch('/config.json').then(async response => response.json()).then(async data => {
-    if (data.current == "dev") baseURL = data.dev.websocket_url
-    else baseURL = data.prod.websocket_url
-    console.log('running 2')
+console.log(config.dev.websocket_url)
+var wsURL = `${config ? `${config.current == "prod" ? config.prod.websocket_url : config.dev.websocket_url}` : 'https://interact-api.novapro.net/v1' }`
 
-    checkLogin()
-    console.log('running 3')
-
-})
+checkLogin()
 
 document.getElementById("messageTypingForm").addEventListener("submit", function (e) { e.preventDefault()})
 
@@ -71,7 +65,7 @@ function checkWebSocket() {
             WebSocket is supported by your Browser
         `
 
-        ws = new WebSocket(`${baseURL}?userID=${currentUserLogin.userID}`)
+        ws = new WebSocket(`${wsURL}?userID=${currentUserLogin.userID}`)
 
         ws.onmessage = function (evt) { 
             const data = JSON.parse(evt.data)

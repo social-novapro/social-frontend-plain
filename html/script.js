@@ -42,24 +42,10 @@ async function checkLoginUser() {
 }
 */
 
-var baseURL
-var hostedURl
+var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
 
-fetch('/config.json').then(async response => response.json()).then(async data => {
-    if (data.current == "dev") {
-        baseURL = data.dev.api_url
-        mainBase = data.dev.hosted_url
-    }
-    else {
-        baseURL = data.prod.api_url
-        mainBase = data.prod.hosted_url
-    }
-
-    checkLogin()
-})
-
-// const baseURL = `http://localhost:5002/v1`
-// const baseURL = `https://interact-api.novapro.net/v1`
+// const apiURL = `http://localhost:5002/v1`
+// const apiURL = `https://interact-api.novapro.net/v1`
 
 var headers = {
     'Content-Type': 'application/json',
@@ -79,10 +65,12 @@ var currentPage
 var searching
 var currentFeed 
 
-const LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
+var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 // let loginUserToken = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
 
 var debug = false
+
+checkLogin()
 
 // CHANGES URL OF BROWSER
 function changeHeader(newLink) {
@@ -133,7 +121,7 @@ async function checkURLParams() {
 async function userPage(username) {
     searching = true
 
-    const response = await fetch(`${baseURL}/get/username/${username}`, {
+    const response = await fetch(`${apiURL}/get/username/${username}`, {
         method: 'GET',
         headers,
     })
@@ -237,9 +225,12 @@ async function checkLogin() {
     var loginUserToken = false
 
     const userStorageLogin = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
-    
     if (userStorageLogin) {
         currentUserLogin = JSON.parse(userStorageLogin)
+        console.log(headers)
+        console.log(currentUserLogin.accessToken)
+        console.log(currentUserLogin.userToken)
+        console.log(currentUserLogin.userID)
 
         headers.accesstoken = currentUserLogin.accessToken
         headers.usertoken = currentUserLogin.userToken
@@ -291,7 +282,7 @@ async function sendLoginRequest() {
     headers.username = usernameLogin
     headers.password = passwordLogin
     
-    const response = await fetch(`${baseURL}Priv/get/userLogin/`, {
+    const response = await fetch(`${apiURL}Priv/get/userLogin/`, {
         method: 'GET',
         headers,
     })
@@ -368,7 +359,7 @@ async function createNewUserRequest() {
     if (debug) console.log(currentUserLogin) 
     if (debug) console.log(data)
 
-    const response = await fetch(`${baseURL}Priv/post/newUser`, {
+    const response = await fetch(`${apiURL}Priv/post/newUser`, {
         method: 'POST',
         headers,
         body: JSON.stringify(data)
@@ -406,7 +397,7 @@ async function profile() {
 }
 
 async function userHtml(userID) {
-    const response = await fetch(`${baseURL}/get/user/${userID}`, {
+    const response = await fetch(`${apiURL}/get/user/${userID}`, {
         method: 'GET',
         headers,
     })
@@ -608,7 +599,7 @@ async function getFeed() {
     if (currentFeed) return buildView(currentFeed)
     if (debug) console.log("loading feed")
 
-    const response = await fetch(`${baseURL}/get/allPosts`, { method: 'GET', headers})
+    const response = await fetch(`${apiURL}/get/allPosts`, { method: 'GET', headers})
     var data = await response.json()
 
     currentFeed = data.reverse()
@@ -721,7 +712,7 @@ function buildView(posts) {
 }
 async function deletePost(postID) {
     if (debug) console.log(`deleting post ${postID}`)
-    const response = await fetch(`${baseURL}/delete/removePost/${postID}`, { method: 'DELETE', headers})
+    const response = await fetch(`${apiURL}/delete/removePost/${postID}`, { method: 'DELETE', headers})
 
     if (response.status == 200) return document.getElementById(`postdiv_${postID}`).remove()
     else return showModal("Error", "Something went wrong, please try again later")
@@ -729,7 +720,7 @@ async function deletePost(postID) {
 
 async function likePost(postID) {
     if (debug) console.log("liking post")
-    const response = await fetch(`${baseURL}/put/likePost/${postID}`, { method: 'PUT', headers})
+    const response = await fetch(`${apiURL}/put/likePost/${postID}`, { method: 'PUT', headers})
     const data = await response.json()
 
     if (debug) console.log(data)
@@ -741,7 +732,7 @@ async function likePost(postID) {
 
 // USER DATA FOR FEED
 async function getUserData(userID) {
-    const response = await fetch(`${baseURL}/get/user/${userID}`, {
+    const response = await fetch(`${apiURL}/get/user/${userID}`, {
         method: 'GET',
         headers,
     });
@@ -778,7 +769,7 @@ async function searchResult(input) {
 
     changeHeader(`?search=${input}`)
 
-    const response = await fetch(`${baseURL}/get/search/`, {
+    const response = await fetch(`${apiURL}/get/search/`, {
         method: 'GET',
         headers,
     });  
@@ -856,7 +847,7 @@ async function createPost() {
     if (debug) console.log(currentUserLogin) 
     if (debug) console.log(data)
 
-    const response = await fetch(`${baseURL}/post/createPost`, {
+    const response = await fetch(`${apiURL}/post/createPost`, {
         method: 'POST',
         headers,
         body: JSON.stringify(data)
@@ -884,7 +875,7 @@ async function createPost() {
     if (debug) console.log(currentUserLogin) 
     if (debug) console.log(data)
 
-    const response = await fetch(`${baseURL}/post/createPost`, {
+    const response = await fetch(`${apiURL}/post/createPost`, {
         method: 'POST',
         headers,
         body: JSON.stringify(data)
@@ -932,7 +923,7 @@ async function renameUsername() {
             newUsername
         }   
     
-        const response = await fetch(`${baseURL}/put/editUsername`, {
+        const response = await fetch(`${apiURL}/put/editUsername`, {
             method: 'PUT',
             headers,
             body: JSON.stringify(data)
