@@ -11,7 +11,7 @@ var headers = {
 
 var currentUserLogin = { }
 
-checkLogin()
+checkURLParams()
 
 async function checkURLParams() {
     const params = new URLSearchParams(window.location.search)
@@ -27,9 +27,10 @@ async function checkURLParams() {
 }
 
 function redirection() {
-    window.location.href = redirectURL
+    window.location.href = '/'
 }
 
+/*
 // LOGIN INFO 
 async function checkLogin() {
     var loginUserToken = false
@@ -43,6 +44,18 @@ async function checkLogin() {
     }
     
     if (!loginUserToken) return loginSplashScreen()
+}*/
+async function sendLoginRequest() {
+    const response = await fetch(`${apiURL}/auth/checkToken/`, {
+        method: 'GET',
+        headers,
+    })
+
+    return response
+}
+
+async function checkLogin() {
+    return loginSplashScreen()
 }
 
 // USER LOGIN SPLASH SCREEN 
@@ -104,6 +117,10 @@ async function sendLoginRequest() {
 }
 
 function saveLoginUser(userID, userToken, accessToken) {
+    //setCookie("accesstoken", accessToken , 365);
+    //setCookie("usertoken", userToken , 365);
+    //setCookie("userid", userID , 365);
+
     localStorage.setItem(LOCAL_STORAGE_LOGIN_USER_TOKEN, JSON.stringify({ userID, userToken, accessToken}))
 }
 
@@ -179,3 +196,9 @@ async function createNewUserRequest() {
 
     if (userData.login === true) return redirection()
 }
+/* function setCookie(cname,cvalue,exdays) {
+    var d = new Date();
+    d.setTime(d.getTime() + (exdays*24*60*60*1000));
+    var expires = "expires=" + d.toGMTString();
+    document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+} */

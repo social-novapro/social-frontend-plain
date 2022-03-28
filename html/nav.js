@@ -5,16 +5,26 @@ var pathArray = window.location.pathname.split( '/' );
 
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 
+console.log(config)
 var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
 var hostedURL = `${config ? `${config.current == "prod" ? config.prod.hosted_url : config.dev.hosted_url}` : 'https://interact-api.novapro.net/v1' }`
-console.log(hostedURL)
+var wsURL = `${config ? `${config.current == "prod" ? config.prod.websocket_url : config.dev.websocket_url}` : 'wss://interact-api.novapro.net/' }`
 
+var headers = {
+    "devtoken" : "6292d8ae-8c33-4d46-a617-4ac048bd6f11",
+    "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421"
+}
+
+console.log(hostedURL)
 console.log(baseUrl)
 console.log(pathArray)
 addNavigation()
 addTitle() 
 checkLogin()
 
+/*if ("WebSocket" in window) {
+    ws = new WebSocket(`${wsURL}stats`)
+}*/
 
 function addNavigation() {
     document.getElementById('navArea').innerHTML = `
@@ -36,18 +46,62 @@ async function signOut() {
     console.log(pathArray)
     localStorage.removeItem(LOCAL_STORAGE_LOGIN_USER_TOKEN);
     
-    if (pathArray[0] == "" || "begin") window.location.href = `${hostedURL}begin`
-    else window.location.href = `${hostedURL}begin?redirect=${pathArray[1]}`
+    if (pathArray[1] == "" || "begin") window.location.href = `/begin`
+    else window.location.href = `/begin?redirect=${pathArray[1]}`
+}
+
+async function sendLoginRequest() {
+    const response = await fetch(`${apiURL}/auth/checkToken/`, {
+        method: 'GET',
+        headers,
+    })
+
+    return response
+}
+
+async function redirectPage() {
+    if (pathArray[1]=="begin") return
+    else if (pathArray[1]=="") window.location.href='/begin'
+    else window.location.href=`/begin?redirect=${pathArray[1]}`
 }
 
 async function checkLogin() {
     const userStorageLogin = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
-
-    if (userStorageLogin) {
+    if (!userStorageLogin) return redirectPage()
+    else {
         currentUserLogin = JSON.parse(userStorageLogin)
-        loginUserToken = true
+
+        headers.accesstoken = currentUserLogin.accessToken
+        headers.usertoken = currentUserLogin.userToken
+        headers.userid = currentUserLogin.userID
     }
+
+    const response = await sendLoginRequest()
+    if (!response.ok) return redirectPage()
+
+    const userData = await response.json()
+
+    if (!userData.login) return redirectPage()
+    return
 }
+
+/* // GET REQUESTED COOKIE
+function getCookie(cname) {
+    var name = cname + "=";
+    var decodedCookie = decodeURIComponent(document.cookie);
+    var ca = decodedCookie.split(';');
+
+    for(var i = 0; i < ca.length; i++) {
+        var c = ca[i];
+        while (c.charAt(0) == ' ') {
+            c = c.substring(1);
+        } if (c.indexOf(name) == 0) {
+            return c.substring(name.length, c.length);
+        }
+    }
+
+    return "";
+}*/
 
 async function switchNav(pageVal) {
     switch (pageVal) {

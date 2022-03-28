@@ -31,9 +31,12 @@ async function checkLogin() {
     console.log('running 3')
 
     const userStorageLogin = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
-    console.log(userStorageLogin)
     if (userStorageLogin) {
         currentUserLogin = JSON.parse(userStorageLogin)
+        headers.accesstoken = currentUserLogin.accessToken
+        headers.usertoken = currentUserLogin.userToken
+        headers.userid = currentUserLogin.userID
+        console.log(headers)
         loginUserToken = true
     }
     console.log('running 4')
@@ -66,10 +69,25 @@ function checkWebSocket() {
         `
 
         ws = new WebSocket(`${wsURL}?userID=${currentUserLogin.userID}`)
+        ws.onopen = function() {
+           // ws.send({'test': 'test'})
+         //   ws.close()
+        }
 
         ws.onmessage = function (evt) { 
+            // console.log(evt)
             const data = JSON.parse(evt.data)
-            //console.log(data)
+            /*
+            const authSend = {
+                "type": 10,
+                "apiVersion": "1.0",
+                "userID": currentUserLogin.userID,
+                "tokens": headers,
+            };
+            console.log(authSend)
+            
+            ws.send(JSON.stringify(authSend));*/
+            // console.log(data)
             //console.log(data.type)
 
             switch (data.type) {
@@ -106,6 +124,25 @@ function checkWebSocket() {
                 case 09:
                     if (data.user._id == currentUserLogin.userID) return
                     else userTyping(data)
+                    break;
+                case 10:
+                    console.log(data)
+                    const authSend = {
+                        "type": 10,
+                        "apiVersion": "1.0",
+                        "userID": currentUserLogin.userID,
+                        "tokens": headers,
+                    };
+                    console.log(authSend)
+                    
+                    try {
+                        ws.send(JSON.stringify(authSend));
+                        console.log("sent?")
+
+                    }
+                    catch (e) {
+                        console.log(e)
+                    }
                     break;
                 default:
                     alert("unhandled event occured")
