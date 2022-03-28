@@ -12,7 +12,12 @@ var baseURL
 console.log(config.dev.websocket_url)
 var wsURL = `${config ? `${config.current == "prod" ? config.prod.websocket_url : config.dev.websocket_url}` : 'https://interact-api.novapro.net/v1' }`
 
-checkLogin()
+if (location.protocol !== 'https:' && location.hostname !== 'localhost' &&location.hostname!=='127.0.0.1') {
+    location.replace(`https:${location.href.substring(location.protocol.length)}`);
+}
+else {
+    checkLogin()
+}
 
 document.getElementById("messageTypingForm").addEventListener("submit", function (e) { e.preventDefault()})
 

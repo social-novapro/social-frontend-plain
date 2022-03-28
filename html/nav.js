@@ -1,6 +1,4 @@
-if (location.protocol !== 'https:' && location.hostname !== 'localhost' &&location.hostname!=='127.0.0.1') {
-    location.replace(`https:${location.href.substring(location.protocol.length)}`);
-}
+
 
 var loginUserToken
 var getUrl = window.location;
@@ -19,12 +17,18 @@ var headers = {
     "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421"
 }
 
+if (location.protocol !== 'https:' && location.hostname !== 'localhost' &&location.hostname!=='127.0.0.1') {
+    location.replace(`https:${location.href.substring(location.protocol.length)}`);
+}
+else {
+    addNavigation()
+    addTitle() 
+    checkLogin()
+}
+
 console.log(hostedURL)
 console.log(baseUrl)
 console.log(pathArray)
-addNavigation()
-addTitle() 
-checkLogin()
 
 /*if ("WebSocket" in window) {
     ws = new WebSocket(`${wsURL}stats`)

@@ -70,8 +70,12 @@ var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 
 var debug = false
 
-checkLogin()
-
+if (location.protocol !== 'https:' && location.hostname !== 'localhost' &&location.hostname!=='127.0.0.1') {
+    location.replace(`https:${location.href.substring(location.protocol.length)}`);
+}
+else {
+    checkLogin()
+}
 // CHANGES URL OF BROWSER
 function changeHeader(newLink) {
     let stateObj = { id: "100" };
