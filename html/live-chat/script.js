@@ -9,7 +9,7 @@ var sendTypeStop
 var amountTyping
 var baseURL
 
-console.log(config.dev.websocket_url)
+// console.log(config.dev.websocket_url)
 var wsURL = `${config ? `${config.current == "prod" ? config.prod.websocket_url : config.dev.websocket_url}` : 'https://interact-api.novapro.net/v1' }`
 
 if (location.protocol !== 'https:' && location.hostname !== 'localhost' &&location.hostname!=='127.0.0.1') {
@@ -33,7 +33,7 @@ function getTime() {
 }
 
 async function checkLogin() {
-    console.log('running 3')
+    // console.log'running 3')
 
     const userStorageLogin = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
     if (userStorageLogin) {
@@ -41,10 +41,10 @@ async function checkLogin() {
         headers.accesstoken = currentUserLogin.accessToken
         headers.usertoken = currentUserLogin.userToken
         headers.userid = currentUserLogin.userID
-        console.log(headers)
+        // console.logheaders)
         loginUserToken = true
     }
-    console.log('running 4')
+    // console.log'running 4')
 
     if (!loginUserToken) return window.location.href = "/begin/?live-chat";
     else return checkWebSocket()
@@ -66,7 +66,7 @@ function checkRoomID() {
 
 
 function checkWebSocket() {
-    console.log('running 5')
+    // console.log'running 5')
 
     if ("WebSocket" in window) {
         document.getElementById("actiondescription").innerHTML = `
@@ -131,22 +131,22 @@ function checkWebSocket() {
                     else userTyping(data)
                     break;
                 case 10:
-                    console.log(data)
+                    // console.logdata)
                     const authSend = {
                         "type": 10,
                         "apiVersion": "1.0",
                         "userID": currentUserLogin.userID,
                         "tokens": headers,
                     };
-                    console.log(authSend)
+                    // console.logauthSend)
                     
                     try {
                         ws.send(JSON.stringify(authSend));
-                        console.log("sent?")
+                        // console.log"sent?")
 
                     }
                     catch (e) {
-                        console.log(e)
+                        // console.loge)
                     }
                     break;
                 default:
@@ -169,7 +169,7 @@ function checkWebSocket() {
 }
 
 function clientStopTyping(typingTime) {
-    if (clientTypingAct.typingTime != typingTime) return console.log('/')
+    if (clientTypingAct.typingTime != typingTime) return // console.log'/')
 
     const messageSend = {
         type: 09,
@@ -219,7 +219,7 @@ function clientUserType() {
 function userTyping(data) {
     if (data.type==08) {
         var addUser = `<p id="userTyping-${data.user._id}">${data.user.username}</p>`//<p id="typingMainText"> is typing...</p>
-        if (document.getElementById(`userTyping-${data.user._id}`)) return console.log("user is already typing")
+        if (document.getElementById(`userTyping-${data.user._id}`)) return // console.log"user is already typing")
         else document.getElementById("userTyping").innerHTML += addUser
     }
     if (data.type==09) {
@@ -265,7 +265,7 @@ function editMessage(id) {
     document.getElementById(`editButton_${id}`).innerHTML = ''
     document.getElementById(`contentArea_${id}`).innerHTML = `
         <form class="contentMessage" onsubmit="submitEditedMessage('${id}')" id="editArea_${id}">
-            <input type="text" class="contentMessage" id="editMessageBar_${id}" placeholder="${oldMessage}">
+            <input type="text" class="contentMessage" id="editMessageBar_${id}" value="${oldMessage}">
         </form>
     `
     // <a onclick="cancelEdit('${id}')">Cancel</a>
@@ -397,6 +397,13 @@ function checkURLParams() {
     return {"param":false}
 }
 
+function getId(url) {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+
+    return (match && match[2].length === 11) ? match[2] : null;
+}
+
 function checkForImage(content) {
     const imageFormats = ['.jpg', '.png','.jpeg', '.svg', '.gif']
     const videoFormats = [{'urlEnd': '.mp4', "type": 'mp4'}, {'urlEnd':'.mov','type':'mp4'}, {'urlEnd':'.ogg', 'type': 'ogg'}]
@@ -424,6 +431,13 @@ function checkForImage(content) {
                         </video>
                     `
                 }
+            }
+            const videoId = getId(contentArgs[index]);
+
+            if (videoId) {
+                foundImage = true
+                const iframeMarkup = `<iframe width="320" height="240" src="https://www.youtube-nocookie.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+                contentArgs[index] = iframeMarkup
             }
         }
     }

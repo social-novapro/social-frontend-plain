@@ -74,7 +74,11 @@ if (location.protocol !== 'https:' && location.hostname !== 'localhost' &&locati
     location.replace(`https:${location.href.substring(location.protocol.length)}`);
 }
 else {
-    checkLogin()
+    if (!('fetch' in window)) {
+      if (debug) console.log('Fetch API not found, please upgrade your browser.');
+        showModal(`Please upgrade your browser to use Interact!`)
+    }
+    else checkLogin()
 }
 // CHANGES URL OF BROWSER
 function changeHeader(newLink) {
@@ -120,6 +124,53 @@ async function checkURLParams() {
     }
    
     return paramsInfo
+}
+
+function postElementCreate(post, user, type) {
+    var timesince
+    if (post.timePosted) timesince = checkDate(post.timePosted)
+    const imageContent = checkForImage(post.content)
+
+   // imageContent.attachments
+    if (imageContent.imageFound)if (debug) console.log(imageContent.attachments)
+    if (type=="basic"){
+        return `
+            <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'} | ${timesince}</p>
+            <div class="postContent" id="postContentArea_${post._id}">
+                <div class="textAreaPost">
+                    <p id="postContent_${post._id}">${imageContent.content}</p>
+                    ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
+                </div>
+            </div>
+        `
+    }
+    
+    return `
+        <div class="publicPost areaPost" id="postdiv_${post._id}">
+            <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'} | ${timesince}</p>
+            <div class="postContent" id="postContentArea_${post._id}">
+                <div class="textAreaPost">
+                    <p id="postContent_${post._id}">${imageContent.content}</p>
+                    ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
+                </div>
+                ${post.quoteReplyPostID && post.quotedPost && post.quotedUser ? `<hr><div>${postElementCreate(post.quotedPost, post.quotedUser, "basic")}</div>` : ''}
+
+                <div class="PostAttachments">
+                    ${imageContent.image ? `<div>${imageContent.attachments.map(function(attachment) {return `${attachment}`}).join(" ")}</div>`:''}
+                </div>
+            </div>
+            <p class="debug">${post._id} - from: ${post.userID}</p>
+            <div class="actionOptions pointerCursor"> 
+                <p>${post.totalLikes} likes</p>
+                <p>${post.totalReplies} comments</p>
+                <p id="quoteButton_${post._id}"><a onclick="quotePost('${post._id}')">quote post</a></p>
+                ${post.userID == currentUserLogin.userID ? `
+                <p onclick="deletePost('${post._id}')">delete post</p>
+                <p id='editButton_${post._id}'><a onclick="editPost('${post._id}')">edit post</a></p>
+            ` : '' }</p>
+            </div>
+        </div>
+    `
 }
 
 async function userPage(username) {
@@ -231,10 +282,10 @@ async function checkLogin() {
     const userStorageLogin = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
     if (userStorageLogin) {
         currentUserLogin = JSON.parse(userStorageLogin)
-        console.log(headers)
-        console.log(currentUserLogin.accessToken)
-        console.log(currentUserLogin.userToken)
-        console.log(currentUserLogin.userID)
+        if (debug) console.log(headers)
+        if (debug) console.log(currentUserLogin.accessToken)
+        if (debug) console.log(currentUserLogin.userToken)
+        if (debug) console.log(currentUserLogin.userID)
 
         headers.accesstoken = currentUserLogin.accessToken
         headers.usertoken = currentUserLogin.userToken
@@ -292,9 +343,9 @@ async function sendLoginRequest() {
     })
 
     // if (response.status != 200) 
-    console.log(response)
+    if (debug) console.log(response)
     const userData = await response.json()
-    console.log(userData)
+    if (debug) console.log(userData)
    //  currentUserLogin = userData.accessToken
     if (response.ok) {
         if (userData.public._id) currentUserLogin.userid = userData.public._id
@@ -368,9 +419,9 @@ async function createNewUserRequest() {
         headers,
         body: JSON.stringify(data)
     });
-    console.log(response)
+    if (debug) console.log(response)
     const responseParsed = await response.json()
-    console.log(responseParsed)
+    if (debug) console.log(responseParsed)
     if (response.ok) {
         // save user token to cookie
         // setCookie(currentUser,cvalue,exdays) {}
@@ -411,6 +462,8 @@ async function userHtml(userID) {
     var timesince
     if (profileData.userData.creationTimestamp) timesince = checkDate(profileData.userData.creationTimestamp)
     
+    profileData.postData.reverse()
+    // profileData.included.post ? profileData.postData.reverse() : profileData.postData = []
     document.getElementById("mainFeed").innerHTML =  `
         <div class="search">
             <p><b>Display Name</b></p>
@@ -446,22 +499,7 @@ async function userHtml(userID) {
             </div>
             <hr class="rounded">
             ${profileData.postData.map(function(post) {
-                var timesincePost
-                if (post.timePosted) timesincePost = checkDate(post.timePosted)
-                
-                return `
-                    <div class="publicPost areaPost" id="postdiv_${post._id}">
-                        <p class="${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}"> ${timesince}</p>
-                        <div class="postContent"> <p>${post.content}</p></div>
-                        <p class="debug">${post._id} - from: ${post.userID}</p>
-                        <div class="actionOptions"> 
-                            <p>${post.totalLikes} likes</p>
-                            <p>${post.totalReplies} comments</p>
-                            ${post.userID == currentUserLogin.userID ? `<p onclick="deletePost('${post._id}')">delete post</p>` : '' }</p>
-                        </div>
-                    </div>
-                    
-                `
+                return postElementCreate(post, profileData.userData)                
             }).join(" ")}
         ` : ``}
     `
@@ -513,7 +551,7 @@ function saveLoginUser(userLoginToken) {
     localStorage.setItem(LOCAL_STORAGE_LOGIN_USER_TOKEN, JSON.stringify(userLoginToken))
 }
 function checkLoginUser() {
-    console.log(localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN))
+  if (debug) console.log(localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN))
    //  localStorage.setItem(LOCAL_STORAGE_LOGIN_USER_TOKEN, JSON.stringify(userLoginToken))
 }
 
@@ -661,27 +699,16 @@ function checkMonth(month) {
 function buildView(posts) {
     if (searching) return
 
+   // const userDiv = document.createElement("div") 
+   // userDiv.innerHTML=`<div id="test"></div>`
+
+   // // document.getElementById("mainFeed").append(userDiv)
+   // document.getElementById('test').innerText=`test`
+
 
     document.getElementById("mainFeed").innerHTML = `
         ${posts.map(function(postArray) {
-            const post = postArray.postData
-            const user = postArray.userData
-
-            var timesince
-            if (post.timePosted) timesince = checkDate(post.timePosted)
-
-            return `
-                <div class="publicPost areaPost" id="postdiv_${post._id}">
-                    <p class="${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'} | ${timesince}</p>
-                    <div class="postContent"> <p>${post.content}</p></div>
-                    <p class="debug">${post._id} - from: ${post.userID}</p>
-                    <div class="actionOptions"> 
-                        <p>${post.totalLikes} likes</p>
-                        <p>${post.totalReplies} comments</p>
-                        ${post.userID == currentUserLogin.userID ? `<p onclick="deletePost('${post._id}')">delete post</p>` : '' }</p>
-                    </div>
-                </div>
-            `
+            return postElementCreate(postArray.postData, postArray.userData)
             /* 
             return `
                 <div class="postArea">
@@ -720,6 +747,103 @@ async function deletePost(postID) {
 
     if (response.status == 200) return document.getElementById(`postdiv_${postID}`).remove()
     else return showModal("Error", "Something went wrong, please try again later")
+}
+//postContent_${post._id}
+
+function editPost(postID) {
+    if (debug) console.log(`editing post ${postID}`)
+
+    const oldMessage = document.getElementById(`postContent_${postID}`).innerText
+
+    if (debug) console.log(oldMessage)
+    document.getElementById(`postContentArea_${postID}`).innerHTML = `
+        <form id="editPostForm" class="contentMessage"onsubmit="submitEdit('${postID}')">
+            <input type="text" id="editPostInput" class="contentMessage contentMessageFormEdit" value="${oldMessage}">
+        </form>
+    `
+    document.getElementById(`editButton_${postID}`).innerHTML=`<a onclick='cancelEdit("${postID}", "${oldMessage}")'>cancel edit</a>`
+   // editButton_${post._id}
+
+    document.getElementById(`editPostInput`).focus()
+    document.getElementById("editPostForm").addEventListener("submit", function (e) { e.preventDefault()})
+
+    // if (response.status == 200) return document.getElementById(`postdiv_${postID}`).remove()
+    // else return showModal("Error", "Something went wrong, please try again later")
+}
+
+function cancelEdit(postID, content) {
+    if (debug) console.log(`cancelling edit of post ${postID}`)
+    const imageContent = checkForImage(content)
+
+    document.getElementById(`postContentArea_${postID}`).innerHTML = `
+        <div class="textAreaPost">
+            <p id="postContent_${post._id}">${imageContent.content} </p>
+            ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
+        </div>
+        ${imageContent.image ? `<div>${imageContent.attachments.map(function(attachment) {return `${attachment}`}).join(" ")}</div>`:''}
+    `
+    document.getElementById(`editButton_${postID}`).innerHTML=`<a onclick='editPost("${postID}")'>edit post</a>`
+    return
+}
+
+async function submitEdit(postID) {
+    if (debug) console.log(postID)
+
+    const newEdit = document.getElementById('editPostInput').value
+    const data = {'postID': postID, 'content': newEdit}
+
+    const response = await fetch(`${apiURL}/put/editPost`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(data)
+    })
+    
+    if (debug) console.log(response)
+    if (!response.status == 200) return showModal("Error something went wrong, please try again later")
+
+    const editData = await response.json()
+
+    if (debug) console.log(editData)
+    const imageContent = checkForImage(editData.new.content)
+
+    document.getElementById(`editButton_${postID}`).innerHTML=`<a onclick='editPost("${postID}")'>edit post</a>`
+
+    return document.getElementById(`postContentArea_${postID}`).innerHTML = `
+        <div class="textAreaPost">
+            <p id="postContent_${postID}">${imageContent.content} </p>
+            ${editData.new.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
+        </div>
+        <div class="PostAttachments">
+            ${imageContent.image ? `<div>${imageContent.attachments.map(function(attachment) {return `${attachment}`}).join(" ")}</div>`:''}
+        </div>
+    `  
+}
+async function quotePost(postID) {
+    const postResponse = await fetch(`${apiURL}/get/post/${postID}`, { method: 'GET', headers})
+    if (!postResponse.ok) return showModal(`<h1>Error</h1><p>something went wrong</p>`)
+    const post = await postResponse.json()
+    const userResponse = await fetch(`${apiURL}/get/userByID/${post.userID}`, { method: 'GET', headers })
+        
+    if (!userResponse.ok) return showModal(`<h1>Error</h1><p>something went wrong</p>`)
+    const user = await userResponse.json()
+  if (debug) console.log(user)
+    await showModal(`
+        <h1>Create a new Post</h1>
+        <div class="postModalActions">
+            <p onclick="createPost({'quoteID':'${postID}'})">Upload Post</p>
+            <p onclick="closeModal()">Close</p>
+        </div>
+        <div class="post">
+            <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'}</p>
+            <div class="postContent" id="postContentArea_${post._id}">
+                <div class="textAreaPost">
+                    <p id="postContent_${post._id}">${post.content} </p>
+                    ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
+                </div>
+            </div>
+        </div>
+        <textarea class="postTextArea" id="newPostTextArea"></textarea>
+    `, "hide")
 }
 
 async function likePost(postID) {
@@ -782,7 +906,7 @@ async function searchResult(input) {
 
     if (debug) console.log("loading search")
 
-    console.log(data)
+    if (debug) console.log(data)
     
     if (!data.postsFound[0] && !data.usersFound[0]) return document.getElementById("mainFeed").innerHTML= `<div class="publicPost searchUser"><p>no results were found, try to seach something else.</div>`
     else console.log(data.postsFound)
@@ -802,32 +926,7 @@ async function searchResult(input) {
             `
         }).join(" ")}
         ${data.postsFound.reverse().map(function(postArray) {
-            var post = postArray.postData
-            var user = postArray.userData
-
-            var timesince
-            if (post.timePosted) timesince = checkDate(post.timePosted)
-          
-            return `
-                <div class="publicPost areaPost searchUser" id="postdiv_${post._id}">
-                    <p class="${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'} | ${timesince}</p>
-                    <div class="postContent"> <p>${post.content}</p></div>
-                    <p class="debug">${post._id} - from: ${post.userID}</p>
-                    <div class="actionOptions"> 
-                        <p>${post.totalLikes} likes</p>
-                        <p>${post.totalReplies} comments</p>
-                        ${post.userID == currentUserLogin.userID ? `<p onclick="deletePost('${post._id}')">delete post</p>` : '' }</p>
-                    </div>
-                </div>
-            `
-            /* old
-                <div class="publicPost searchUser">
-                    <h2>${user.displayName} @${user.username}</h2>
-                    <p>${timesince}</p>
-                    <p>${post.content}</p>
-                    <p class="debug">${post._id}</p>
-                </div>
-            */
+            return postElementCreate(postArray.postData, postArray.userData)
         }).join(" ")}
     `
 
@@ -865,13 +964,19 @@ async function createPost() {
 }
 */
 // PUBLISH WRITTEN POST
-async function createPost() {
+async function createPost(params) {
+    if (debug) console.log(params)
   //   var input = document.getElementById('postBarArea').value;
     var input = document.getElementById('newPostTextArea').value
 
+    var quoted 
+    if (params.quoteID) quoted = params.quoteID
+    else quoted='null'
+
     const data = { 
         "userID" : currentUserLogin.userID, 
-        "content" : input 
+        "content" : input,
+        "quoteReplyPostID" : quoted
     };
 
     closeModal()
@@ -894,7 +999,7 @@ async function createPost() {
 
 // BLANK FUNCTION FOR LATER BUTTONS TO LIKE / REPLY / REPOST
 function blankFunction(action) {
-    console.log(`a dummy ${action} was requested`)
+  console.log(`a dummy ${action} was requested`)
 }
 
 function removeEditUser() {
@@ -939,4 +1044,50 @@ async function renameUsername() {
             <p>Changed username! from ${newData.before.username} to ${newData.new.username}</p>
         `
     }
+}
+
+function getId(url) {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+
+    return (match && match[2].length === 11) ? match[2] : null;
+}
+    
+function checkForImage(content) {
+    const imageFormats = ['.jpg', '.png','.jpeg', '.svg', '.gif']
+    const videoFormats = [{'urlEnd': '.mp4', "type": 'mp4'}, {'urlEnd':'.mov','type':'mp4'}, {'urlEnd':'.ogg', 'type': 'ogg'}]
+
+    const contentArgs = content.split(/[ ]+/)
+    var foundImage = false
+
+    var attachments = []
+    for (index = 0; index < contentArgs.length; index++) {
+        if (contentArgs[index].startsWith('https://')) {
+            for (const imageFormat of imageFormats) {
+                if (contentArgs[index].endsWith(imageFormat)) {
+                    foundImage = true
+                   // contentArgs[index] = `<img class="messageImage" src="${contentArgs[index]}"></img>`
+                    attachments.push(`<img class="messageImage" width="100px" src="${contentArgs[index]}"></img>`)
+                }
+            }
+
+            for (const videoFormat of videoFormats) {
+                if (contentArgs[index].endsWith(videoFormat.urlEnd)) {
+                    foundImage = true
+                    //contentArgs[index] = `\n<video width="320" height="240" controls><source src="${contentArgs[index]}" type="video/${videoFormat.type}"></video>`
+                    attachments.push(`<video width="320" height="240" controls><source src="${contentArgs[index]}" type="video/${videoFormat.type}"></video>`)
+                }
+            }
+            const videoId = getId(contentArgs[index]);
+
+            if (videoId) {
+                foundImage = true
+                const iframeMarkup = `<iframe width="320" height="240" src="https://www.youtube-nocookie.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+               // contentArgs[index] = iframeMarkup
+                attachments.push(iframeMarkup)
+            }
+        }
+    }
+
+    return {"image" : foundImage, "content": contentArgs.join(" "), attachments}
 }

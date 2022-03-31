@@ -17,6 +17,9 @@
         var(--main-shadow-color);
     transition: transform 400ms, border-color 400ms, background-color 400ms;
 }
+.pointerCursor {
+    cursor: pointer;
+}
 .areaPost p {
     padding: 10px;
     text-align: left;
@@ -49,6 +52,13 @@
 }
 .mainButton {
     display: inline-block;
+}
+.contentMessageFormEdit {
+    border: none;
+    width: 100%;
+    background-color:  var(--main-button-color);
+    color: var(--main-a-color);
+
 }
 .debug {
     font-size: smaller;
@@ -179,6 +189,12 @@
     transition: transform 400ms, border-color 400ms, background-color 400ms;
 }
 */
+.textAreaPost {
+    display: flex;
+}
+.PostAttachments {
+    display: block;
+}
 .postContent {
     background-color:  rgba(44, 44, 44, 0.548);
     border: 2px solid var(--main-border-color);
@@ -196,4 +212,7 @@
 }
 .searchUser p{
     padding: 5px;
+}
+.edited i {
+    color: var(--hover-border-color)
 }
