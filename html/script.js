@@ -777,7 +777,7 @@ function cancelEdit(postID, content) {
 
     document.getElementById(`postContentArea_${postID}`).innerHTML = `
         <div class="textAreaPost">
-            <p id="postContent_${post._id}">${imageContent.content} </p>
+            <p id="postContent_${postID}">${imageContent.content}</p>
             ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
         </div>
         ${imageContent.image ? `<div>${imageContent.attachments.map(function(attachment) {return `${attachment}`}).join(" ")}</div>`:''}
