@@ -970,7 +970,7 @@ async function createPost(params) {
     var input = document.getElementById('newPostTextArea').value
 
     var quoted 
-    if (params.quoteID) quoted = params.quoteID
+    if (params?.quoteID) quoted = params.quoteID
     else quoted='null'
 
     const data = { 
