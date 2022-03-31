@@ -146,28 +146,29 @@ function postElementCreate(post, user, type) {
     }
     
     return `
-        <div class="publicPost areaPost" id="postdiv_${post._id}">
-            <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'} | ${timesince}</p>
-            <div class="postContent" id="postContentArea_${post._id}">
-                <div class="textAreaPost">
-                    <p id="postContent_${post._id}">${imageContent.content}</p>
-                    ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
+        <div id="postElement_${post._id}" class="postElement">
+            <div class="publicPost areaPost" id="postdiv_${post._id}">
+                <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'} | ${timesince}</p>
+                <div class="postContent" id="postContentArea_${post._id}">
+                    <div class="textAreaPost">
+                        <p id="postContent_${post._id}">${imageContent.content}</p>
+                        ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
+                    </div>
+                    ${post.quoteReplyPostID && post.quotedPost && post.quotedUser ? `<hr><div>${postElementCreate(post.quotedPost, post.quotedUser, "basic")}</div>` : ''}
+                    <div class="PostAttachments">
+                        ${imageContent.image ? `<div>${imageContent.attachments.map(function(attachment) {return `${attachment}`}).join(" ")}</div>`:''}
+                    </div>
                 </div>
-                ${post.quoteReplyPostID && post.quotedPost && post.quotedUser ? `<hr><div>${postElementCreate(post.quotedPost, post.quotedUser, "basic")}</div>` : ''}
-
-                <div class="PostAttachments">
-                    ${imageContent.image ? `<div>${imageContent.attachments.map(function(attachment) {return `${attachment}`}).join(" ")}</div>`:''}
+                <p class="debug">${post._id} - from: ${post.userID}</p>
+                <div class="actionOptions pointerCursor"> 
+                    <p>${post.totalLikes} likes</p>
+                    <p>${post.totalReplies} comments</p>
+                    <p id="quoteButton_${post._id}"><a onclick="quotePost('${post._id}')">quote post</a></p>
+                    ${post.userID == currentUserLogin.userID ? `
+                    <p onclick="deletePost('${post._id}')">delete post</p>
+                    <p id='editButton_${post._id}'><a onclick="editPost('${post._id}', '${post.edited}')">edit post</a></p>
+                ` : '' }</p>
                 </div>
-            </div>
-            <p class="debug">${post._id} - from: ${post.userID}</p>
-            <div class="actionOptions pointerCursor"> 
-                <p>${post.totalLikes} likes</p>
-                <p>${post.totalReplies} comments</p>
-                <p id="quoteButton_${post._id}"><a onclick="quotePost('${post._id}')">quote post</a></p>
-                ${post.userID == currentUserLogin.userID ? `
-                <p onclick="deletePost('${post._id}')">delete post</p>
-                <p id='editButton_${post._id}'><a onclick="editPost('${post._id}')">edit post</a></p>
-            ` : '' }</p>
             </div>
         </div>
     `
@@ -750,7 +751,7 @@ async function deletePost(postID) {
 }
 //postContent_${post._id}
 
-function editPost(postID) {
+function editPost(postID, edited) {
     if (debug) console.log(`editing post ${postID}`)
 
     const oldMessage = document.getElementById(`postContent_${postID}`).innerText
@@ -761,7 +762,7 @@ function editPost(postID) {
             <input type="text" id="editPostInput" class="contentMessage contentMessageFormEdit" value="${oldMessage}">
         </form>
     `
-    document.getElementById(`editButton_${postID}`).innerHTML=`<a onclick='cancelEdit("${postID}", "${oldMessage}")'>cancel edit</a>`
+    document.getElementById(`editButton_${postID}`).innerHTML=`<a onclick='cancelEdit("${postID}", "${oldMessage}", "${edited}")'>cancel edit</a>`
    // editButton_${post._id}
 
     document.getElementById(`editPostInput`).focus()
@@ -771,19 +772,20 @@ function editPost(postID) {
     // else return showModal("Error", "Something went wrong, please try again later")
 }
 
-function cancelEdit(postID, content) {
+async function cancelEdit(postID, content, edited) {
     if (debug) console.log(`cancelling edit of post ${postID}`)
-    const imageContent = checkForImage(content)
 
-    document.getElementById(`postContentArea_${postID}`).innerHTML = `
-        <div class="textAreaPost">
-            <p id="postContent_${postID}">${imageContent.content}</p>
-            ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
-        </div>
-        ${imageContent.image ? `<div>${imageContent.attachments.map(function(attachment) {return `${attachment}`}).join(" ")}</div>`:''}
-    `
-    document.getElementById(`editButton_${postID}`).innerHTML=`<a onclick='editPost("${postID}")'>edit post</a>`
-    return
+    const postData = await fetch(`${apiURL}/get/post/${postID}`, { method: 'GET', headers})
+    if (!postData.ok) return showModal("Error", "Something went wrong, please try again later")
+    const post = await postData.json()
+    if (debug) console.log(post)
+    const userData = await fetch(`${apiURL}/get/userByID/${post.userID}`, { method: 'GET', headers})
+    if (debug) console.log(userData)
+    if (!userData.ok) return showModal("Error", "Something went wrong, please try again later")
+
+    const user = await userData.json()
+    if (debug) console.log(user)
+    return document.getElementById(`postElement_${postID}`).innerHTML = postElementCreate(post, user)
 }
 
 async function submitEdit(postID) {
