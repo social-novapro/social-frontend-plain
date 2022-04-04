@@ -243,8 +243,8 @@ function addToList(data, content, user, timeStamp, message) {
             </div>
             ${data.type==2 && user._id == currentUserLogin.userID  ?  `
                 <div class="messageActions">
-                    <p id="deleteButton_${data._id}"><a onclick="deleteMessage('${data._id}')">Delete</a><p>
-                    <p id="editButton_${data._id}"><a onclick="editMessage('${data._id}')">Edit</a><p>
+                    <p id="deleteButton_${data._id}"><p onclick="deleteMessage('${data._id}')">Delete</p></p>
+                    <div id="editButton_${data._id}"><p onclick="editMessage('${data._id}', '${data.message.edited ? true : false}')">Edit</p></div>
                 </div>
             ` : `` }
         </div>
@@ -255,14 +255,18 @@ function addToList(data, content, user, timeStamp, message) {
     objDiv.scrollTop = objDiv.scrollHeight;
 }
 
-/*
-function cancelEdit(id) {
-    document.getElementById(`contentMainArea_${id}`).innerHTML = `<p class="contentMessage" id="contentArea_${id}">${messageSend.editMessage.content}</p><p class="edited"><i>(edited)</i></p>`
+
+function cancelEdit(id, content, edited) {
+    document.getElementById(`contentMainArea_${id}`).innerHTML = `
+        <p class="contentMessage" id="contentArea_${id}">${content}</p>
+        ${edited ? '<p class="edited contentMessage"><i>(edited)</i></p>' : ''}
+    `
+    document.getElementById(`editButton_${id}`).innerHTML = `<p onclick="editMessage('${id}', '${edited ? true : false}')">Edit</p>`
 }
-*/
-function editMessage(id) {
+
+function editMessage(id, edited) {
     const oldMessage = document.getElementById(`contentArea_${id}`).innerHTML
-    document.getElementById(`editButton_${id}`).innerHTML = ''
+    document.getElementById(`editButton_${id}`).innerHTML = `<a onclick="cancelEdit('${id}', '${oldMessage}', '${edited}')">Cancel</a>`
     document.getElementById(`contentArea_${id}`).innerHTML = `
         <form class="contentMessage" onsubmit="submitEditedMessage('${id}')" id="editArea_${id}">
             <input type="text" class="contentMessage" id="editMessageBar_${id}" value="${oldMessage}">
@@ -291,7 +295,7 @@ function submitEditedMessage(id) {
 
     ws.send(JSON.stringify(messageSend))
 
-    document.getElementById(`editButton_${id}`).innerHTML=`<a onclick="editMessage('${id}')">Edit</a>`
+    document.getElementById(`editButton_${id}`).innerHTML=`<p onclick="editMessage('${id}')">Edit</p>`
     document.getElementById(`contentMainArea_${id}`).innerHTML = `<p class="contentMessage" id="contentArea_${id}">${messageSend.editMessage.content}</p><p class="edited"><i>(edited)</i></p>`
 }
 
@@ -417,7 +421,7 @@ function checkForImage(content) {
                 if (contentArgs[index].endsWith(imageFormat)) {
                     foundImage = true
                     contentArgs[index] = `
-                        <img class="messageImage" src="${contentArgs[index]}"></img>
+                        <img alt="userImage" class="messageImage" src="${contentArgs[index]}"></img>
                     `
                 }
             }
@@ -426,7 +430,7 @@ function checkForImage(content) {
                 if (contentArgs[index].endsWith(videoFormat.urlEnd)) {
                     foundImage = true
                     contentArgs[index] = `
-                        <video width="320" height="240" controls>
+                        <video alt="uservideo" width="320" height="240" controls>
                             <source src="${contentArgs[index]}" type="video/${videoFormat.type}">
                         </video>
                     `
@@ -436,7 +440,7 @@ function checkForImage(content) {
 
             if (videoId) {
                 foundImage = true
-                const iframeMarkup = `<iframe width="320" height="240" src="https://www.youtube-nocookie.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+                const iframeMarkup = `<iframe title="uservideo" width="320" height="240" src="https://www.youtube-nocookie.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
                 contentArgs[index] = iframeMarkup
             }
         }

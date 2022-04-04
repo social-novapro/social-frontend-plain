@@ -1,6 +1,6 @@
 <!DOCTYPE HTML>
 <!--BASE IDEA OF CODE FROM https://www.tutorialspoint.com/html5/html5_websocket.htm-->
-<html>
+<html lang="en">
    <head>
         <title>Live Chat - Interact</title>
         <meta name="apple-mobile-web-app-capable" content="yes">
@@ -11,10 +11,13 @@
         <link rel="icon" type="image/png" href="/favicon.ico">
         <meta property="og:image" content="/apple-touch-icon.png">
         <meta property="og:title" content="Interact">
-	    <meta property="og:description" content="Modern Social Network Rethought."/>
+	    <meta property="og:description" content="Modern Social Network Rethought; Live chat."/>
+	    <meta name="description" content="Modern Social Network Rethought; Live chat."/>
 	    <meta property="og:url" content="https://www.interact.novapro.net/live-chat"/>
 	    <meta property="og:type" content="website"/>
     	<meta property="og:site_name" content="Interact"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#1c1c1e"/>
         <link rel="stylesheet" type="text/css" href="./style.css">
         <link rel="stylesheet" type="text/css" href="/mainStyle.css">
    </head>
@@ -31,7 +34,7 @@
                         <input type="text" id="messageBar" placeholder="Type your message!">
                     </form>
                 </div>
-                <a class="sendButton" onclick="sendmessage()">Send message</a>
+                <p class="sendButton" onclick="sendmessage()">Send message</p>
                 <div id="userTyping"></div>
                 <div id="messages" class="allMessages"></div>
                 <div id="onlinePeople" class="onlinePeople"></div>

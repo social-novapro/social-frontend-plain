@@ -163,10 +163,10 @@ function postElementCreate(post, user, type) {
                 <div class="actionOptions pointerCursor"> 
                     <p>${post.totalLikes} likes</p>
                     <p>${post.totalReplies} comments</p>
-                    <p id="quoteButton_${post._id}"><a onclick="quotePost('${post._id}')">quote post</a></p>
+                    <p id="quoteButton_${post._id}"><p onclick="quotePost('${post._id}')">quote post</p></p>
                     ${post.userID == currentUserLogin.userID ? `
                     <p onclick="deletePost('${post._id}')">delete post</p>
-                    <p id='editButton_${post._id}'><a onclick="editPost('${post._id}', '${post.edited}')">edit post</a></p>
+                    <p id='editButton_${post._id}'><p onclick="editPost('${post._id}', '${post.edited}')">edit post</p></p>
                 ` : '' }</p>
                 </div>
             </div>
@@ -762,7 +762,7 @@ function editPost(postID, edited) {
             <input type="text" id="editPostInput" class="contentMessage contentMessageFormEdit" value="${oldMessage}">
         </form>
     `
-    document.getElementById(`editButton_${postID}`).innerHTML=`<a onclick='cancelEdit("${postID}", "${oldMessage}", "${edited}")'>cancel edit</a>`
+    document.getElementById(`editButton_${postID}`).innerHTML=`<p onclick='cancelEdit("${postID}", "${oldMessage}", "${edited}")'>cancel edit</p>`
    // editButton_${post._id}
 
     document.getElementById(`editPostInput`).focus()
@@ -1069,7 +1069,7 @@ function checkForImage(content) {
                 if (contentArgs[index].endsWith(imageFormat)) {
                     foundImage = true
                    // contentArgs[index] = `<img class="messageImage" src="${contentArgs[index]}"></img>`
-                    attachments.push(`<img class="messageImage" width="100px" src="${contentArgs[index]}"></img>`)
+                    attachments.push(`<img alt="userImage" class="messageImage" width="100px" src="${contentArgs[index]}"></img>`)
                 }
             }
 
@@ -1077,14 +1077,14 @@ function checkForImage(content) {
                 if (contentArgs[index].endsWith(videoFormat.urlEnd)) {
                     foundImage = true
                     //contentArgs[index] = `\n<video width="320" height="240" controls><source src="${contentArgs[index]}" type="video/${videoFormat.type}"></video>`
-                    attachments.push(`<video width="320" height="240" controls><source src="${contentArgs[index]}" type="video/${videoFormat.type}"></video>`)
+                    attachments.push(`<video alt="uservideo" width="320" height="240" controls><source src="${contentArgs[index]}" type="video/${videoFormat.type}"></video>`)
                 }
             }
             const videoId = getId(contentArgs[index]);
 
             if (videoId) {
                 foundImage = true
-                const iframeMarkup = `<iframe width="320" height="240" src="https://www.youtube-nocookie.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+                const iframeMarkup = `<iframe title="uservideo" width="320" height="240" src="https://www.youtube-nocookie.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
                // contentArgs[index] = iframeMarkup
                 attachments.push(iframeMarkup)
             }
