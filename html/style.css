@@ -1,4 +1,14 @@
-.search {
+.search:hover {
+    border-color:rgba(39, 113, 240, 0.9);
+}
+.search input {
+    color: var(--main-a-color);
+    width: 90%;
+    background-color:  var(--main-button-color);
+    outline: none;
+    border: none;
+}
+.searchSelect {
     background-color:  var(--main-button-color);
     border: 2px solid var(--main-border-color);
     overflow-wrap: break-word;
@@ -17,6 +27,28 @@
         var(--main-shadow-color);
     transition: transform 400ms, border-color 400ms, background-color 400ms;
 }
+.userInfo {
+    background-color:  var(--main-button-color);
+    border: 2px solid var(--main-border-color);
+    overflow-wrap: break-word;
+    margin-left: 20%;
+    margin-right: 20%;
+    margin-top: 20px;
+    /*
+        display: inline-block;
+    */
+    text-decoration: none;
+    color: var(--main-a-color);
+    text-align: center;
+    padding: 15px;
+    border-radius: 15px;
+    box-shadow: 
+        var(--main-shadow-color);
+    transition: transform 400ms, border-color 400ms, background-color 400ms;
+}
+.searchBar {
+    text-align: left;
+}
 .pointerCursor {
     cursor: pointer;
 }
@@ -24,13 +56,7 @@
     padding: 10px;
     text-align: left;
 }
-.search input {
-    color: var(--main-a-color);
-    width: 90%;
-    background-color:  var(--main-button-color);
-    outline: none;
-    border: none;
-}
+
 .publicPost {
     background-color:  var(--main-button-color);
     border: 2px solid var(--main-border-color);

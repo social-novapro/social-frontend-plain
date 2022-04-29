@@ -42,6 +42,7 @@ function addNavigation() {
             <div id="page3Nav"><button class="buttonStyled"  onclick="switchNav(3)" id="page3">DevMode</button></div>
             <div id="page4Nav"><button class="buttonStyled"  onclick="createPostModal()" id="page4">Create Post</button></div>
             <div id="page5Nav"><button class="buttonStyled"  onclick="signOut()" id="page5">Sign Out</button></div>
+            <div id="searchBar"><button class="buttonStyled" onclick="activeSearchBar()" id="page6">Search</button></div>
         </div>
     `
 }

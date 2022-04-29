@@ -466,35 +466,35 @@ async function userHtml(userID) {
     profileData.postData.reverse()
     // profileData.included.post ? profileData.postData.reverse() : profileData.postData = []
     document.getElementById("mainFeed").innerHTML =  `
-        <div class="search">
+        <div class="userInfo">
             <p><b>Display Name</b></p>
             <p>${profileData.userData.displayName}</p>
         </div>
-        <div class="search">
+        <div class="userInfo">
             <p><b>Username</b></p>
             <p>${profileData.userData.username}</p>
         </div>
-        <div class="search">
+        <div class="userInfo">
             <p><b>Description</b></p>
             <p>${profileData.userData.description}</p>
         </div> 
         ${profileData.userData.pronouns ? 
             `
-                <div class="search"><p><b>Pronouns</b></p>
+                <div class="userInfo"><p><b>Pronouns</b></p>
                     <p>${profileData.userData.pronouns}</p>
                 </div>
             ` : ``
         }
         ${profileData.userData.creationTimestamp ? 
             `  
-                <div class="search">
+                <div class="userInfo">
                     <p><b>Creation</b></p>
                     <p>${timesince}</p>
                 </div>
             `: ``
         }
         ${profileData.included.posts ? `
-            <div class="search">
+            <div class="userInfo">
                 <p><b>Posts</b></p>
                 <p>${profileData.postData.length}</p>
             </div>
@@ -510,16 +510,27 @@ async function userHtml(userID) {
 
 // MAKES SEARCH BAR APPEAR
 function searchBar() {
-    document.getElementById("searchBar").innerHTML = `
-        <div class="search">
-            <input type="text" id="searchBarArea" onkeyup="searchSocial()" placeholder="Search for Posts and Users...">
+}
+function activeSearchBar() {
+    document.getElementById("searchArea").innerHTML = `
+        <div class="searchSelect search">
+            <input id="searchBarArea" onkeyup="searchSocial()" placeholder="Search for Posts and Users...">
         </div>
+    `
+    document.getElementById('searchBar').innerHTML = `
+        <button class="buttonStyled" onclick="unactiveSearchBar()" id="page6">Remove Search</button>
+    `
+}
+function unactiveSearchBar() {
+    document.getElementById("searchArea").innerHTML = ``
+    document.getElementById('searchBar').innerHTML = `
+        <button class="buttonStyled" onclick="activeSearchBar()" id="page6">Search</button>
     `
 }
 
 function postBar() {
     document.getElementById("postBar").innerHTML = `
-        <div class="search">
+        <div class="userInfo">
             <input type="text" id="postBarArea" placeholder="Type out your next update...">
             <button class="buttonStyled" onclick="postbarPublish()">Publish Update</button>
         </div>
@@ -538,10 +549,10 @@ async function signupSocial() {
             <div class="main-feed">
                 <h1>Dummy signup page</h1>
             </div>
-            <div class="search">
+            <div class="userInfo">
                 <input type="text" id="usernameProfile" placeholder="Your username">
             </div>
-                <div class="search">
+                <div class="userInfo">
                 <input type="text" id="displaynameProfile" placeholder="Your displayname">
             </div>
         </div>
