@@ -266,7 +266,7 @@ function cancelEdit(id, content, edited) {
 
 function editMessage(id, edited) {
     const oldMessage = document.getElementById(`contentArea_${id}`).innerHTML
-    document.getElementById(`editButton_${id}`).innerHTML = `<a onclick="cancelEdit('${id}', '${oldMessage}', '${edited}')">Cancel</a>`
+    document.getElementById(`editButton_${id}`).innerHTML = `<p onclick="cancelEdit('${id}', '${oldMessage}', '${edited}')">Cancel</p>`
     document.getElementById(`contentArea_${id}`).innerHTML = `
         <form class="contentMessage" onsubmit="submitEditedMessage('${id}')" id="editArea_${id}">
             <input type="text" class="contentMessage" id="editMessageBar_${id}" value="${oldMessage}">

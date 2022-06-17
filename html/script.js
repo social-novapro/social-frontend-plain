@@ -161,7 +161,7 @@ function postElementCreate(post, user, type) {
                 </div>
                 <p class="debug">${post._id} - from: ${post.userID}</p>
                 <div class="actionOptions pointerCursor"> 
-                    <p>${post.totalLikes} likes</p>
+                    <p onclick="likePost('${post._id}')" id="likePost_${post._id}">${post.totalLikes} likes</p>
                     <p>${post.totalReplies} comments</p>
                     <p id="quoteButton_${post._id}"><p onclick="quotePost('${post._id}')">quote post</p></p>
                     ${post.userID == currentUserLogin.userID ? `
@@ -839,7 +839,7 @@ async function quotePost(postID) {
         
     if (!userResponse.ok) return showModal(`<h1>Error</h1><p>something went wrong</p>`)
     const user = await userResponse.json()
-  if (debug) console.log(user)
+    if (debug) console.log(user)
     await showModal(`
         <h1>Create a new Post</h1>
         <div class="postModalActions">
@@ -865,10 +865,12 @@ async function likePost(postID) {
     const data = await response.json()
 
     if (debug) console.log(data)
-
-    if (data.ok) {
-        getFeed()
-    }
+    if (!response.ok) return 
+    // const likeElemenet = document.getElementById(`likePost_${postID}`)
+    // if (likeElemenet.classList.contains("likedColour")) likeElemenet.classList.remove("likedColour");
+    // else if (data.totalLikes > likeElemenet.innerText.replace(" likes", "") || !likeElemenet.classList.contains("likedColour")) likeElemenet.classList.add("likedColour");
+    document.getElementById(`likePost_${postID}`).classList.add("likedColour");
+    document.getElementById(`likePost_${postID}`).innerText = `${data.totalLikes} likes`
 }
 
 // USER DATA FOR FEED
