@@ -165,15 +165,26 @@ function postElementCreate(post, user, type) {
                     <p>${post.totalReplies} comments</p>
                     <p id="quoteButton_${post._id}"><p onclick="quotePost('${post._id}')">quote post</p></p>
                     ${post.userID == currentUserLogin.userID ? `
-                    <p onclick="deletePost('${post._id}')">delete post</p>
-                    <p id='editButton_${post._id}'><p onclick="editPost('${post._id}', '${post.edited}')">edit post</p></p>
-                ` : '' }</p>
+                        <p onclick="deletePost('${post._id}')">delete post</p>
+                        <p id='editButton_${post._id}'><p onclick="editPost('${post._id}', '${post.edited}')">edit post</p></p>
+                    ` : '' }</p>
+                    <p id="popupactions_${post._id}" onclick="popupActions('${post._id}')">more</p>
                 </div>
             </div>
         </div>
     `
 }
 
+async function popupActions(postID) {
+    var elementPopup = document.getElementById(`popupOpen_${postID}`)
+    if (elementPopup) return elementPopup.remove()
+
+    document.getElementById(`postElement_${postID}`).innerHTML+=`
+        <div id="popupOpen_${postID}" class="publicPost"  style="position: element(#popupactions_${postID});">
+            <p>test</p>
+        </div>
+    `
+}
 async function userPage(username) {
     searching = true
 
