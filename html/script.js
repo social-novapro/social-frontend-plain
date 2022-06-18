@@ -176,15 +176,36 @@ function postElementCreate(post, user, type) {
 }
 
 async function popupActions(postID) {
-    var elementPopup = document.getElementById(`popupOpen_${postID}`)
-    if (elementPopup) return elementPopup.remove()
+    var elementPopup = document.getElementById(`popupOpen_${postID}`);
+    if (elementPopup) return elementPopup.remove();
 
     document.getElementById(`postElement_${postID}`).innerHTML+=`
-        <div id="popupOpen_${postID}" class="publicPost"  style="position: element(#popupactions_${postID});">
-            <p>test</p>
+        <div id="popupOpen_${postID}" class="publicPost" style="position: element(#popupactions_${postID});">
+            <p>Menu Actions</p>
+            <p>---</p>
+            <p onclick="showEditHistory('${postID}')" id="editHistory_${postID}">Check Edit History</p>
         </div>
-    `
-}
+    `;
+};
+
+async function showEditHistory(postID) {
+    const response = await fetch(`${apiURL}/get/postEditHistory/${postID}`, {
+        method: 'GET',
+        headers,
+    });
+
+    const editData = await response.json();
+    if (debug) console.log(editData);
+    if (!response.ok || !editData.edits) return document.getElementById(`editHistory_${postID}`).innerHTML = `Could not find any edits.`;
+
+    var newElement = `<p>Edit History:</p>`;
+    for (const edit of editData.edits) {
+        newElement+=`<p>${edit.content}</p>`
+    };
+
+    document.getElementById(`editHistory_${postID}`).innerHTML=newElement;
+};
+
 async function userPage(username) {
     searching = true
 
