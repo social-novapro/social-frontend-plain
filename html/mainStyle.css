@@ -16,7 +16,7 @@
         rgb(0, 0, 0) 12px 12px -15px, 
         rgb(0, 0, 0) 12px -12px 15px, 
         rgb(0, 0, 0) 12px -12px -15px;
-    --nav-link-shadow: 0px 0px 20px 0px rgba(0, 0, 0, 0.56) ;
+    --nav-link-shadow: 0px 0px 20px 0px rgba(0, 0, 0, 0.56);
     /* Border Colors (x2) */
     --main-border-color:rgb(107, 107, 107);
     --hover-border-color: rgba(39, 113, 240, 0.9);
@@ -29,6 +29,22 @@
     --main-a-color: rgb(218, 218, 218); 
     --main-p-color: rgb(201, 201, 201); 
     --fa-secondary-colour:  rgb(184, 184, 184);;
+}
+.buttonStyle2 {
+    background-color: rgb(44, 44, 46, 0.95);
+    border:none;
+    float: left;
+    display: block;
+    text-align: center;
+    text-decoration: none;   
+    padding: 20px;
+    background-color: var(--hover-border-color);
+    box-shadow: 0 5px 0 rgba(9, 74, 186, 0.9);
+    transition: transform 0.1s ease-out;
+}
+.buttonStyle2:active {
+    box-shadow: none;
+    transform: translateY(5px);
 }
 h1 {
     color: var(--main-h1-color)
@@ -74,7 +90,6 @@ p {
 .debug-shown {
     display:block;
 }
-
 .nav { 
     background-color: rgb(44, 44, 46, 0.95);
     padding: 20px;

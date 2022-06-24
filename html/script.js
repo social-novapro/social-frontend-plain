@@ -135,7 +135,7 @@ function postElementCreate(post, user, type) {
     if (imageContent.imageFound)if (debug) console.log(imageContent.attachments)
     if (type=="basic"){
         return `
-            <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'} | ${timesince}</p>
+            <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'} | ${timesince}</p>
             <div class="postContent" id="postContentArea_${post._id}">
                 <div class="textAreaPost">
                     <p id="postContent_${post._id}">${imageContent.content}</p>
@@ -148,7 +148,7 @@ function postElementCreate(post, user, type) {
     return `
         <div id="postElement_${post._id}" class="postElement">
             <div class="publicPost areaPost" id="postdiv_${post._id}">
-                <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'} | ${timesince}</p>
+                <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'} | ${timesince}</p>
                 <div class="postContent" id="postContentArea_${post._id}">
                     <div class="textAreaPost">
                         <p id="postContent_${post._id}">${imageContent.content}</p>
@@ -226,27 +226,35 @@ async function userPage(username) {
     document.getElementById("mainFeed").innerHTML = `
         <div class="publicPost signInDiv" id="userAccountPage"></div>
     `
+
     if (userData.displayName && userData.username) {
         document.getElementById("userAccountPage").innerHTML += `
             <h1>${userData.displayName} - @${userData.username}</h1>
         `
-    }
-    else if (userData.displayName && !userData.username) {
+    } else if (userData.displayName && !userData.username) {
         document.getElementById("userAccountPage").innerHTML += `
             <h1>${userData.displayName} - @(unknown))</h1>
         `
-    }
-    else if (!userData.displayName && userData.username) {
+    } else if (!userData.displayName && userData.username) {
         document.getElementById("userAccountPage").innerHTML / `
             <h1>(unknown) - @${userData.username}</h1>
+        `
+    }
+
+    if (userData.verified) {
+        document.getElementById("userAccountPage").innerHTML += `
+            <p>Verified</p>
+        `
+    } else {
+        document.getElementById("userAccountPage").innerHTML += `
+            <p>Not Verified</p>
         `
     }
     if (userData.description) {
         document.getElementById("userAccountPage").innerHTML += `
             <p>${userData.description}</p>
         `
-    }
-    else {
+    } else {
         document.getElementById("userAccountPage").innerHTML += `
             <p>There is no description for this user.</p>
         `
@@ -510,6 +518,30 @@ async function userHtml(userID) {
             <p><b>Description</b></p>
             <p>${profileData.userData.description}</p>
         </div> 
+        ${profileData.verified ? 
+            `
+                <div class="userInfo">
+                    <p>Verified</p>
+                </div>
+            ` : `
+                ${profileData.userData._id == currentUserLogin.userID ? 
+                `
+                    <div class="userInfo">
+                        <p><b>Verify ✔️</b></p>
+                        <div class="searchSelect search">
+                            <input id="content_request_verification"  placeholder="Why do you want to verify?">
+                            <button onclick="requestVerification()">Request</button>
+                        </div>
+                    </div>
+                ` : ``}
+            `
+            /*
+             <form onsubmit="requestVerification()" id="verifyUserForm">
+                    <input type="text" id="content_request_verification" placeholder="Why do you want to verify?">
+                </form>
+            */
+        }   
+    
         ${profileData.userData.pronouns ? 
             `
                 <div class="userInfo"><p><b>Pronouns</b></p>
@@ -540,9 +572,41 @@ async function userHtml(userID) {
     return document.getElementById("page2Nav").innerHTML = `<div id="page2Nav"><button class="buttonStyled"  onclick="switchNav(5)" id="page2">Home</button>`
 }
 
+async function requestVerification() {
+    var input = document.getElementById('content_request_verification').value
+    if (debug) console.log(input)
+
+    const data = { 
+        "content" : input,
+    };
+2
+    // closeModal()
+
+    if (debug) console.log(currentUserLogin) 
+    if (debug) console.log(data)
+
+    fetch(`${apiURL}/post/requestVerify`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data)
+    }).then(res => {
+        console.log(res)
+    })
+    /*const response = await fetch(`${apiURL}/post/requestVerify`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data)
+    });*/
+
+    // const verification = await response.json()
+    // if (debug) console.log(verification)
+}
+
 // MAKES SEARCH BAR APPEAR
 function searchBar() {
+
 }
+
 function activeSearchBar() {
     document.getElementById("searchArea").innerHTML = `
         <div class="searchSelect search">
@@ -562,11 +626,17 @@ function unactiveSearchBar() {
 
 function postBar() {
     document.getElementById("postBar").innerHTML = `
-        <div class="userInfo">
-            <input type="text" id="postBarArea" placeholder="Type out your next update...">
-            <button class="buttonStyled" onclick="postbarPublish()">Publish Update</button>
-        </div>
+        <form id="searchBar" class="searchSelect search" onsubmit="createPost()">
+            <input type="text" id="newPostTextArea" placeholder="Type out your next update...">
+        </form>
     `
+
+    /* 
+    <div class="searchSelect search">
+        <input type="text" id="postBarArea" placeholder="Type out your next update...">
+        <button class="buttonStyled" onclick="postbarPublish()">Publish Update</button>
+    </div>
+    */
 }
 
 // MAKES SEARCHBAR DISAPPEAR
@@ -594,11 +664,11 @@ async function signupSocial() {
 function saveLoginUser(userLoginToken) {
     localStorage.setItem(LOCAL_STORAGE_LOGIN_USER_TOKEN, JSON.stringify(userLoginToken))
 }
+
 function checkLoginUser() {
   if (debug) console.log(localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN))
    //  localStorage.setItem(LOCAL_STORAGE_LOGIN_USER_TOKEN, JSON.stringify(userLoginToken))
 }
-
 
 // DEBUGGING MODE
 function devMode() {
@@ -1015,6 +1085,7 @@ async function createPost(params) {
     if (debug) console.log(params)
   //   var input = document.getElementById('postBarArea').value;
     var input = document.getElementById('newPostTextArea').value
+    if (debug) console.log(input)
 
     var quoted 
     if (params?.quoteID) quoted = params.quoteID
