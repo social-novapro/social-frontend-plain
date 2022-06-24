@@ -183,10 +183,29 @@ async function popupActions(postID) {
         <div id="popupOpen_${postID}" class="publicPost" style="position: element(#popupactions_${postID});">
             <p>Menu Actions</p>
             <p>---</p>
+            <p onclick="saveBookmark('${postID}')" id="saveBookmark_${postID}">Save to Bookmarks</p>
             <p onclick="showEditHistory('${postID}')" id="editHistory_${postID}">Check Edit History</p>
         </div>
     `;
 };
+
+async function saveBookmark(postID, list) {
+    const body = {
+        postID,
+        listname: list ? list : "main"
+    }
+    const response = await fetch(`${apiURL}/post/savePost/`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body)
+    });
+
+    // if (!response.ok) return document.getElementById(`saveBookmark_${postID}`).innerText = "Error while saving"
+    const res = await response.json();
+    if (debug) console.log(res)
+    if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.error}`;
+    document.getElementById(`saved post to bookmarks`)
+}
 
 async function showEditHistory(postID) {
     const response = await fetch(`${apiURL}/get/postEditHistory/${postID}`, {
@@ -518,6 +537,15 @@ async function userHtml(userID) {
             <p><b>Description</b></p>
             <p>${profileData.userData.description}</p>
         </div> 
+        ${profileData.userData._id == currentUserLogin.userID ?
+            `
+                <div class="userInfo">
+                    <p><b>Bookmarks</b></p>
+                    <button class="buttonStyled" id="showBookmarksButton" onclick="showBookmarks()">Show Bookmarks</button>
+                    <div id="bookmarksdiv"></div>
+                </div>
+            ` : ``
+        }
         ${profileData.verified ? 
             `
                 <div class="userInfo">
@@ -572,6 +600,82 @@ async function userHtml(userID) {
     return document.getElementById("page2Nav").innerHTML = `<div id="page2Nav"><button class="buttonStyled"  onclick="switchNav(5)" id="page2">Home</button>`
 }
 
+function hideBookmarks() {
+    document.getElementById('bookmarksdiv').innerHTML=""
+    document.getElementById('showBookmarksButton').innerHTML="Show Bookmarks"
+}
+
+async function showBookmarks() {
+    if (document.getElementById('bookmarksAreShown')) return hideBookmarks()
+    document.getElementById('showBookmarksButton').innerHTML="Hide Bookmarks"
+
+    const response = await fetch(`${apiURL}/get/bookmarks/`, {
+        method: 'GET',
+        headers
+    });
+
+    // if (!response.ok) return document.getElementById(`saveBookmark_${postID}`).innerText = "Error while saving"
+    const res = await response.json();
+    if (debug) console.log(res)
+    // if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.error}`;
+
+    var obj = {} // { list: name, saves: [] }
+    for (const list of res.lists) {
+        obj[list.name] = []
+    }
+
+    for (const save of res.saves) {
+        // console.log(save.listname)
+        obj[save.bookmarkList].push(save._id)
+    }
+
+    var ele = `<hr class="rounded" id="bookmarksAreShown">`
+
+    for (const listname in obj) {
+        var list = obj[listname]
+        ele+=`
+            <div>
+                <p>${listname}</p>
+                <hr class="rounded">
+        `
+        for (const save of list) {
+            if (debug) console.log(save)
+            const newData = await getPostAndProfileData(save)
+            if (newData.error) ele+=`<p>error</p>`
+            else ele+= postElementCreate(newData.postData, newData.profileData, "basic")
+            // ele+=
+        }
+        ele+=`</div>`
+    }
+
+    document.getElementById("bookmarksdiv").innerHTML=ele
+    if (debug) console.log(obj)
+}
+
+async function getPostAndProfileData(postID) {
+    const postRes = await fetch(`${apiURL}/get/post/${postID}`, {
+        method: 'GET', 
+        headers
+    });
+
+    const postData = await postRes.json();
+
+    if (!postRes.ok || postData.error) return {error: `${postData.error ? postData.error : "an unknown error"}`}
+    if (debug) console.log(postData)
+
+    const profileRes = await fetch(`${apiURL}/get/userByID/${postData.userID}`, {
+        method: 'GET',
+        headers,
+    })
+
+    const profileData = await profileRes.json()
+    if (debug) console.log(profileData)
+
+    if (!profileRes.ok || profileData.error) return {error: `${profileData.error ? profileData.error : "an unknown error"}`}
+
+
+    return { "postData" : postData, "profileData": profileData}
+}
 async function requestVerification() {
     var input = document.getElementById('content_request_verification').value
     if (debug) console.log(input)
@@ -579,7 +683,6 @@ async function requestVerification() {
     const data = { 
         "content" : input,
     };
-2
     // closeModal()
 
     if (debug) console.log(currentUserLogin) 
