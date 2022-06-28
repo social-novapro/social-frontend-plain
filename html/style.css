@@ -84,6 +84,10 @@
     width: 100%;
     background-color:  var(--main-button-color);
     color: var(--main-a-color);
+}
+.userEditForm {
+    background-color:  var(--main-button-color);
+    color: var(--main-p-color)
 
 }
 .debug {

@@ -234,6 +234,10 @@ async function userPage(username) {
     })
     
     const userData = await response.json() 
+
+    userHtml(userData._id)
+
+    return 
     if (userData.displayName) document.title = `${userData.displayName} | Interact`
 
     if (userData.code) {
@@ -511,6 +515,21 @@ async function profile() {
     currentPage = "profile"
 }
 
+async function userEdit(action) {
+    const newValue = document.getElementById(`userEdit_${action}_text`).value
+    headers[`new${action.toLowerCase()}`] = newValue
+
+    const response = await fetch(`${apiURL}/put/userEdit`, {
+        method: 'PUT',
+        headers
+    })
+    const newUser = await response.json()
+    if (!response.ok) return console.log("error")
+
+    // return window.location.href = `${document.getElementById('userEdit_username_text').value}`
+    console.log(newUser)
+}
+
 async function userHtml(userID) {
     const response = await fetch(`${apiURL}/get/user/${userID}`, {
         method: 'GET',
@@ -518,26 +537,53 @@ async function userHtml(userID) {
     })
     
     const profileData = await response.json()
-    
+
     var timesince
     if (profileData.userData.creationTimestamp) timesince = checkDate(profileData.userData.creationTimestamp)
+
+    var clientUser = profileData.userData._id === currentUserLogin.userID ? true : false
+    if (profileData?.userData?.displayName) document.title = `${profileData?.userData?.displayName} | Interact`
     
     profileData.postData.reverse()
     // profileData.included.post ? profileData.postData.reverse() : profileData.postData = []
     document.getElementById("mainFeed").innerHTML =  `
         <div class="userInfo">
             <p><b>Display Name</b></p>
-            <p>${profileData.userData.displayName}</p>
+            ${clientUser ? 
+                `
+                    <form id="userEdit_displayName" class="contentMessage" onsubmit="userEdit('displayName')">
+                        <input id="userEdit_displayName_text" type="text" class="userEditForm" value="${profileData.userData.displayName}">
+                    </form>
+                ` : `
+                    <p>${profileData.userData.displayName}</p>
+                `
+            }
         </div>
         <div class="userInfo">
             <p><b>Username</b></p>
-            <p>${profileData.userData.username}</p>
+            ${clientUser ? 
+                `
+                    <form id="userEdit_username" class="contentMessage" onsubmit="userEdit('username')">
+                        <input type="text" id="userEdit_username_text" class="userEditForm" value="${profileData.userData.username}">
+                    </form>
+                ` : `
+                    <p>${profileData.userData.username}</p>
+                `
+            }
         </div>
         <div class="userInfo">
             <p><b>Description</b></p>
-            <p>${profileData.userData.description}</p>
+            ${clientUser ? 
+                `
+                    <form id="userEdit_description" class="contentMessage" onsubmit="userEdit('description')">
+                        <input type="text" id="userEdit_description_text" class="userEditForm" value="${profileData.userData.description}">
+                    </form>
+                ` : `
+                    <p>${profileData.userData.description}</p>
+                `
+            }
         </div> 
-        ${profileData.userData._id == currentUserLogin.userID ?
+        ${clientUser ?
             `
                 <div class="userInfo">
                     <p><b>Bookmarks</b></p>
@@ -552,7 +598,7 @@ async function userHtml(userID) {
                     <p>Verified</p>
                 </div>
             ` : `
-                ${profileData.userData._id == currentUserLogin.userID ? 
+                ${clientUser ? 
                 `
                     <div class="userInfo">
                         <p><b>Verify ✔️</b></p>
@@ -573,7 +619,15 @@ async function userHtml(userID) {
         ${profileData.userData.pronouns ? 
             `
                 <div class="userInfo"><p><b>Pronouns</b></p>
-                    <p>${profileData.userData.pronouns}</p>
+                    ${clientUser ? 
+                        `
+                            <form id="userEdit_pronouns" class="contentMessage" onsubmit="userEdit('pronouns')">
+                                <input type="text" id="userEdit_pronouns_text" class="userEditForm" value="${profileData.userData.pronouns}">
+                            </form>
+                        ` : `
+                            <p>${profileData.userData.pronouns}</p>
+                        `
+                    }
                 </div>
             ` : ``
         }
@@ -597,6 +651,13 @@ async function userHtml(userID) {
         ` : ``}
     `
 
+    if (clientUser) {
+        if (profileData.userData.displayName) document.getElementById("userEdit_displayName").addEventListener("submit", function (e) { e.preventDefault()})
+        if (profileData.userData.username) document.getElementById("userEdit_username").addEventListener("submit", function (e) { e.preventDefault()})
+        if (profileData.userData.description) document.getElementById("userEdit_description").addEventListener("submit", function (e) { e.preventDefault()})
+        if (profileData.userData.pronouns) document.getElementById("userEdit_pronouns").addEventListener("submit", function (e) { e.preventDefault()})
+    }
+  
     return document.getElementById("page2Nav").innerHTML = `<div id="page2Nav"><button class="buttonStyled"  onclick="switchNav(5)" id="page2">Home</button>`
 }
 
