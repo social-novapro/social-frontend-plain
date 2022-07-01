@@ -38,6 +38,10 @@ h1 {
     padding-top: 20px;
     padding-bottom: 10px;
 }
+.messageActions {
+    cursor: pointer;
+    user-select: none;
+}
 p {
     color:rgb(107, 107, 107)
 }
@@ -68,11 +72,15 @@ input {
 .contentMainArea {
     display: flex;
 }
+.replyingEle {
+    background-color: var(--hover-nav-color);
+}
 .messageActions {
     display: flex;
 }
 .messageActions p{
-    padding: 2px
+    padding: 2px;
+    color: rgb(123, 123, 123);
 }
 .messageType {
     background-color:  var(--main-button-color);

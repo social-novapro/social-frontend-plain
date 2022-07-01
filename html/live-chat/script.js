@@ -231,30 +231,80 @@ function userTyping(data) {
 function addToList(data, content, user, timeStamp, message) {
     var timesince
     if (timeStamp) timesince = checkDate(timeStamp)
-    
+    // console.log(data)
     const imageContent = checkForImage(content)
 
+    // console.log(data.message)
     document.getElementById("messages").innerHTML+=`
         <div class="message" id="${data._id}">
             <p class="subheaderMessage ${user._id == currentUserLogin.userID ? "ownUser" : "otherUser"}">${user.displayName} @${user.username} | ${timesince}</p>
             <div class="contentMainArea" id="contentMainArea_${data._id}">
                 <p class="contentMessage" id="contentArea_${data._id}">${imageContent.content}</p>
-                ${data.message ? data.message.edited ? '<p class="edited contentMessage"><i>(edited)</i></p>' : '' : ''}
+                ${data.message?.edited ? '<p class="edited contentMessage"><i>(edited)</i></p>' : ''}
+                ${data.message?.replyTo ? `<a class="edited contentMessage" href="#${data.message.replyTo}" onclick="highlightMessage('${data.message.replyTo}')"><i>(replying)</i></a>` : ''}
             </div>
-            ${data.type==2 && user._id == currentUserLogin.userID  ?  `
-                <div class="messageActions">
+            <div class="messageActions">
+                <div id="replyDiv_${data._id}"><p onclick="replyToMessage('${data._id}')">Reply</p></div>
+                ${data.type==2 && user._id == currentUserLogin.userID  ?  `
                     <p id="deleteButton_${data._id}"><p onclick="deleteMessage('${data._id}')">Delete</p></p>
                     <div id="editButton_${data._id}"><p onclick="editMessage('${data._id}', '${data.message.edited ? true : false}')">Edit</p></div>
-                </div>
-            ` : `` }
+                ` : `` }
+            </div>
         </div>
     `;
 
     var objDiv = document.getElementById("messages");
 
     objDiv.scrollTop = objDiv.scrollHeight;
-}
+};
 
+function cancelReply(id) {
+    document.getElementById(`contentArea_${id}`).classList.remove("replyingEle");
+    document.getElementById(`replyDiv_${id}`).innerHTML= `
+        <p onclick="replyToMessage('${id}')">Cancel</p>
+    `;
+};
+
+function highlightMessage(id) {
+    document.getElementById(`contentArea_${id}`).classList.add("replyingEle");
+    setTimeout(function () {
+        document.getElementById(`contentArea_${id}`).classList.remove("replyingEle");
+    }, 5000);
+    // document.getElementById(`contentArea_${id}`).classList.add("activeHighlight");
+};
+
+function checkIfActiveReply() {
+    var returnObj = {
+        foundActive: false,
+        replyID: null
+    };
+
+    if(document.getElementById(`activeReply`)) {
+        returnObj.foundActive=true;
+        const classList = document.getElementById(`activeReply`).classList;
+
+        for (var i=0; i<classList.length; i++) {
+            if (classList[i].startsWith('id_')) {
+                returnObj.replyID = classList[i].replace('id_', '');
+            };
+        };
+    };
+
+    return returnObj;
+};
+
+function replyToMessage(id) {
+    // const ele = document.getElementById(id);
+    const lookForReply = checkIfActiveReply();
+
+    if (lookForReply.foundActive) cancelReply(lookForReply.replyID);
+    // if (document.getElementsByClassName(`activeHighlight`)) document.getElementsByClassName.remove
+
+    document.getElementById(`contentArea_${id}`).classList.add("replyingEle");
+    document.getElementById(`replyDiv_${id}`).innerHTML= `
+        <p id="activeReply" class="id_${id}" onclick="cancelReply('${id}')">Reply</p>
+    `;
+} ;
 
 function cancelEdit(id, content, edited) {
     document.getElementById(`contentMainArea_${id}`).innerHTML = `
@@ -266,7 +316,7 @@ function cancelEdit(id, content, edited) {
 
 function editMessage(id, edited) {
     const oldMessage = document.getElementById(`contentArea_${id}`).innerHTML
-    document.getElementById(`editButton_${id}`).innerHTML = `<p onclick="cancelEdit('${id}', '${oldMessage}', '${edited}')">Cancel</p>`
+    document.getElementById(`editButton_${id}`).innerHTML = `<p onclick="cancelEdit('${id}', '${oldMessage}', '${edited ? true : false}')">Cancel</p>`
     document.getElementById(`contentArea_${id}`).innerHTML = `
         <form class="contentMessage" onsubmit="submitEditedMessage('${id}')" id="editArea_${id}">
             <input type="text" class="contentMessage" id="editMessageBar_${id}" value="${oldMessage}">
@@ -370,13 +420,17 @@ function sendmessage() {
     var input = document.getElementById('messageBar').value;
     if (!input) return document.getElementById("actiondescription").innerHTML = `There is no text included`        
 
+    const lookForReply = checkIfActiveReply();
+    if (lookForReply.foundActive) cancelReply(lookForReply.replyID);
+
     const messageSend = {
         type: 02,
         apiVersion: "1.0",
     //    roomID,
         message: {
             userID: currentUserLogin.userID,
-            content: input	
+            content: input,
+            replyTo: lookForReply.replyID
         }
     }
 
