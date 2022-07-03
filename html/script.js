@@ -185,6 +185,7 @@ async function popupActions(postID) {
             <p>---</p>
             <p onclick="saveBookmark('${postID}')" id="saveBookmark_${postID}">Save to Bookmarks</p>
             <p onclick="showEditHistory('${postID}')" id="editHistory_${postID}">Check Edit History</p>
+            <p onclick="showLikes('${postID}')" id="likedBy_${postID}">Check Who Liked</p>
         </div>
     `;
 };
@@ -205,6 +206,24 @@ async function saveBookmark(postID, list) {
     if (debug) console.log(res)
     if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.error}`;
     document.getElementById(`saved post to bookmarks`)
+}
+
+async function showLikes(postID) {
+    const response = await fetch(`${apiURL}/get/postLikedBy/${postID}`, {
+        method: 'GET',
+        headers,
+    });
+
+    const likedBy = await response.json();
+    if (debug) console.log(likedBy.peopleLiked);
+    if (!response.ok || !likedBy.peopleLiked) return document.getElementById(`likedBy_${postID}`).innerHTML = `Could not find any people who liked the post.`;
+
+    var newElement = `<p>Liked By:</p>`;
+    for (const people of likedBy.peopleLiked) {
+        newElement+=`<p onclick="userHtml('${people.userID}')">${people.username}</p>`
+    };
+
+    document.getElementById(`likedBy_${postID}`).innerHTML=newElement;
 }
 
 async function showEditHistory(postID) {
