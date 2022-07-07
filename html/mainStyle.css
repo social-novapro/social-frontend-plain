@@ -187,3 +187,9 @@ hr.rounded {
     margin-left: 20%; 
     margin-right: 20%; 
 }
+.blur {
+    color: transparent;
+    text-shadow: 0 0 8px rgb(134, 36, 36);
+    cursor: pointer;
+    user-select: none;
+}

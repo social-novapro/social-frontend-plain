@@ -611,6 +611,15 @@ async function userHtml(userID) {
                 </div>
             ` : ``
         }
+        ${clientUser ?
+            `
+                <div class="userInfo">
+                    <p><b>Developer</b></p>
+                    <button class="buttonStyled" id="showDevOptionsButton" onclick="showDevOptions()">Show Dev Settings</button>
+                    <div id="showDevDiv"></div>
+                </div>
+            ` : ``
+        }
         ${profileData.verified ? 
             `
                 <div class="userInfo">
@@ -731,6 +740,108 @@ async function showBookmarks() {
     document.getElementById("bookmarksdiv").innerHTML=ele
     if (debug) console.log(obj)
 }
+
+async function hideDevOptions() {
+    document.getElementById('showDevDiv').innerHTML=""
+    document.getElementById('showDevOptionsButton').innerHTML="Show Dev Settings"
+}
+
+function revealDevOptions(option, index){
+    switch (option) {
+        case "devToken":
+            const eledevtoken = document.getElementById('devToken');
+            if (eledevtoken.classList.contains("blur")) eledevtoken.classList.remove('blur')   
+            else eledevtoken.classList.add('blur')
+            break;
+        case "appTokens":
+            const eleapptokens = document.getElementById(`appToken_${index}`);
+            if (eleapptokens.classList.contains("blur")) eleapptokens.classList.remove('blur')   
+            else eleapptokens.classList.add('blur')
+           
+            break;
+        case "appAccess":
+            const eleaccess = document.getElementById(`appAccess_${index}`);
+            if (eleaccess.classList.contains("blur")) eleaccess.classList.remove('blur')   
+            else eleaccess.classList.add('blur')
+           
+            break
+        default:
+            break;
+    }
+}
+
+async function showDevOptions() {
+    if (document.getElementById('showDevAreShown')) return hideDevOptions()
+    document.getElementById('showDevOptionsButton').innerHTML="Hide Developer Settings"
+
+    const response = await fetch(`${apiURL}/get/developer/`, {
+        method: 'GET',
+        headers
+    });
+
+    if (!response.ok) return document.getElementById(`showDevDiv`).innerText = "Error while requesting data"
+    const res = await response.json();
+    if (debug) console.log(res)
+
+    var firstEle = `
+        <hr class="rounded" id="showDevAreShown">
+        <p>Account Status</p>
+        <div class="userInfo">
+            ${res.developer ? `<p>You have an Interact Developer Account</p>`:``}
+            ${res.applications&&res.AppTokens ? `<p>You have ${res.AppTokens.length} Approved Applications</p>`: ``}
+            ${res.allowedApplications&&res.AppAccesses ? `<p>${res.AppAccesses.length} Connected Applications`: ``} 
+        </div>
+    `;
+
+    var devAccEle;
+    if (res.developer&&res.DeveloperToken) {
+        devAccEle=`
+            <hr class="rounded">
+            <p>Developer Account</p>
+            <div class="userInfo">
+                ${res.DeveloperToken._id ? `<p>devToken: <p onclick="revealDevOptions('devToken')" id="devToken" class="blur">${res.DeveloperToken._id}</p>`:``}
+                ${res.DeveloperToken.premium ? `<p>Premium Dev Account</p>`:`<p>Regular Dev Account</p>`}
+                ${res.DeveloperToken.creationTimestamp ? `<p>Dev account created: ${checkDate(res.DeveloperToken.creationTimestamp)}</p>`:`<p>Unknown creation date</p>`}
+            </div>
+        `;
+    };
+
+    var appTokensEle=`<hr class="rounded"><p>App Tokens</p>`;
+
+    if (res.applications&&res.AppTokens) {
+        var amount=0;
+        for (const appToken of res.AppTokens) {
+            amount++;
+            appTokensEle+=`
+                <div class="userInfo">
+                    <p>appToken ${amount} of ${res.AppTokens.length}</p>
+                    ${appToken._id ? `<p>appToken: <p onclick="revealDevOptions('appTokens', ${amount})" id="appToken_${amount}" class="blur">${appToken._id}</p>`:``}
+                    <p>API Uses: ${appToken.APIUses? appToken.APIUses : `0`}
+                    ${appToken.creationTimestamp ? `<p>Application created: ${checkDate(appToken.creationTimestamp)}</p>`:`<p>Unknown creation date</p>`}
+                </div>
+            `;
+        };
+    };
+
+    var appAccessEle=`<hr class="rounded"><p>App Connections</p>`;
+    if (res.allowedApplications&&res.AppTokens) {
+        var amount=0;
+        for (const appAccess of res.AppAccesses) {
+            amount++;
+            appAccessEle+=`
+                <div class="userInfo">
+                    <p>appAccess ${amount} of ${res.AppAccesses.length}</p>
+                    ${appAccess.appToken ? `<p>Using appToken: <p onclick="revealDevOptions('appAccess', ${amount})" id="appAccess_${amount}" class="blur">${appAccess.appToken}</p>`:``}
+                </div>
+            `;
+        };
+    };
+    
+    var ele = firstEle+devAccEle+appTokensEle+appAccessEle;
+    
+    document.getElementById("showDevDiv").innerHTML=ele;
+    return;
+};
 
 async function getPostAndProfileData(postID) {
     const postRes = await fetch(`${apiURL}/get/post/${postID}`, {
@@ -962,7 +1073,6 @@ function test() {
         </div>
     `
 }
-
 
 function checkDate(time){
     var timeNum = 0
