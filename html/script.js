@@ -793,7 +793,7 @@ async function showDevOptions() {
         </div>
     `;
 
-    var devAccEle;
+    var devAccEle='';
     if (res.developer&&res.DeveloperToken) {
         devAccEle=`
             <hr class="rounded">
@@ -804,17 +804,30 @@ async function showDevOptions() {
                 ${res.DeveloperToken.creationTimestamp ? `<p>Dev account created: ${checkDate(res.DeveloperToken.creationTimestamp)}</p>`:`<p>Unknown creation date</p>`}
             </div>
         `;
+    } else {
+        devAccEle=`
+            <hr class="rounded">
+            <p>Developer Account</p>
+            <div class="userInfo" id="devAcc">
+                <p>Signup for a developer account.</p>
+                <div class="searchSelect search">
+                    <button onclick="requestDevToken()">Signup</button>
+                </div>
+            </div>
+        `
     };
 
-    var appTokensEle=`<hr class="rounded"><p>App Tokens</p>`;
-
+    var appTokensEle='';
     if (res.applications&&res.AppTokens) {
+        appTokensEle+=`<hr class="rounded"><p>App Token${res.AppTokens.length>=2 ? 's': ''}</p>`
+        
         var amount=0;
-        for (const appToken of res.AppTokens) {
+        for (const appToken of res.AppTokens.reverse()) {
             amount++;
             appTokensEle+=`
                 <div class="userInfo">
                     <p>appToken ${amount} of ${res.AppTokens.length}</p>
+                    <p>app name: ${appToken.appName ? appToken.appName : `Unknown`}
                     ${appToken._id ? `<p>appToken: <p onclick="revealDevOptions('appTokens', ${amount})" id="appToken_${amount}" class="blur">${appToken._id}</p>`:``}
                     <p>API Uses: ${appToken.APIUses? appToken.APIUses : `0`}
                     ${appToken.creationTimestamp ? `<p>Application created: ${checkDate(appToken.creationTimestamp)}</p>`:`<p>Unknown creation date</p>`}
@@ -843,6 +856,26 @@ async function showDevOptions() {
     return;
 };
 
+async function requestDevToken() {
+    document.getElementById('devAcc').innerHTML="loading";
+
+    const requestRes = await fetch(`${apiURL}Priv/post/newDev`, {
+        method: 'POST',
+        headers
+    });
+
+    const devData = await requestRes.json();
+    if (!requestRes.ok || devData.error) return console.log({error: `${devData?.error ? devData.error : "an unknown error"}`});
+
+    const newEle = `
+        ${devData._id ? `<p>devToken: <p onclick="revealDevOptions('devToken')" id="devToken" class="blur">${devData._id}</p>`:``}
+        ${devData.premium ? `<p>Premium Dev Account</p>`:`<p>Regular Dev Account</p>`}
+        ${devData.creationTimestamp ? `<p>Dev account created: ${checkDate(devData.creationTimestamp)}</p>`:`<p>Unknown creation date</p>`}
+    `;
+
+    document.getElementById('devAcc').innerHTML=newEle;
+};
+
 async function getPostAndProfileData(postID) {
     const postRes = await fetch(`${apiURL}/get/post/${postID}`, {
         method: 'GET', 
@@ -851,22 +884,23 @@ async function getPostAndProfileData(postID) {
 
     const postData = await postRes.json();
 
-    if (!postRes.ok || postData.error) return {error: `${postData.error ? postData.error : "an unknown error"}`}
-    if (debug) console.log(postData)
+    if (!postRes.ok || postData.error) return {error: `${postData.error ? postData.error : "an unknown error"}`};
+    if (debug) console.log(postData);
 
     const profileRes = await fetch(`${apiURL}/get/userByID/${postData.userID}`, {
         method: 'GET',
         headers,
-    })
+    });
 
-    const profileData = await profileRes.json()
-    if (debug) console.log(profileData)
+    const profileData = await profileRes.json();
+    if (debug) console.log(profileData);
 
-    if (!profileRes.ok || profileData.error) return {error: `${profileData.error ? profileData.error : "an unknown error"}`}
+    if (!profileRes.ok || profileData.error) return {error: `${profileData.error ? profileData.error : "an unknown error"}`};
 
 
-    return { "postData" : postData, "profileData": profileData}
+    return { "postData" : postData, "profileData": profileData };
 }
+
 async function requestVerification() {
     var input = document.getElementById('content_request_verification').value
     if (debug) console.log(input)
