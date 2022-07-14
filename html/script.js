@@ -567,6 +567,16 @@ async function userHtml(userID) {
     // profileData.included.post ? profileData.postData.reverse() : profileData.postData = []
     document.getElementById("mainFeed").innerHTML =  `
         <div class="userInfo">
+            <p><b>Notifications</b></p>
+            <a id="notificationSub" onclick="subNotifi('${profileData.userData._id}')">Subscribe</a>
+            ${clientUser ? 
+                `
+                    <button class="buttonStyled" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
+                    <div id="notificationsDIv"></div>
+                ` : `` 
+            }
+        </div>
+        <div class="userInfo">
             <p><b>Display Name</b></p>
             ${clientUser ? 
                 `
@@ -689,6 +699,18 @@ async function userHtml(userID) {
     return document.getElementById("page2Nav").innerHTML = `<div id="page2Nav"><button class="buttonStyled"  onclick="switchNav(5)" id="page2">Home</button>`
 }
 
+async function subNotifi(subUser) {
+    const response = await fetch(`${apiURL}/post/subUser/${subUser}`, {
+        method: 'POST',
+        headers
+    });
+    const res = await response.json();
+    if (debug) console.log(res)
+    if (!response.ok || res.error) return document.getElementById('notificationSub').innerHTML=`error`
+
+    document.getElementById('notificationSub').innerHTML=`done`
+}
+
 function hideBookmarks() {
     document.getElementById('bookmarksdiv').innerHTML=""
     document.getElementById('showBookmarksButton').innerHTML="Show Bookmarks"
@@ -739,6 +761,95 @@ async function showBookmarks() {
 
     document.getElementById("bookmarksdiv").innerHTML=ele
     if (debug) console.log(obj)
+}
+
+function hideNotifications() {
+    document.getElementById('notificationsDiv').innerHTML=""
+    document.getElementById('showNotificationsButton').innerHTML="Show Notifications"
+}
+
+async function showNotifications() {
+    if (document.getElementById('notificationsAreShown')) return hideNotifications()
+    document.getElementById('showNotificationsButton').innerHTML="Hide Notifcations"
+
+    const response = await fetch(`${apiURL}/get/notifications/`, {
+        method: 'GET',
+        headers
+    });
+
+    // if (!response.ok) return document.getElementById(`saveBookmark_${postID}`).innerText = "Error while saving"
+    const res = await response.json();
+    if (debug) console.log(res)
+    if (!response.ok) return document.getElementById('showNotificationsButton').innerHTML=`error`
+    
+
+    var ele = `<hr class="rounded" id="bookmarksAreShown"><p>${res.amountFound} Notifications</p><hr class="rounded">`
+    /*
+        type: String (one)
+            1: someone followed
+            2: someone unfollowed
+            3: someone liked post
+            4: someone unliked post
+            5: someone posted
+            6: someone mentioned you
+
+        var returnData = {
+            amountFound: interactUserNotifications.notifications.length,
+            notifications: []
+        };
+    */
+
+    for (const notifi of res.notifications) {
+        switch (notifi.type) {
+            case 5:
+                console.log(notifi.userID)
+                const userData = await getUserDataSimple(notifi.userID) 
+                ele+=`
+                    <div>
+                        <a onclick="showPost('${notifi.postID}')">${userData.username} has posted! (click to see)</a>
+                    </div>
+                `
+            break;
+        
+            default:
+                break;
+        }
+    }
+   
+    
+
+    document.getElementById("notificationsDIv").innerHTML=ele
+}
+async function showPost(postID) {
+    const response = await fetch(`${apiURL}/get/post/${postID}`, {
+        method: 'GET',
+        headers
+    });
+
+    const res = await response.json();
+    if (debug) console.log(res)
+    if (!response.ok) return 
+
+    const user = await getUserDataSimple(res.userID)
+    if (debug) console.log(user)
+    const ele = postElementCreate(res, user)
+    document.getElementById('mainFeed').innerHTML=ele
+}
+`
+    <button class="buttonStyled" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
+    <div id="notificationsDIv"></div>
+`
+
+async function getUserDataSimple(userID) {
+    const response = await fetch(`${apiURL}/get/userByID/${userID}`, {
+        method: 'GET',
+        headers
+    });
+
+    const res = await response.json();
+    if (debug) console.log(res)
+    if (!response.ok) return 
+    else  return res
 }
 
 async function hideDevOptions() {
