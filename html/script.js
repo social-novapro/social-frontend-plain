@@ -237,7 +237,7 @@ async function showEditHistory(postID) {
     if (!response.ok || !editData.edits) return document.getElementById(`editHistory_${postID}`).innerHTML = `Could not find any edits.`;
 
     var newElement = `<p>Edit History:</p>`;
-    for (const edit of editData.edits) {
+    for (const edit of editData.edits.reverse()) {
         newElement+=`<p>${edit.content}</p>`
     };
 
@@ -571,8 +571,10 @@ async function userHtml(userID) {
             <a id="notificationSub" onclick="subNotifi('${profileData.userData._id}')">Subscribe</a>
             ${clientUser ? 
                 `
-                    <button class="buttonStyled" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
-                    <div id="notificationsDIv"></div>
+                    <div>
+                        <button class="buttonStyled" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
+                        <div id="notificationsDIv"></div>
+                    </div>
                 ` : `` 
             }
         </div>
@@ -799,7 +801,7 @@ async function showNotifications() {
         };
     */
 
-    for (const notifi of res.notifications) {
+    for (const notifi of res.notifications.reverse()) {
         switch (notifi.type) {
             case 5:
                 console.log(notifi.userID)
@@ -1399,18 +1401,43 @@ async function quotePost(postID) {
     `, "hide")
 }
 
+function checkIfLiked(postID) {
+    if (document.getElementById(`likePost_${postID}`).classList.contains("likedColour")) return true
+    else return false
+}
+
 async function likePost(postID) {
     if (debug) console.log("liking post")
-    const response = await fetch(`${apiURL}/put/likePost/${postID}`, { method: 'PUT', headers})
-    const data = await response.json()
 
+    const postIsLiked = checkIfLiked(postID)
+
+    var data 
+    if (postIsLiked) {
+        if (debug) console.log("liking post")
+        const response = await fetch(`${apiURL}/delete/unlikePost/${postID}`, { method: 'DELETE', headers})
+        data = await response.json()
+
+
+
+        if (!response.ok || data.error) return 
+        document.getElementById(`likePost_${postID}`).classList.remove("likedColour");
+        document.getElementById(`likePost_${postID}`).innerText = `${data.totalLikes} likes`
+    }
+    else {
+        if (debug) console.log("liking post")
+        const response = await fetch(`${apiURL}/put/likePost/${postID}`, { method: 'PUT', headers})
+
+        data = await response.json()
+
+        if (!response.ok || data.error) return 
+
+        document.getElementById(`likePost_${postID}`).classList.add("likedColour");
+        document.getElementById(`likePost_${postID}`).innerText = `${data.totalLikes} likes`
+    }
+    
     if (debug) console.log(data)
-    if (!response.ok) return 
-    // const likeElemenet = document.getElementById(`likePost_${postID}`)
-    // if (likeElemenet.classList.contains("likedColour")) likeElemenet.classList.remove("likedColour");
-    // else if (data.totalLikes > likeElemenet.innerText.replace(" likes", "") || !likeElemenet.classList.contains("likedColour")) likeElemenet.classList.add("likedColour");
-    document.getElementById(`likePost_${postID}`).classList.add("likedColour");
-    document.getElementById(`likePost_${postID}`).innerText = `${data.totalLikes} likes`
+
+   
 }
 
 // USER DATA FOR FEED
