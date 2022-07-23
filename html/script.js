@@ -575,6 +575,10 @@ async function userHtml(userID) {
                         <button class="buttonStyled" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
                         <div id="notificationsDIv"></div>
                     </div>
+                    <div>
+                        <button class="buttonStyled" id="showSubscriptionsButton" onclick="showSubscriptions()">Show Subscriptions</button>
+                        <div id="subscriptionsDiv"></div>
+                    </div>
                 ` : `` 
             }
         </div>
@@ -713,6 +717,18 @@ async function subNotifi(subUser) {
     document.getElementById('notificationSub').innerHTML=`done`
 }
 
+async function unsubUser(userID, username) {
+    const response = await fetch(`${apiURL}/delete/unsubUser/${userID}`, {
+        method: 'DELETE',
+        headers
+    });
+    const res = await response.json();
+    if (debug) console.log(res)
+    if (!response.ok || res.error) return document.getElementById(`subList_${userID}`).innerHTML=`error while unsubscribing`
+
+    document.getElementById(`subList_${userID}`).innerHTML=`Unsubscribed to <a onclick="userHtml('${userID}')">${username}</a>.`
+}
+
 function hideBookmarks() {
     document.getElementById('bookmarksdiv').innerHTML=""
     document.getElementById('showBookmarksButton').innerHTML="Show Bookmarks"
@@ -764,6 +780,70 @@ async function showBookmarks() {
     document.getElementById("bookmarksdiv").innerHTML=ele
     if (debug) console.log(obj)
 }
+
+function hideSubscriptions() {
+    document.getElementById('subscriptionsDiv').innerHTML=""
+    document.getElementById('showSubscriptionsButton').innerHTML="Show Subscriptions"
+}
+
+async function showSubscriptions() {
+    if (document.getElementById('subscriptionsAreShown')) return hideSubscriptions()
+    document.getElementById('showSubscriptionsButton').innerHTML="Hide Subscriptions"
+    const response = await fetch(`${apiURL}/get/subscriptions/`, {
+        method: 'GET',
+        headers
+    });
+    // console.log(response)
+
+    // if (!response.ok) return document.getElementById(`saveBookmark_${postID}`).innerText = "Error while saving"
+    `
+        [
+            {
+                _id: "d1f32225-a940-48ed-bff9-22efd5636cbd",
+                __v: 0, 
+                subscribed: [
+                    { 
+                        _id: "d1f32225-a940-48ed-bff9-22efd5636cbd", 
+                        timestamp: 1657607591942
+                    }, {
+                        _id: "d2ac792f-0f5a-443d-8453-f8396e1b6303", 
+                        timestamp: 1658554148695
+                    }
+                ]
+            }, {
+                _id: "6ceae342-2ca2-48ec-8ce3-0e39caebe989",
+                __v: 0,
+                subscribed: [{
+                    _id: "d2ac792f-0f5a-443d-8453-f8396e1b6303", 
+                    timestamp: 1658554289386
+                }]
+            }
+        ]
+    `
+    const res = await response.json();
+    if (debug) console.log(res)
+    if (!response.ok) return document.getElementById('showSubscriptionsButton').innerHTML=`error`
+    
+
+    var ele = `<hr class="rounded" id="subscriptionsAreShown"><p>${res.length} Subscriptions</p><hr class="rounded">`
+
+    for (const sub of res.reverse()) {
+        const userData = await getUserDataSimple(sub._id) 
+        ele = ele + `
+            <div id="subList_${userData._id}">
+                <div>
+                    <a onclick="userHtml('${userData._id}')">${userData.username}</a>
+                </div>
+                <div>
+                    <a onclick="unsubUser('${userData._id}', '${userData.username}')">unsub from user.</a>
+                </div>
+            </div>
+        `
+    }
+
+    document.getElementById("subscriptionsDiv").innerHTML=ele
+}
+
 
 function hideNotifications() {
     document.getElementById('notificationsDiv').innerHTML=""
