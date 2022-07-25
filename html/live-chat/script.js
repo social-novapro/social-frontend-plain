@@ -8,6 +8,11 @@ var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 var sendTypeStop
 var amountTyping
 var baseURL
+var headers = {
+    "devtoken" : "6292d8ae-8c33-4d46-a617-4ac048bd6f11",
+    "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421"
+}
+var verifiedConnection = false
 
 // console.log(config.dev.websocket_url)
 var wsURL = `${config ? `${config.current == "prod" ? config.prod.websocket_url : config.dev.websocket_url}` : 'https://interact-api.novapro.net/v1' }`
@@ -19,6 +24,17 @@ else {
     checkLogin()
 }
 
+function sendTokensDebug() {
+    const authSend = {
+        type: 10,
+        apiVersion: "1.0",
+        userID: currentUserLogin.userID,
+        mesType: 2,
+        tokens: headers
+    }
+
+    ws.send(JSON.stringify(authSend))
+}
 document.getElementById("messageTypingForm").addEventListener("submit", function (e) { e.preventDefault()})
 
 var clientTypingAct = {
@@ -80,7 +96,6 @@ function checkWebSocket() {
         }
 
         ws.onmessage = function (evt) { 
-            // console.log(evt)
             const data = JSON.parse(evt.data)
             /*
             const authSend = {
@@ -131,22 +146,19 @@ function checkWebSocket() {
                     else userTyping(data)
                     break;
                 case 10:
-                    // console.logdata)
-                    const authSend = {
-                        "type": 10,
-                        "apiVersion": "1.0",
-                        "userID": currentUserLogin.userID,
-                        "tokens": headers,
-                    };
-                    // console.logauthSend)
+                    if (data.mesType==1) {
+                        const authSend = {
+                            type: 10,
+                            apiVersion: "1.0",
+                            userID: currentUserLogin.userID,
+                            mesType: 2,
+                            tokens: headers
+                        }
                     
-                    try {
-                        ws.send(JSON.stringify(authSend));
-                        // console.log"sent?")
-
+                        ws.send(JSON.stringify(authSend))
                     }
-                    catch (e) {
-                        // console.loge)
+                    else if (data.mesType==2) {
+                        verifiedConnection = true
                     }
                     break;
                 default:
