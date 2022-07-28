@@ -1,0 +1,6 @@
+.allMessages {
+    overflow-wrap: break-word;
+    height: 50vh; 
+    width: 100vw;     
+    overflow-y: scroll;
+}
