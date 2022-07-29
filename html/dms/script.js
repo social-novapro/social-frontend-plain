@@ -1,5 +1,6 @@
 // var websocketenabled
 var ws
+var currentGroup
 var roomID
 var defaultRoomID = "0001"
 var loginUserToken = false
@@ -7,7 +8,7 @@ var currentUserLogin = { }
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 var sendTypeStop
 var amountTyping
-var baseURL
+// var baseURL
 var headers = {
     "devtoken" : "6292d8ae-8c33-4d46-a617-4ac048bd6f11",
     "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421"
@@ -16,11 +17,11 @@ var verifiedConnection = false
 
 // console.log(config.dev.websocket_url)
 var wsURL = `${config ? `${config.current == "prod" ? config.prod.websocket_url : config.dev.websocket_url}` : 'https://interact-api.novapro.net/v1' }`
+var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
 
 if (location.protocol !== 'https:' && location.hostname !== 'localhost' &&location.hostname!=='127.0.0.1') {
     location.replace(`https:${location.href.substring(location.protocol.length)}`);
-}
-else {
+} else {
     checkLogin()
 }
 
@@ -35,7 +36,23 @@ function sendTokensDebug() {
 
     ws.send(JSON.stringify(authSend))
 }
-document.getElementById("messageTypingForm").addEventListener("submit", function (e) { e.preventDefault()})
+
+setDimennsions()
+// document.getElementById("messageTypingForm").addEventListener("submit", function (e) { e.preventDefault()})
+function setDimennsions() {
+    var height = document.getElementById("html").clientHeight
+    var width = document.getElementById("html").clientWidth
+
+    // var width = window.innerWidth;
+    // console.log(width)
+    width = width - 200
+    // console.log(width)
+    // console.log(document.getElementById('mainGroupArea').style.width)
+
+    document.getElementById('currentGroupsArea').style.width="100px"
+    document.getElementById('mainGroupArea').style.width=`${width}px`
+    document.getElementById('currentGroupsAreaRight').style.width="100px"
+}
 
 var clientTypingAct = {
     typing: false,
@@ -80,6 +97,98 @@ function checkRoomID() {
     return defaultRoomID
 }
 
+function createNewGroup() {
+    var ele = `
+        <h1>Create a new group</h1>
+        <div class="messageType">
+            <form onsubmit="addUsers()" onkeyup="searchUsers()" id="groupCreateForm">
+                <input type="text" id="groupCreateInput" placeholder="Tag your users!">
+            </form>
+            <form id="groupNameForm">
+                <input type="text" id="newGroupName" placeholder="Choose a new group name!">
+            </form>
+        </div>
+        <a onclick="createGroup()">Create</a>
+        <p>Amount Users Added<p id="amountUsersNewGroup">0</p></p>
+        <div id="currentlyAdded"></div>
+        <div id="possibleAdds" class="borderArea"></div>
+    `
+
+    document.getElementById("mainGroupArea").innerHTML=ele
+    document.getElementById("groupCreateForm").addEventListener("submit", function (e) { e.preventDefault()})
+    document.getElementById("groupNameForm").addEventListener("submit", function (e) { e.preventDefault()})
+
+}
+
+async function searchUsers() {
+    const searchUser = document.getElementById('groupCreateInput').value
+    if (!searchUser) return document.getElementById('possibleAdds').innerHTML=``
+    
+    const response = await fetch(`${apiURL}/get/taguserSearch/${searchUser}`, {
+        method: 'GET',
+        headers,
+    });
+    // console.log(response)
+
+    const res = await response.json();
+    // if (debug) console.log(res)
+    if (res.error) return;
+    var usersEle=""
+    for (const index of res) {
+        usersEle+=`
+            <div class="borderArea" onclick="changeUserAddInput('${index.user.username}')">
+                <p>${index.user.username}</p>
+                ${index.user.discription ? `<p>${index.user.description}</p>` : ``}
+                <p>${index.possiblity}% match</p>
+            </div>
+        `
+    }
+    document.getElementById('possibleAdds').innerHTML=usersEle
+}
+function changeUserAddInput(username) {
+    document.getElementById('groupCreateInput').value=username
+}
+function addUsers() {
+    var amountUsers = document.getElementById("amountUsersNewGroup").innerText
+    var value = document.getElementById("groupCreateInput").value
+    const num = parseInt(amountUsers)
+    const newNum = num+1
+    document.getElementById("amountUsersNewGroup").innerText=newNum
+    document.getElementById('currentlyAdded').innerHTML+=`<p id="userAdd_${newNum}">${value}</p>`
+    document.getElementById("groupCreateInput").value=""
+    document.getElementById('possibleAdds').innerHTML=""
+}
+
+async function createGroup() {
+    var members = parseInt(document.getElementById("amountUsersNewGroup").innerText)
+    var groupName = document.getElementById("newGroupName").value;
+    var addingMembers = []
+
+    for (let i=1; i<members; i++) {
+        const username = document.getElementById(`userAdd_${i}`).innerText
+        const response = await fetch(`${apiURL}/get/username/${username}`, {
+            method: 'GET',
+            headers,
+        });
+        // console.log(response)
+    
+        const res = await response.json();
+        // if (debug) console.log(res)
+        // console.log(res)
+        if (res.error) return;
+        addingMembers.push(res._id)
+    }
+
+    const sendData =  {
+        type: 202,
+        addUsers: addingMembers,
+        groupName
+    }
+    // console.log(sendData)
+    ws.send(JSON.stringify(sendData))
+    document.getElementById("mainGroupArea").innerText="<p>Created Group.</p>"
+}
+
 
 function checkWebSocket() {
     // console.log'running 5')
@@ -90,6 +199,7 @@ function checkWebSocket() {
         `
 
         ws = new WebSocket(`${wsURL}?userID=${currentUserLogin.userID}`)
+
         ws.onopen = function() {
            // ws.send({'test': 'test'})
          //   ws.close()
@@ -111,8 +221,41 @@ function checkWebSocket() {
             //console.log(data.type)
 
             switch (data.type) {
+                case 10:
+                    if (data.mesType==1) {
+                        const authSend = {
+                            type: 10,
+                            apiVersion: "1.0",
+                            userID: currentUserLogin.userID,
+                            mesType: 2,
+                            tokens: headers
+                        }
+                        ws.send(JSON.stringify(authSend))
+                    } else if (data.mesType==4) {
+                        verifiedConnection = true
+                        ws.send(JSON.stringify({
+                            type: 201,
+                            apiVersion: "1.0"
+                        }))
+                        console.log('3')
+                    }
+                    break;
+
                 case 200: 
-                break;
+                    break;
+                case 201: 
+                console.log("e")
+                    createSidebar(data)
+                    break;
+                case 204: 
+                    if (data.groupID)  {
+                        removeGroupFromList(data.groupID)
+                    }
+                    break;
+                case 404:
+                    break;
+                    
+                    break;
             }
         };
             
@@ -120,6 +263,7 @@ function checkWebSocket() {
             // websocket is closed.
             document.getElementById("actiondescription").innerHTML = `
                 Connection is closed...
+                <p onclick="checkWebSocket()">Click to reconnect.</p>
             `
         };
     } else {
@@ -129,65 +273,168 @@ function checkWebSocket() {
     }
 }
 
-function clientStopTyping(typingTime) {
-    if (clientTypingAct.typingTime != typingTime) return // console.log'/')
+function removeGroupFromList(groupID) {
+    const foundSidebar = document.getElementById(`sidebarGroup_${groupID}`);
+    const foundMain = document.getElementById(`openedGroup_${groupID}`);
+    if (foundSidebar) foundSidebar.remove();
+    if (foundMain) foundMain.remove();
+    return true;
+};
 
-    const messageSend = {
-        type: 09,
-        apiVersion: "1.0",
-        userID: currentUserLogin.userID,
-        typing: false,
-    }
+async function createSidebar(userGroupsData) {
+    var sidebarEle = ""
 
-    ws.send(JSON.stringify(messageSend))
-}
+    console.log(userGroupsData)
+    for (const group of userGroupsData.userGroups.groups) {
+        console.log(group)
+        const data = await getGroupData({ groupID: group._id })
+        if (!data.error) {
+            console.log(data)
+            /*
+                groupData : {
+                    __v: 0
+                    _id: "e4374fc6-8e39-4bc1-ade9-aa87054d1adc"
+                    created: 1659060056257
+                    groupName: "New Group."
+                    owner: "d1f32225-a940-48ed-bff9-22efd5636cbd"
+                    users: [
+                        _id: "d1f32225-a940-48ed-bff9-22efd5636cbd"
+                    ]
+                },
+                success: true
+            */
 
-function clientUserType() {
-    const input = document.getElementById('messageBar').value
-    if (sendTypeStop) clearTimeout(sendTypeStop)
-    
-    if (!input) {
-        clientTypingAct.typing = false
-        clientTypingAct.typingTime = 0
-
-        const messageSend = {
-            type: 09,
-            apiVersion: "1.0",
-            userID: currentUserLogin.userID,
-            typing: false,
+            sidebarEle+=`
+                <div id="sidebarGroup_${data.groupData._id}" onclick="openGroup('${data.groupData._id}')">
+                    <p>${data?.groupData?.groupName}</p>
+                </div>
+            `
         }
-    
-        return ws.send(JSON.stringify(messageSend))
+        
     }
-    
-    const messageSend = {
-        type: 08,
-        apiVersion: "1.0",
-        userID: currentUserLogin.userID,
-        userTyping: true,
+    document.getElementById("currentGroupsArea").innerHTML=sidebarEle
+
+}
+async function openGroup(groupID) {
+    const data = await getGroupData({ groupID }) 
+
+    document.getElementById('mainGroupArea').innerHTML=`
+        <div id="openedGroup_${groupID}">
+            <p>Pretend like i opened a new chat! ${groupID}</p>
+        </div>
+    ` 
+
+    var rightSideBarEle = `
+        <p onclick="deleteGroup('${groupID}')">Delete.</p>
+    `
+    // <p onclick="addUser()">Add User.</p>
+
+    for (const user of data.groupData.users) {
+        const userData = await getUserDataSimple(user._id)
+        if (!userData.error) {
+            // console.log(userData)
+            rightSideBarEle+=`
+                <div>
+                    <p>${userData.username}</p>
+                </div>
+            `
+              // <p>${userData.displayName}</p>
+        }
     }
 
-    const timeTyping = getTime()
-
-    clientTypingAct.typing = true
-    clientTypingAct.typingTime = timeTyping
-
-    ws.send(JSON.stringify(messageSend))
-
-    sendTypeStop = setTimeout(function() { clientStopTyping(timeTyping); }, 4000)
+    document.getElementById("currentGroupsAreaRight").innerHTML=rightSideBarEle
 }
 
-function userTyping(data) {
-    if (data.type==08) {
-        var addUser = `<p id="userTyping-${data.user._id}">${data.user.username}</p>`//<p id="typingMainText"> is typing...</p>
-        if (document.getElementById(`userTyping-${data.user._id}`)) return // console.log"user is already typing")
-        else document.getElementById("userTyping").innerHTML += addUser
-    }
-    if (data.type==09) {
-        var removeUser = document.getElementById(`userTyping-${data.user._id}`)
-        if (removeUser) removeUser.remove()
-    }
+function deleteGroup(groupID) {
+    ws.send(JSON.stringify({
+        type: 204,
+        groupID
+    }))
 }
+
+async function getGroupData({ groupID }) {
+    const response = await fetch(`${apiURL}/get/groupData/${groupID}`, {
+        method: 'GET',
+        headers,
+    });
+    // console.log(response)
+
+    const res = await response.json();
+    // if (debug) console.log(res)
+    if (res.error) return res;
+    else return res
+}
+
+async function getUserDataSimple(userID) {
+    const response = await fetch(`${apiURL}/get/userByID/${userID}`, {
+        method: 'GET',
+        headers
+    });
+
+    const res = await response.json();
+    // if (debug) console.log(res)
+    if (!response.ok) return 
+    else return res
+}
+// function clientStopTyping(typingTime) {
+//     if (clientTypingAct.typingTime != typingTime) return // console.log'/')
+
+//     const messageSend = {
+//         type: 09,
+//         apiVersion: "1.0",
+//         userID: currentUserLogin.userID,
+//         typing: false,
+//     }
+
+//     ws.send(JSON.stringify(messageSend))
+// }
+
+// function clientUserType() {
+//     const input = document.getElementById('messageBar').value
+//     if (sendTypeStop) clearTimeout(sendTypeStop)
+    
+//     if (!input) {
+//         clientTypingAct.typing = false
+//         clientTypingAct.typingTime = 0
+
+//         const messageSend = {
+//             type: 09,
+//             apiVersion: "1.0",
+//             userID: currentUserLogin.userID,
+//             typing: false,
+//         }
+    
+//         return ws.send(JSON.stringify(messageSend))
+//     }
+    
+//     const messageSend = {
+//         type: 08,
+//         apiVersion: "1.0",
+//         userID: currentUserLogin.userID,
+//         userTyping: true,
+//     }
+
+//     const timeTyping = getTime()
+
+//     clientTypingAct.typing = true
+//     clientTypingAct.typingTime = timeTyping
+
+//     ws.send(JSON.stringify(messageSend))
+
+//     sendTypeStop = setTimeout(function() { clientStopTyping(timeTyping); }, 4000)
+// }
+
+// function userTyping(data) {
+//     if (data.type==08) {
+//         var addUser = `<p id="userTyping-${data.user._id}">${data.user.username}</p>`//<p id="typingMainText"> is typing...</p>
+//         if (document.getElementById(`userTyping-${data.user._id}`)) return // console.log"user is already typing")
+//         else document.getElementById("userTyping").innerHTML += addUser
+//     }
+//     if (data.type==09) {
+//         var removeUser = document.getElementById(`userTyping-${data.user._id}`)
+//         if (removeUser) removeUser.remove()
+//     }
+// }
 
 function addToList(data, content, user, timeStamp, message) {
     var timesince
@@ -400,21 +647,17 @@ function sendmessage() {
     document.getElementById('messageBar').value = ''
 }
 
-function changeUserCount(newUserCount) {
-    document.getElementById("userCount").innerHTML = `Current User Count: ${newUserCount}`  
-}
+// function checkURLParams() {
+//     const params = new URLSearchParams(window.location.search)
+//     const ifRoom = params.has('room')
 
-function checkURLParams() {
-    const params = new URLSearchParams(window.location.search)
-    const ifRoom = params.has('room')
+//     if (ifRoom) {
+//         const roomSearch = params.get('room')
+//         return {"param":true, paramTypes: [ {"paramName":"room", "roomID":roomSearch}]}
+//     }
 
-    if (ifRoom) {
-        const roomSearch = params.get('room')
-        return {"param":true, paramTypes: [ {"paramName":"room", "roomID":roomSearch}]}
-    }
-
-    return {"param":false}
-}
+//     return {"param":false}
+// }
 
 function getId(url) {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;

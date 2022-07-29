@@ -1,6 +1,6 @@
 <!DOCTYPE HTML>
 <!--BASE IDEA OF CODE FROM https://www.tutorialspoint.com/html5/html5_websocket.htm-->
-<html lang="en">
+<html id="html" lang="en">
    <head>
         <title>Live Chat - Interact</title>
         <meta name="apple-mobile-web-app-capable" content="yes">
@@ -28,20 +28,35 @@
         <div class="allArea">
             <div id="navArea"></div>
             <div class="mainArea">
-                <h1 class="main-header">Interact Live Chat</h1>
-                <p id="userCount">Current User Count: 0</p>
+                <h1 class="main-header">Interact Group Chat</h1>
+                <p id="friendsCount">Current User Count: 0</p>
                 <p id="actiondescription">Action</p>
+                <p class="sendbutton" onclick="createNewGroup()">New Group</p>
+            
                 <div class="modalContainer" id="modalContainer"><div class="modal" id="modal"></div></div>
-                <div class="messageType">
-                    <form onsubmit="sendmessage()" onkeyup="clientUserType()" id="messageTypingForm">
-                        <input type="text" id="messageBar" placeholder="Type your message!">
-                    </form>
-                </div>
-                <p class="sendButton" onclick="sendmessage()">Send message</p>
+                <!--
+                    <div class="messageType">
+                        <form onsubmit="sendmessage()" onkeyup="clientUserType()" id="messageTypingForm">
+                            <input type="text" id="messageBar" placeholder="Type your message!">
+                        </form>
+                    </div>
+                    <div class="messageType">
+                        <form onsubmit="createGroup()" id="groupCreateForm">
+                            <input type="text" id="groupCreateInput" placeholder="Tag your users!">
+                        </form>
+                    </div>
+                    <p class="sendButton" onclick="sendgroupmessage()">Send group message</p>
+                -->
                 <div id="userTyping"></div>
-                <div id="messages" class="allMessages"></div>
+                <!-- <div id="messages" class="allMessages"></div> -->
                 <div id="onlinePeople" class="onlinePeople"></div>
             </div>
+            <div id="mainGroupScreen" class="row">
+                <div id="currentGroupsArea" class="column left"></div>
+                <div id="mainGroupArea" class="column middle"></div>
+                <div id="currentGroupsAreaRight" class="column right"></div>
+            </div>
+
         </div>
    </body>
 </html>
