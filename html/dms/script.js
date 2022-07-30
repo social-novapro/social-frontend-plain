@@ -164,13 +164,12 @@ async function createGroup() {
     var groupName = document.getElementById("newGroupName").value;
     var addingMembers = []
 
-    for (let i=1; i<members; i++) {
-        const username = document.getElementById(`userAdd_${i}`).innerText
+    for (let i=0; i<members; i++) {
+        const username = document.getElementById(`userAdd_${i+1}`).innerText
         const response = await fetch(`${apiURL}/get/username/${username}`, {
             method: 'GET',
             headers,
         });
-        // console.log(response)
     
         const res = await response.json();
         // if (debug) console.log(res)
@@ -237,14 +236,12 @@ function checkWebSocket() {
                             type: 201,
                             apiVersion: "1.0"
                         }))
-                        console.log('3')
                     }
                     break;
 
                 case 200: 
                     break;
                 case 201: 
-                console.log("e")
                     createSidebar(data)
                     break;
                 case 204: 
@@ -284,12 +281,10 @@ function removeGroupFromList(groupID) {
 async function createSidebar(userGroupsData) {
     var sidebarEle = ""
 
-    console.log(userGroupsData)
     for (const group of userGroupsData.userGroups.groups) {
-        console.log(group)
+        // console.log(group)
         const data = await getGroupData({ groupID: group._id })
         if (!data.error) {
-            console.log(data)
             /*
                 groupData : {
                     __v: 0
@@ -310,12 +305,14 @@ async function createSidebar(userGroupsData) {
                 </div>
             `
         }
-        
     }
     document.getElementById("currentGroupsArea").innerHTML=sidebarEle
-
 }
+
 async function openGroup(groupID) {
+    document.getElementById("mainGroupArea").innerHTML=""
+    document.getElementById("currentGroupsAreaRight").innerHTML=""
+
     const data = await getGroupData({ groupID }) 
 
     document.getElementById('mainGroupArea').innerHTML=`
