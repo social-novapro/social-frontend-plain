@@ -1,6 +1,6 @@
 // var websocketenabled
 var ws
-var currentGroup
+var currentGroup = null
 var roomID
 var defaultRoomID = "0001"
 var loginUserToken = false
@@ -249,6 +249,26 @@ function checkWebSocket() {
                         removeGroupFromList(data.groupID)
                     }
                     break;
+                case 210:
+                    // if (data.message._id == currentGroup) {
+                        addToGroupDM(data)
+                    // }
+                    break;
+                case 211: 
+                /*
+                    type: 211,
+                    user,
+                    index: responseData.index,
+                    messages: responseData.messages,
+                        user
+                        message
+                    groupData: responseData.groupData
+                */
+                    for (const message of data.messages) {
+                        addToGroupDM(message)
+                    }
+                    // console.log('211')
+                    break;
                 case 404:
                     break;
                     
@@ -279,7 +299,7 @@ function removeGroupFromList(groupID) {
 };
 
 async function createSidebar(userGroupsData) {
-    var sidebarEle = ""
+    var sidebarEle = `<div id="action"></div>`
 
     for (const group of userGroupsData.userGroups.groups) {
         // console.log(group)
@@ -309,7 +329,95 @@ async function createSidebar(userGroupsData) {
     document.getElementById("currentGroupsArea").innerHTML=sidebarEle
 }
 
+function sendGroupMessage(groupID) {
+    var input = document.getElementById('groupMessageBar').value;
+    if (!input) return document.getElementById("actiondescription").innerHTML = `There is no text included`        
+    document.getElementById('groupMessageBar').value = "";
+
+    var sendData = {
+        groupID,
+        "content" : input,
+        type: 210
+    }
+
+    ws.send(JSON.stringify(sendData))
+}
+
+function clearAction() {
+    document.getElementById("action").innerHTML=""
+
+}
+
+function addToGroupDM(data) {
+    /*
+        var sendNewMessage = {
+            type: 210,
+            user,
+            message: newMessage.messageData,
+            group: newMessage.groupData
+        }
+    */
+
+    if (data.message.groupID != currentGroup) {
+        document.getElementById("action").innerHTML = `<p onclick="openGroup('${data.message.groupID}')">new message</p><hr />`
+        setTimeout(clearAction, 5000);
+    }
+    console.log(data)
+    if (!data.user) return
+    if (!data.message) return
+
+    var timestamp = data.message.timestamp
+    var messageID = data.message._id
+    var userID = data.user._id
+    var groupID = data.message.groupID
+    var username = data.user.username
+    var displayName = data.user.displayName
+    var content = data.message.content
+
+    var timesince
+    if (timestamp) timesince = checkDate(timestamp)
+    // console.log(data)
+    const imageContent = checkForImage(content)
+
+    // console.log(data.message)
+    document.getElementById(`messages_${groupID}`).innerHTML+=`
+        <div class="message" id="${messageID}">
+            <p class="subheaderMessage ${userID == currentUserLogin.userID ? "ownUser" : "otherUser"}">${displayName} @${username} | ${timesince}</p>
+            <div class="contentMainArea" id="contentMainArea_${messageID}">
+                <p class="contentMessage" id="contentArea_${messageID}">${imageContent.content}</p>
+            </div>
+            <div class="messageActions">
+            </div>
+        </div>
+    `;
+
+    /*
+    document.getElementById("messages_").innerHTML+=`
+        <div class="message" id="${messageID}">
+            <p class="subheaderMessage ${userID == currentUserLogin.userID ? "ownUser" : "otherUser"}">${displayName} @${username} | ${timesince}</p>
+            <div class="contentMainArea" id="contentMainArea_${messageID}">
+                <p class="contentMessage" id="contentArea_${messageID}">${imageContent.content}</p>
+                ${data.message?.edited ? '<p class="edited contentMessage"><i>(edited)</i></p>' : ''}
+                ${data.message?.replyTo ? `<a class="edited contentMessage" href="#${data.message.replyTo}" onclick="highlightMessage('${data.message.replyTo}')"><i>(replying)</i></a>` : ''}
+            </div>
+            <div class="messageActions">
+                <div id="replyDiv_${data._id}"><p onclick="replyToMessage('${messageID}')">Reply</p></div>
+                ${data.type==2 && user._id == currentUserLogin.userID  ?  `
+                    <p id="deleteButton_${messageID}"><p onclick="deleteMessage('${messageID}')">Delete</p></p>
+                    <div id="editButton_${data._id}"><p onclick="editMessage('${messageID}', '${data.message.edited ? true : false}')">Edit</p></div>
+                ` : `` }
+            </div>
+        </div>
+    `;
+    */
+
+    // var objDiv = document.getElementById("messages");
+
+    // objDiv.scrollTop = objDiv.scrollHeight;
+};
+
 async function openGroup(groupID) {
+    currentGroup = groupID
     document.getElementById("mainGroupArea").innerHTML=""
     document.getElementById("currentGroupsAreaRight").innerHTML=""
 
@@ -318,8 +426,18 @@ async function openGroup(groupID) {
     document.getElementById('mainGroupArea').innerHTML=`
         <div id="openedGroup_${groupID}">
             <p>Pretend like i opened a new chat! ${groupID}</p>
+            <hr></hr>
+            <div class="messageType">
+                <form onsubmit="sendGroupMessage('${groupID}')" id="messageGroupBar">
+                    <input type="text" id="groupMessageBar" placeholder="Type your message!">
+                </form>
+            </div>
+            <hr></hr>
+            <div id="messages_${groupID}"></div>
         </div>
     ` 
+    document.getElementById("messageGroupBar").addEventListener("submit", function (e) { e.preventDefault()})
+
 
     var rightSideBarEle = `
         <p onclick="deleteGroup('${groupID}')">Delete.</p>
@@ -338,6 +456,12 @@ async function openGroup(groupID) {
               // <p>${userData.displayName}</p>
         }
     }
+
+    ws.send(JSON.stringify({
+        type: 211,
+        userID: currentUserLogin.userID,
+        groupID
+    }))
 
     document.getElementById("currentGroupsAreaRight").innerHTML=rightSideBarEle
 }
