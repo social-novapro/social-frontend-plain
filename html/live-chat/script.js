@@ -509,6 +509,16 @@ function checkForImage(content) {
                 const iframeMarkup = `<iframe title="uservideo" width="320" height="240" src="https://www.youtube-nocookie.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
                 contentArgs[index] = iframeMarkup
             }
+
+            if (contentArgs[index].startsWith("https://huelet.net/w/")) {
+                foundImage = true
+
+                const URL = contentArgs[index]
+                var videoID = URL.replace("https://huelet.net/w/", "")
+
+                const iframeHuelet = `<iframe src="https://publish.huelet.net/?embed=true&vuid=${videoID}" width="320" height="240" frameborder="0" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen="true"></iframe>`
+                contentArgs[index] = iframeHuelet
+            }
         }
     }
 
