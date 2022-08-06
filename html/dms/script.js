@@ -8,6 +8,8 @@ var currentUserLogin = { }
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 var sendTypeStop
 var amountTyping
+
+crypto = crypto || window.crypto;
 // var baseURL
 var headers = {
     "devtoken" : "6292d8ae-8c33-4d46-a617-4ac048bd6f11",
@@ -19,11 +21,36 @@ var verifiedConnection = false
 var wsURL = `${config ? `${config.current == "prod" ? config.prod.websocket_url : config.dev.websocket_url}` : 'https://interact-api.novapro.net/v1' }`
 var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
 
-if (location.protocol !== 'https:' && location.hostname !== 'localhost' &&location.hostname!=='127.0.0.1') {
+if (location.protocol !== 'https:' && !((/localhost|(127|192\.168|10)\.(\d{1,3}\.?){2,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.(\d{1,3}\.?){2}/).test(location.hostname))) {
     location.replace(`https:${location.href.substring(location.protocol.length)}`);
 } else {
     checkLogin()
 }
+
+async function launchEnc(){
+    const userTokenAsSalt = await crypto.subtle.digest("SHA-256", localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN));
+    let password = await crypto.subtle.digest("SHA-256", document.getElementById("encPassword").value);
+    let key = new TextEncoder(password);
+    key = await crypto.subtle.importKey("raw", key, "PBKDF2", false, ["deriveBits", "deriveKey"]);
+    key = await crypto.subtle.deriveKey({
+        "name":"PBKDF2", 
+        salt:userTokenAsSalt, 
+        "iterations":100000, 
+        "hash": "SHA-256"
+    }, 
+    key, 
+    {
+        "name": "AES-GCM",
+        "length": 256
+    }, true, ["encrypt", "decrypt"]);
+    let storedKey = crypto.subtle.exportKey("raw", key);
+    localStorage.setItem("PBKDF2Key", storedKey);
+
+    
+
+}
+
+
 
 function sendTokensDebug() {
     const authSend = {

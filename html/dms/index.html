@@ -51,6 +51,17 @@
                 <!-- <div id="messages" class="allMessages"></div> -->
                 <div id="onlinePeople" class="onlinePeople"></div>
             </div>
+            <div id="encPanel">
+                <div class="sendbutton">
+                    <form onsubmit="launchEnc()">
+                    <p id="launchText"></p>
+                    <!--<input type="checkbox" id="encPairToDevice"><p>Check the box to pair the key to your computer. In most cases you should leave this alone.</p>-->
+                    <input type="password" id="encPassword" placeholder="Password">
+                    </form>
+                </div>
+                
+                <p id="encStatus"></p>
+            </div>
             <div id="mainGroupScreen" class="row">
                 <div id="currentGroupsArea" class="column left"></div>
                 <div id="mainGroupArea" class="column middle"></div>
