@@ -70,7 +70,9 @@ var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 
 var debug = false
 
-if (location.protocol !== 'https:' && location.hostname !== 'localhost' &&location.hostname!=='127.0.0.1') {
+
+// good luck
+if (location.protocol !== 'https:' && !((/localhost|(127|192\.168|10)\.(\d{1,3}\.?){2,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.(\d{1,3}\.?){2}/).test(location.hostname))) {
     location.replace(`https:${location.href.substring(location.protocol.length)}`);
 }
 else {
