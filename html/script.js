@@ -1474,7 +1474,7 @@ async function quotePost(postID) {
             <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'}</p>
             <div class="postContent" id="postContentArea_${post._id}">
                 <div class="textAreaPost">
-                    <p id="postContent_${post._id}">${post.content} </p>
+                    <p id="postContent_${post._id}">${post.content}</p>
                     ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
                 </div>
             </div>
