@@ -608,6 +608,22 @@ async function userHtml(userID) {
                 `
             }
         </div>
+        ${profileData.userData.statusTitle  || clientUser ? 
+            `
+                <div class="userInfo">
+                    <p><b>Status</b></p>
+                    ${clientUser ?
+                        `
+                            <form id="userEdit_status" class="contentMessage" onsubmit="userEdit('status')">
+                                <input type="text" id="userEdit_status_text" class="userEditForm" value="${profileData.userData.statusTitle}">
+                            </form> 
+                        ` : `
+                            <p>${profileData.userData.statusTitle}</p>
+                        `
+                    }
+                </div>
+            ` : ``
+        }
         <div class="userInfo">
             <p><b>Description</b></p>
             ${clientUser ? 
@@ -662,7 +678,7 @@ async function userHtml(userID) {
             */
         }   
     
-        ${profileData.userData.pronouns ? 
+        ${profileData.userData.pronouns || clientUser ? 
             `
                 <div class="userInfo"><p><b>Pronouns</b></p>
                     ${clientUser ? 
@@ -698,10 +714,11 @@ async function userHtml(userID) {
     `
 
     if (clientUser) {
-        if (profileData.userData.displayName) document.getElementById("userEdit_displayName").addEventListener("submit", function (e) { e.preventDefault()})
-        if (profileData.userData.username) document.getElementById("userEdit_username").addEventListener("submit", function (e) { e.preventDefault()})
-        if (profileData.userData.description) document.getElementById("userEdit_description").addEventListener("submit", function (e) { e.preventDefault()})
-        if (profileData.userData.pronouns) document.getElementById("userEdit_pronouns").addEventListener("submit", function (e) { e.preventDefault()})
+        document.getElementById("userEdit_displayName").addEventListener("submit", function (e) { e.preventDefault()})
+        document.getElementById("userEdit_username").addEventListener("submit", function (e) { e.preventDefault()})
+        document.getElementById("userEdit_description").addEventListener("submit", function (e) { e.preventDefault()})
+        document.getElementById("userEdit_pronouns").addEventListener("submit", function (e) { e.preventDefault()})
+        document.getElementById("userEdit_status").addEventListener("submit", function (e) { e.preventDefault()})
     }
   
     return document.getElementById("page2Nav").innerHTML = `<div id="page2Nav"><button class="buttonStyled"  onclick="switchNav(5)" id="page2">Home</button>`
