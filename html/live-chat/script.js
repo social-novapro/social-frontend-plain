@@ -159,6 +159,12 @@ function checkWebSocket() {
                     }
                     else if (data.mesType==2) {
                         verifiedConnection = true
+                        // const oldmessages = {
+                        //     type: 11,
+                        //     apiVersion: "1.0",
+                        //     userID: currentUserLogin.userID,
+                        // }
+                        // ws.send(JSON.stringify(oldmessages))
                     }
                     break;
                 default:

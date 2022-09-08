@@ -145,9 +145,11 @@ async function searchUsers() {
     }
     document.getElementById('possibleAdds').innerHTML=usersEle
 }
+
 function changeUserAddInput(username) {
     document.getElementById('groupCreateInput').value=username
 }
+
 function addUsers() {
     var amountUsers = document.getElementById("amountUsersNewGroup").innerText
     var value = document.getElementById("groupCreateInput").value
@@ -236,6 +238,11 @@ function checkWebSocket() {
                             type: 201,
                             apiVersion: "1.0"
                         }))
+                        ws.send(JSON.stringify({
+                            type: 221,
+                            apiVersion: "1.0",
+                            method: "get"
+                        }))
                     }
                     break;
 
@@ -269,9 +276,15 @@ function checkWebSocket() {
                     }
                     // console.log('211')
                     break;
-                case 404:
+                case 221: 
+                    if (!data.error || !data.data.error) {
+                        console.log("using")
+                        console.log(data.groupID)
+                        
+                        if (data.data.groupID) openGroup(data.data.groupID, true)
+                    }
                     break;
-                    
+                case 404:
                     break;
             }
         };
@@ -416,12 +429,34 @@ function addToGroupDM(data) {
     // objDiv.scrollTop = objDiv.scrollHeight;
 };
 
-async function openGroup(groupID) {
-    currentGroup = groupID
-    document.getElementById("mainGroupArea").innerHTML=""
-    document.getElementById("currentGroupsAreaRight").innerHTML=""
+function updateLastOpened(groupID) {
+    if (!groupID) return { "error" : "no groupID was inputed into frontend function."}
+    ws.send(JSON.stringify({
+        type: 221,
+        apiVersion: "1.0",
+        method: "change",
+        groupID
+    }));
+    // ws.onmessage = function (evt) { 
+    //     const data = JSON.parse(evt.data)
+    //     console.log("finding data 2")
+    //     if (data.type==221) {
+    //         if (data.error) return { "success" : false, "error" : data.error }
+    //         else if (!data.data?.error) return { "success" : false, "error" : data.data.error }
+    //         else return {success : true, "data" : data}
+    //     }
+    // };
 
-    const data = await getGroupData({ groupID }) 
+    return { "success" : false };
+};
+
+async function openGroup(groupID, defaultGroupID) {
+    currentGroup = groupID
+    document.getElementById("mainGroupArea").innerHTML="";
+    document.getElementById("currentGroupsAreaRight").innerHTML="";
+
+    const data = await getGroupData({ groupID }) ;
+    if (defaultGroupID != true) updateLastOpened(groupID);
 
     document.getElementById('mainGroupArea').innerHTML=`
         <div id="openedGroup_${groupID}">
@@ -457,13 +492,13 @@ async function openGroup(groupID) {
         }
     }
 
+    
+    document.getElementById("currentGroupsAreaRight").innerHTML=rightSideBarEle
     ws.send(JSON.stringify({
         type: 211,
         userID: currentUserLogin.userID,
         groupID
     }))
-
-    document.getElementById("currentGroupsAreaRight").innerHTML=rightSideBarEle
 }
 
 function deleteGroup(groupID) {
