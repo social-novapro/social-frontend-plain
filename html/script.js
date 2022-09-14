@@ -884,7 +884,7 @@ async function showNotifications() {
     if (!response.ok) return document.getElementById('showNotificationsButton').innerHTML=`error`
     
 
-    var ele = `<hr class="rounded" id="bookmarksAreShown"><p>${res.amountFound} Notifications</p><hr class="rounded">`
+    var ele = `<hr class="rounded" id="bookmarksAreShown"><p id="amount_notifications">${res.amountFound} Notifications</p><hr class="rounded">`
     /*
         type: String (one)
             1: someone followed
@@ -903,11 +903,11 @@ async function showNotifications() {
     for (const notifi of res.notifications.reverse()) {
         switch (notifi.type) {
             case 5:
-                console.log(notifi.userID)
                 const userData = await getUserDataSimple(notifi.userID) 
                 ele+=`
-                    <div>
+                    <div class="buttonStyled" id="notification_${notifi._id}">
                         <a onclick="showPost('${notifi.postID}')">${userData.username} has posted! (click to see)</a>
+                        <p onclick="dismissNotification('${notifi._id}')">Dismiss Notification.</p>
                     </div>
                 `
             break;
@@ -917,10 +917,31 @@ async function showNotifications() {
         }
     }
    
-    
-
     document.getElementById("notificationsDIv").innerHTML=ele
 }
+async function dismissNotification(notificationID) {
+    const response = await fetch(`${apiURL}/delete/dismissNotification/${notificationID}`, {
+        method: 'DELETE',
+        headers
+    });
+    const res = await response.json();
+    if (!response.ok) return ;
+
+    if (res.success == false) return;
+    document.getElementById(`notification_${notificationID}`).remove();
+
+    var input = document.getElementById("amount_notifications").innerText
+    console.log(input)
+    var newInput = input.replace(" Notifications", "")
+    console.log(input)
+    console.log(newInput)
+
+    newInput--
+    console.log(newInput)
+
+    document.getElementById("amount_notifications").innerHTML=`${newInput} Notifications` 
+};
+
 async function showPost(postID) {
     const response = await fetch(`${apiURL}/get/post/${postID}`, {
         method: 'GET',
@@ -936,10 +957,12 @@ async function showPost(postID) {
     const ele = postElementCreate(res, user)
     document.getElementById('mainFeed').innerHTML=ele
 }
+/*
 `
     <button class="buttonStyled" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
     <div id="notificationsDIv"></div>
 `
+*/
 
 async function getUserDataSimple(userID) {
     const response = await fetch(`${apiURL}/get/userByID/${userID}`, {
