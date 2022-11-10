@@ -14,7 +14,7 @@ var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : con
 
 if (location.protocol !== 'https:' && !((/localhost|(127|192\.168|10)\.(\d{1,3}\.?){2,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.(\d{1,3}\.?){2}/).test(location.hostname))) {
     location.replace(`https:${location.href.substring(location.protocol.length)}`);
-}else checkLogin();
+} else checkLogin();
 
 async function checkLogin() {
     const userStorageLogin = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
@@ -47,7 +47,7 @@ async function verifyRequests() {
     if (!response.ok) return console.log(response);
 
     const requests = await response.json();
-    console.log(requests);
+    // console.log(requests);
 
     const users = {};
     for (const request of requests) {
@@ -58,7 +58,7 @@ async function verifyRequests() {
             });
         
             const userData = await getUser.json();
-            console.log(userData);
+            // console.log(userData);
             users[request._id] = userData;
         }
     }
@@ -80,16 +80,23 @@ function verificationRequestEle(request, userData) {
             <p>${userData.displayName} @${userData.username}</p>
             <p>${checkDate(request.timestamp)}</p>
             <p>${request.content}</p>
-        </div>
-    `
-    // return putData(userData) 
-    return `
-        <div id="userver_${userData._id}">
-            <p>${userData.username}
-            
+            <a onclick="acceptVerification('${userData._id}')" class="buttonStyled">Accept</a>
         </div>
     `
 }
+
+async function acceptVerification(id) {
+    const response = await fetch(`${apiURL}/admin/put/acceptVerification/${id}`, {
+        method: 'PUT',
+        headers: headers
+    });
+
+    if (!response.ok) return console.log(response);
+    
+    // const data = await response.json();
+    document.getElementById(`userver_${id}`).remove();
+}
+
 function putData(userData) {
     return `
         <div id="userver_${userData._id}">
@@ -98,13 +105,12 @@ function putData(userData) {
         </div>
     `
 }
+
 async function closeVerificationTab() {
     document.getElementById('verifyRequests').innerHTML = `
-        <a onclick="verifyRequests() class="buttonStyled"">Check Verification Requests</a>
+        <a onclick="verifyRequests()" class="buttonStyled">Check Verification Requests</a>
     `;
 }
-
-
 
 function checkDate(time){
     var timeNum = 0

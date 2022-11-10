@@ -900,18 +900,27 @@ async function showNotifications() {
         };
     */
 
+    // console.log(res)
+
     for (const notifi of res.notifications.reverse()) {
         switch (notifi.type) {
             case 5:
                 const userData = await getUserDataSimple(notifi.userID) 
                 ele+=`
                     <div class="buttonStyled" id="notification_${notifi._id}">
-                        <a onclick="showPost('${notifi.postID}')">${userData.username} has posted! (click to see)</a>
+                        <a onclick="showPost('${notifi.postID}')"><b>${userData.username}</b> has posted! (click to see)</a>
                         <p onclick="dismissNotification('${notifi._id}')">Dismiss Notification.</p>
                     </div>
                 `
-            break;
-        
+                break;
+            case 7: 
+                const userData2 = await getUserDataSimple(notifi.userID)
+                ele+=`
+                    <div class="buttonStyled" id="notification_${notifi._id}">
+                        <a onclick="showPost('${notifi.postID}')"><b>${userData2.username}</b> quoted your post!(click to see)</a>
+                        <p onclick="dismissNotification('${notifi._id}')">Dismiss Notification.</p> 
+                    </div>
+                `
             default:
                 break;
         }
