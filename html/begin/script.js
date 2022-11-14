@@ -69,13 +69,19 @@ async function loginSplashScreen() {
     document.getElementById("mainFeed").innerHTML = `hello`
     document.getElementById("mainFeed").innerHTML = `
         <div class="publicPost signInDiv">
-            <h1>Your not signed in!</h1>
+            <h1><a onclick="changeYour()" id="badYourGrammer">Your</a> not signed in!</h1>
             <p>Please Sign into Interact to Proceed!</p>
             <button class="buttonStyled" onclick="loginPage()">Log into Your Account</button>
             <button class="buttonStyled" onclick="createUserPage()">Create an Account</button>
         </div>
     `
-    console.log('--- login splash screen end')
+    console.log('--- login splash screen end');
+}
+
+async function changeYour() {
+    var badYourGrammer = document.getElementById('badYourGrammer');
+    if (badYourGrammer.innerHTML == 'Your') badYourGrammer.innerHTML = 'You are';
+    else badYourGrammer.innerHTML = 'Your';
 }
 
 // USER LOGIN PAGE 
