@@ -568,6 +568,21 @@ async function userHtml(userID) {
     profileData.postData.reverse()
     // profileData.included.post ? profileData.postData.reverse() : profileData.postData = []
     document.getElementById("mainFeed").innerHTML =  `
+        ${profileData.userData.profileURL || clientUser ? 
+            `
+                <div class="userInfo">
+                    <p><b>Profile</b></p>
+                    <img class="profileUserHtmlLarge" src="${profileData.userData.profileURL}"></img>
+                    ${clientUser ?
+                    `
+                        <form id="userEdit_profileImage" class="contentMessage" onsubmit="userEdit('profileImage')">
+                            <input id="userEdit_profileImage_text" type="text" class="userEditForm" value="${profileData.userData.profileURL}">
+                        </form>
+                    ` : ``
+                }
+                </div>
+            ` : ``
+        }
         <div class="userInfo">
             <p><b>Notifications</b></p>
             <a id="notificationSub" onclick="subNotifi('${profileData.userData._id}')">Subscribe</a>
@@ -719,6 +734,7 @@ async function userHtml(userID) {
         document.getElementById("userEdit_description").addEventListener("submit", function (e) { e.preventDefault()})
         document.getElementById("userEdit_pronouns").addEventListener("submit", function (e) { e.preventDefault()})
         document.getElementById("userEdit_status").addEventListener("submit", function (e) { e.preventDefault()})
+        document.getElementById("userEdit_profileImage").addEventListener("submit", function (e) { e.preventDefault()})
     }
   
     return document.getElementById("page2Nav").innerHTML = `<div id="page2Nav"><button class="buttonStyled"  onclick="switchNav(5)" id="page2">Home</button>`

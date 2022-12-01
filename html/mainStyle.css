@@ -193,3 +193,6 @@ hr.rounded {
     cursor: pointer;
     user-select: none;
 }
+.profileUserHtmlLarge {
+    width: 200px;
+}
