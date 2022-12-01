@@ -156,6 +156,7 @@ function postElementCreate(post, user, type) {
                         <p id="postContent_${post._id}">${imageContent.content}</p>
                         ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
                     </div>
+                    ${post.replyingPostID ? `<a class="replyingPost" href="#postElement_${post.replyingPostID}">Press here</a>` : ``}
                     ${post.quoteReplyPostID && post.quotedPost && post.quotedUser ? `<hr><div>${postElementCreate(post.quotedPost, post.quotedUser, "basic")}</div>` : ''}
                     <div class="PostAttachments">
                         ${imageContent.image ? `<div>${imageContent.attachments.map(function(attachment) {return `${attachment}`}).join(" ")}</div>`:''}
@@ -164,7 +165,7 @@ function postElementCreate(post, user, type) {
                 <p class="debug">${post._id} - from: ${post.userID}</p>
                 <div class="actionOptions pointerCursor"> 
                     <p onclick="likePost('${post._id}')" id="likePost_${post._id}">${post.totalLikes} likes</p>
-                    <p>${post.totalReplies} comments</p>
+                    <p onclick="replyPost('${post._id}')">${post.totalReplies} comments</p>
                     <p id="quoteButton_${post._id}"><p onclick="quotePost('${post._id}')">quote post</p></p>
                     ${post.userID == currentUserLogin.userID ? `
                         <p onclick="deletePost('${post._id}')">delete post</p>
@@ -1548,6 +1549,33 @@ async function quotePost(postID) {
     `, "hide")
 }
 
+async function replyPost(postID) {
+    const postResponse = await fetch(`${apiURL}/get/post/${postID}`, { method: 'GET', headers})
+    if (!postResponse.ok) return showModal(`<h1>Error</h1><p>something went wrong</p>`)
+    const post = await postResponse.json()
+    const userResponse = await fetch(`${apiURL}/get/userByID/${post.userID}`, { method: 'GET', headers })
+        
+    if (!userResponse.ok) return showModal(`<h1>Error</h1><p>something went wrong</p>`)
+    const user = await userResponse.json()
+    if (debug) console.log(user)
+    await showModal(`
+        <h1>Create a new Reply</h1>
+        <div class="postModalActions">
+            <p onclick="createPost({'replyID':'${postID}'})">Upload Reply</p>
+            <p onclick="closeModal()">Close</p>
+        </div>
+        <div class="post">
+            <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'}</p>
+            <div class="postContent" id="postContentArea_${post._id}">
+                <div class="textAreaPost">
+                    <p id="postContent_${post._id}">${post.content}</p>
+                    ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
+                </div>
+            </div>
+        </div>
+        <textarea class="postTextArea" id="newPostTextArea"></textarea>
+    `, "hide")
+}
 function checkIfLiked(postID) {
     if (document.getElementById(`likePost_${postID}`).classList.contains("likedColour")) return true
     else return false
@@ -1703,10 +1731,15 @@ async function createPost(params) {
     if (params?.quoteID) quoted = params.quoteID
     else quoted='null'
 
+    var replied
+    if (params?.replyID) replied = params.replyID
+    else replied='null'
+
     const data = { 
         "userID" : currentUserLogin.userID, 
         "content" : input,
-        "quoteReplyPostID" : quoted
+        "quoteReplyPostID" : quoted,
+        "replyingPostID" : replied
     };
 
     closeModal()

@@ -46,6 +46,9 @@
     box-shadow: none;
     transform: translateY(5px);
 }
+a {
+    color: var(--main-p-color)
+}
 h1 {
     color: var(--main-h1-color)
 }
