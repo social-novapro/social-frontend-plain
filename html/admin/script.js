@@ -35,7 +35,9 @@ function setupUI() {
         <div id="verifyRequests">
             <a onclick="verifyRequests()" class="buttonStyled">Check Verification Requests</a>
         </div>
-        <div 
+        <div id="adminRequests">
+            <a onclick="adminRequests()" class="buttonStyled">Check Admin Requests</a>
+        </div>
     `;
 };
 
@@ -64,7 +66,7 @@ async function verifyRequests() {
     }
 
     document.getElementById('verifyRequests').innerHTML = `
-        <a onclick="closeVerificationTab() class="buttonStyled"">Close Verification Requests</a>
+        <a onclick="closeVerificationTab()" class="buttonStyled">Close Verification Requests</a>
         <div>
             ${requests.map((request) => {
                 console.log(users[request._id]);
@@ -101,7 +103,6 @@ function putData(userData) {
     return `
         <div id="userver_${userData._id}">
             <p>${userData.username}
-            
         </div>
     `
 }
@@ -109,6 +110,71 @@ function putData(userData) {
 async function closeVerificationTab() {
     document.getElementById('verifyRequests').innerHTML = `
         <a onclick="verifyRequests()" class="buttonStyled">Check Verification Requests</a>
+    `;
+}
+
+async function adminRequests() {
+    const response = await fetch(`${apiURL}/admin/get/verificationRequests`, {
+        method: 'GET',
+        headers: headers
+    })
+    if (!response.ok) return console.log(response);
+
+    const requests = await response.json();
+
+    const users = {};
+    for (const request of requests) {
+        if (!users[request._id]) {
+            const getUser = await fetch(`${apiURL}/get/userByID/${request._id}`, {
+                method: 'GET',
+                headers: headers
+            });
+        
+            const userData = await getUser.json();
+            // console.log(userData);
+            users[request._id] = userData;
+        }
+    }
+
+    document.getElementById('adminRequests').innerHTML = `
+        <a onclick="closeAdminTab()" class="buttonStyled">Close Admin Requests</a>
+        <div>
+            ${requests.map((request) => {
+                console.log(users[request._id]);
+                    return adminRequestEle(request, users[request._id]);
+                }).join('')
+            }
+        </div>
+    `;
+}
+
+function adminRequestEle(request, userData) {
+    return `
+        <div id="adminR_userver_${userData._id}" class="userInfo">
+            <p>${userData.displayName} @${userData.username}</p>
+            <p>Date Requested: ${checkDate(request.timestamp)}</p>
+            <p>Content: ${request.content}</p>
+            <p>Type: ${request.adminType ? request.adminType : "Unknown"}</p>
+            <a onclick="acceptAdmin('${userData._id}')" class="buttonStyled">Accept</a>
+        </div>
+    `
+}
+
+async function acceptAdmin(id) {
+    const response = await fetch(`${apiURL}/admin/put/acceptAdmin/${id}`, {
+        method: 'PUT',
+        headers: headers
+    });
+
+    if (!response.ok) return console.log(response);
+    
+    // const data = await response.json();
+    document.getElementById(`adminR_userver_${id}`).remove();
+}
+
+async function closeAdminTab() {
+    document.getElementById('adminRequests').innerHTML = `
+        <a onclick="adminRequests()" class="buttonStyled">Check Admin Requests</a>
     `;
 }
 

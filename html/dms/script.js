@@ -45,7 +45,7 @@ function setDimennsions() {
 
     // var width = window.innerWidth;
     // console.log(width)
-    width = width - 200
+    width = width - 201;
     // console.log(width)
     // console.log(document.getElementById('mainGroupArea').style.width)
 
