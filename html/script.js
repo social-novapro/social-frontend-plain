@@ -8,6 +8,8 @@
             - custom feed (default when logged in)
             - following feed (just people you follow)
 
+    check if there are messages to be read
+    make a secondary message area
 // function that checks if user is logged in
 if (checkLoginUser()) {
     // if user is logged in, show the logout button
@@ -260,50 +262,6 @@ async function userPage(username) {
     userHtml(userData._id)
 
     return 
-    if (userData.displayName) document.title = `${userData.displayName} | Interact`
-
-    if (userData.code) {
-        return document.getElementById("mainFeed").innerHTML = `
-            <div class="publicPost signInDiv" id="userAccountPage">The user you requested to view does not exist.</div>
-        `   
-    }
-
-    document.getElementById("mainFeed").innerHTML = `
-        <div class="publicPost signInDiv" id="userAccountPage"></div>
-    `
-
-    if (userData.displayName && userData.username) {
-        document.getElementById("userAccountPage").innerHTML += `
-            <h1>${userData.displayName} - @${userData.username}</h1>
-        `
-    } else if (userData.displayName && !userData.username) {
-        document.getElementById("userAccountPage").innerHTML += `
-            <h1>${userData.displayName} - @(unknown))</h1>
-        `
-    } else if (!userData.displayName && userData.username) {
-        document.getElementById("userAccountPage").innerHTML / `
-            <h1>(unknown) - @${userData.username}</h1>
-        `
-    }
-
-    if (userData.verified) {
-        document.getElementById("userAccountPage").innerHTML += `
-            <p>Verified</p>
-        `
-    } else {
-        document.getElementById("userAccountPage").innerHTML += `
-            <p>Not Verified</p>
-        `
-    }
-    if (userData.description) {
-        document.getElementById("userAccountPage").innerHTML += `
-            <p>${userData.description}</p>
-        `
-    } else {
-        document.getElementById("userAccountPage").innerHTML += `
-            <p>There is no description for this user.</p>
-        `
-    }
 }
 
 /*
@@ -329,7 +287,7 @@ async function createPostModal() {
     `, "hide")
 }
 
-/*
+
 document.addEventListener('keypress', logKey);
 
 function logKey(e) {
@@ -337,7 +295,7 @@ function logKey(e) {
         searchBar()
         document.getElementById('searchBarArea').focus()
     }
-}*/
+}
 
 /*
 async function showModal(html, showClose) {
@@ -1063,8 +1021,10 @@ async function showDevOptions() {
                 ${res.DeveloperToken._id ? `<p>devToken: <p onclick="revealDevOptions('devToken')" id="devToken" class="blur">${res.DeveloperToken._id}</p>`:``}
                 ${res.DeveloperToken.premium ? `<p>Premium Dev Account</p>`:`<p>Regular Dev Account</p>`}
                 ${res.DeveloperToken.creationTimestamp ? `<p>Dev account created: ${checkDate(res.DeveloperToken.creationTimestamp)}</p>`:`<p>Unknown creation date</p>`}
+                ${res.DeveloperToken._id ? `<p onclick="copyToClipboard('${res.DeveloperToken._id}')">Copy Token</p>` : ""}
             </div>
         `;
+
     } else {
         devAccEle=`
             <hr class="rounded">
@@ -1078,24 +1038,42 @@ async function showDevOptions() {
         `
     };
 
-    var appTokensEle='';
+    var appTokensEle='<hr class="rounded"><p>App Token</p>';
+
+    // list of app token
+    var amount=0;
     if (res.applications&&res.AppTokens) {
-        appTokensEle+=`<hr class="rounded"><p>App Token${res.AppTokens.length>=2 ? 's': ''}</p>`
+        appTokensEle=`<hr class="rounded"><p>App Token${res.AppTokens.length>=2 ? 's': ''}</p><div id="appTokenList">`
         
-        var amount=0;
+        // var amount=0;
         for (const appToken of res.AppTokens.reverse()) {
             amount++;
             appTokensEle+=`
                 <div class="userInfo">
-                    <p>appToken ${amount} of ${res.AppTokens.length}</p>
+                    <p>appToken #${amount} of ${res.AppTokens.length}</p>
                     <p>app name: ${appToken.appName ? appToken.appName : `Unknown`}
                     ${appToken._id ? `<p>appToken: <p onclick="revealDevOptions('appTokens', ${amount})" id="appToken_${amount}" class="blur">${appToken._id}</p>`:``}
+                    ${appToken._id ? `<p onclick="copyToClipboard('${appToken._id}')">Copy Token</p>` : ""}
                     <p>API Uses: ${appToken.APIUses? appToken.APIUses : `0`}
                     ${appToken.creationTimestamp ? `<p>Application created: ${checkDate(appToken.creationTimestamp)}</p>`:`<p>Unknown creation date</p>`}
                 </div>
             `;
         };
+        appTokensEle+="</div>"
     };
+    // create new app token
+    if (res.developer) {
+        appTokensEle+=`
+            <div class="userInfo" id="newAppToken">
+                <p>Generate New App Token</p>
+                <p>Please input an application name</p>
+                <div class="searchSelect search">
+                    <input id="appName_AppTokenRequest" placeholder="Application Name:">
+                </div>
+                <button onclick="requestAppToken(${amount})">Generate Token</button>
+            </div>
+        `
+    }
 
     var appAccessEle=`<hr class="rounded"><p>App Connections</p>`;
     if (res.allowedApplications&&res.AppTokens) {
@@ -1116,6 +1094,62 @@ async function showDevOptions() {
     document.getElementById("showDevDiv").innerHTML=ele;
     return;
 };
+
+function copyToClipboard(data) {
+    navigator.clipboard.writeText(data);
+}
+
+async function requestAppToken(amount) {
+    const newAmount = amount+1;
+    const appName = document.getElementById('appName_AppTokenRequest').value;
+    if (debug) console.log(appName);
+    const userDevToken = document.getElementById('devToken').innerText;
+    if (debug) console.log(userDevToken);
+    document.getElementById('newAppToken').innerHTML="loading";
+
+    if (!appName){
+        return document.getElementById('newAppToken').innerText="Failed! Please input a new app name!";
+
+    };
+    if (!userDevToken) {
+        return document.getElementById('newAppToken').innerText="Failed! No user dev token, please request a developer account!";
+    };
+    const data = {
+        appname: appName,
+        userdevtoken: userDevToken
+    }
+    const requestRes = await fetch(`${apiURL}Priv/post/newAppToken`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data)
+    });
+
+    const appTokenData = await requestRes.json();
+    if (debug) console.log(appTokenData)
+    if (!requestRes.ok || requestRes.error) return console.log({error: `${requestRes?.error ? requestRes.error : "an unknown error"}`});
+
+    const newEle = `
+        <div class="userInfo">
+            <p>NEW TOKEN</p>
+            <p>appToken #${newAmount}</p>
+            <p>app name: ${appTokenData.appName ? appTokenData.appName : `Unknown`}
+            ${appTokenData._id ? `<p>appToken: <p onclick="revealDevOptions('appTokens', ${newAmount})" id="appToken_${newAmount}" class="blur">${appTokenData._id}</p>`:``}
+            ${appTokenData._id ? `<p onclick="copyToClipboard('${appTokenData._id}')">Copy Token</p>` : ""}
+            <p>API Uses: ${appTokenData.APIUses? appTokenData.APIUses : `0`}
+            ${appTokenData.creationTimestamp ? `<p>Application created: ${checkDate(appTokenData.creationTimestamp)}</p>`:`<p>Unknown creation date</p>`}
+        </div>
+    `;
+    const newRequestEle = `
+        <p>Generate New App Token</p>
+        <p>Please input an application name</p>
+        <div class="searchSelect search">
+            <input id="appName_AppTokenRequest" placeholder="Application Name:">
+        </div>
+        <button onclick="requestAppToken(${newAmount})">Generate Token</button>
+    `
+    document.getElementById('newAppToken').innerHTML=newRequestEle
+    document.getElementById('appTokenList').innerHTML+=newEle;
+}
 
 async function requestDevToken() {
     document.getElementById('devAcc').innerHTML="loading";
