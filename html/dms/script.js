@@ -1,6 +1,6 @@
 // var websocketenabled
 var ws
-var currentGroup = null
+var currentGroup = undefined
 var roomID
 var defaultRoomID = "0001"
 var loginUserToken = false
@@ -640,7 +640,7 @@ function highlightMessage(id) {
 function checkIfActiveReply() {
     var returnObj = {
         foundActive: false,
-        replyID: null
+        replyID: undefined
     };
 
     if(document.getElementById(`activeReply`)) {
@@ -819,7 +819,7 @@ function getId(url) {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = url.match(regExp);
 
-    return (match && match[2].length === 11) ? match[2] : null;
+    return (match && match[2].length === 11) ? match[2] : undefined;
 }
 
 function checkForImage(content) {

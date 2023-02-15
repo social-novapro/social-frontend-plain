@@ -72,7 +72,6 @@ var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 
 var debug = false
 
-
 // good luck
 if (location.protocol !== 'https:' && !((/localhost|(127|192\.168|10)\.(\d{1,3}\.?){2,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.(\d{1,3}\.?){2}/).test(location.hostname))) {
     location.replace(`https:${location.href.substring(location.protocol.length)}`);
@@ -104,37 +103,50 @@ async function checkURLParams() {
 
     if (ifUsername) {
         paramsFound = true
+        paramsInfo.paramsFound = true
         const usernameSearch = params.get('username')
         userPage(usernameSearch)
     }
     else if (ifPostID) {
         paramsFound = true
-        const usernameSearch = params.get('postID')
+        paramsInfo.paramsFound = true
+
+        const postIDSearch = params.get('postID')
+        // postPage()
+        postHtml(postIDSearch)
         // return userPage(usernameSearch)
     }
     else if (ifSearch) {
         paramsFound = true
+        paramsInfo.paramsFound = true
+
         const searchSearching = params.get('search')
         searchResult(searchSearching)
         addWritingToSeachBar(searchSearching)
     }
     else if (ifLoginRequest) {
         paramsFound = true
+        paramsInfo.paramsFound = true
+
         loginPage()
     }
     else if (ifNewAccountLogin) {
         paramsFound = true
+        paramsInfo.paramsFound = true
+
         loginSplashScreen()
     }
    
     return paramsInfo
 }
 
-function postElementCreate(post, user, type) {
+function postElementCreate({ post, user, type, hideParent, hideReplies }) {
     var timesince
     if (post.timePosted) timesince = checkDate(post.timePosted)
     const imageContent = checkForImage(post.content)
-
+    const options = {
+        hideParent, hideReplies
+    }
    // imageContent.attachments
     if (imageContent.imageFound)if (debug) console.log(imageContent.attachments)
     if (type=="basic"){
@@ -151,7 +163,15 @@ function postElementCreate(post, user, type) {
     
     return `
         <div id="postElement_${post._id}" class="postElement">
+            ${!hideParent==true && post.isReply ? `
+                <div id="parent_${post._id}"></div>` 
+            : `` } 
             <div class="publicPost areaPost" id="postdiv_${post._id}">
+                ${!hideParent==true && post.isReply ? `
+                    ${ post.replyData ? `
+                        <p onclick="viewParentPost('${post._id}', '${post.replyData.postID}')" id="parentViewing_${post._id}">This was a reply, click here to see.</p>
+                    ` : ``}
+                `: ``}
                 <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'} | ${timesince}</p>
                 <div class="postContent" id="postContentArea_${post._id}">
                     <div class="textAreaPost">
@@ -159,28 +179,37 @@ function postElementCreate(post, user, type) {
                         ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
                     </div>
                     ${post.replyingPostID ? `<a class="replyingPost" href="#postElement_${post.replyingPostID}">Press here</a>` : ``}
-                    ${post.quoteReplyPostID && post.quotedPost && post.quotedUser ? `<hr><div>${postElementCreate(post.quotedPost, post.quotedUser, "basic")}</div>` : ''}
+                    ${post.quoteReplyPostID && post.quotedPost && post.quotedUser ? `<hr><div>${postElementCreate({post: post.quotedPost, user: post.quotedUser, type: "basic"})}</div>` : ''}
                     <div class="PostAttachments">
                         ${imageContent.image ? `<div>${imageContent.attachments.map(function(attachment) {return `${attachment}`}).join(" ")}</div>`:''}
                     </div>
                 </div>
                 <p class="debug">${post._id} - from: ${post.userID}</p>
                 <div class="actionOptions pointerCursor"> 
-                    <p onclick="likePost('${post._id}')" id="likePost_${post._id}">${post.totalLikes} likes</p>
-                    <p onclick="replyPost('${post._id}')">${post.totalReplies} comments</p>
-                    <p id="quoteButton_${post._id}"><p onclick="quotePost('${post._id}')">quote post</p></p>
+                    ${post.totalLikes ? 
+                        `<p onclick="likePost('${post._id}')" id="likePost_${post._id}">${post.totalLikes} likes</p>` :
+                        `<p onclick="likePost('${post._id}')" id="likePost_${post._id}">like</p>`
+                    }
+                    ${post.totalReplies ? 
+                        `<p onclick="replyPost('${post._id}')">${post.totalReplies} replies</p>` : 
+                        `<p onclick="replyPost('${post._id}')">reply</p>`
+                    }
+                    ${post.totalQuotes ? 
+                        `<p onclick="quotePost('${post._id}')">${post.totalQuotes} quotes</p>` : 
+                        `<p id="quoteButton_${post._id}"><p onclick="quotePost('${post._id}')">quote</p></p>`
+                    }
                     ${post.userID == currentUserLogin.userID ? `
                         <p onclick="deletePost('${post._id}')">delete post</p>
                         <p id='editButton_${post._id}'><p onclick="editPost('${post._id}', '${post.edited}')">edit post</p></p>
                     ` : '' }</p>
-                    <p id="popupactions_${post._id}" onclick="popupActions('${post._id}')">more</p>
+                    <p id="popupactions_${post._id}" onclick="popupActions('${post._id}', '${options}')">more</p>
                 </div>
             </div>
         </div>
     `
 }
 
-async function popupActions(postID) {
+async function popupActions(postID, options) {
     var elementPopup = document.getElementById(`popupOpen_${postID}`);
     if (elementPopup) return elementPopup.remove();
 
@@ -188,12 +217,115 @@ async function popupActions(postID) {
         <div id="popupOpen_${postID}" class="publicPost" style="position: element(#popupactions_${postID});">
             <p>Menu Actions</p>
             <p>---</p>
-            <p onclick="saveBookmark('${postID}')" id="saveBookmark_${postID}">Save to Bookmarks</p>
-            <p onclick="showEditHistory('${postID}')" id="editHistory_${postID}">Check Edit History</p>
-            <p onclick="showLikes('${postID}')" id="likedBy_${postID}">Check Who Liked</p>
+            <p class="pointerCursor" onclick="saveBookmark('${postID}')" id="saveBookmark_${postID}">Save to Bookmarks</p>
+            <p class="pointerCursor" onclick="showEditHistory('${postID}')" id="editHistory_${postID}">Check Edit History</p>
+            <p class="pointerCursor" onclick="showLikes('${postID}')" id="likedBy_${postID}">Check Who Liked</p>
+            ${options.hideReplies != true ? `<p class="pointerCursor" onclick="viewReplies('${postID}')" id="replies_${postID}">Check Replies</p>` : ``}
         </div>
     `;
 };
+
+async function viewParentPost(postID, parentPostID) {
+    if (document.getElementById(`openedParent_${postID}`)) {
+        document.getElementById(`parentViewing_${postID}`).innerText = "This was a reply, click here to see.";
+        return document.getElementById(`openedParent_${postID}`).remove();
+    }
+
+    const response = await fetch(`${apiURL}/get/post/${parentPostID}`, {
+        method: 'GET',
+        headers
+        // body: JSON.stringify(body)
+    });
+    
+    const postData = await response.json();
+    if (debug) console.log(postData);
+
+    if (postData.deleted == true || !postData.userID) {
+        document.getElementById(`parent_${postID}`).innerHTML = `
+            <div class="publicPost areaPost" id="openedParent_${postID}">
+                <div class="publicPost areaPost">
+                    <p>Parent post has been deleted.</p>
+                </div>
+            </div>
+        `;
+        document.getElementById(`parentViewing_${postID}`).innerText = "Close parent post.";
+
+        return;
+    }
+
+    const userRes = await fetch(`${apiURL}/get/userByID/${postData.userID}`, {
+        method: 'GET',
+        headers
+        // body: JSON.stringify(body)
+    });
+   
+    const userData = await userRes.json();
+
+    const postEle = postElementCreate({post: postData, user: userData});
+    document.getElementById(`parent_${postID}`).innerHTML = `
+        <div class="publicPost areaPost" id="openedParent_${postID}">${postEle}</div>
+    `;
+    document.getElementById(`parentViewing_${postID}`).innerText = "Close parent post.";
+
+}
+
+// async function 
+async function viewReplies(postID) {
+    if (document.getElementById(`repliesOpened_${postID}`)) {
+        document.getElementById(`replies_${postID}`).innerText = "Check replies";
+
+        return document.getElementById(`repliesOpened_${postID}`).remove();
+    }
+
+    // if ()
+    // http://localhost:5002/v1/get/postReplies/71f9a348-aa28-4443-a39d-4247620e43ce
+    const response = await fetch(`${apiURL}/get/postReplies/${postID}`, {
+        method: 'GET',
+        headers
+        // body: JSON.stringify(body)
+    });
+    const replyData = await response.json();
+    if (debug) console.log(replyData)
+    if (replyData.code) {
+        document.getElementById(`postElement_${postID}`).innerHTML+=`
+            <div id="repliesOpened_${postID}" class="publicPost" style="position: element(#popupactions_${postID});">
+                <p>Replies</p>
+                <p>---</p>
+                There are no replies yet on this post.
+            </div>
+        `;
+        if (debug) console.log("no replies")
+        return ;
+    }
+    // array
+
+    var ele = ``;
+    for (const reply of replyData.replies) {
+        // if (reply!=null) {
+            const userRes = await fetch(`${apiURL}/get/userByID/${reply.userID}`, {
+                method: 'GET',
+                headers
+                // body: JSON.stringify(body)
+            });
+            const userData = await userRes.json();
+            if (debug) console.log(userData)
+            ele+=postElementCreate({post: reply, user: userData, hideParent: true });
+        // }
+    }
+
+    document.getElementById(`postElement_${postID}`).innerHTML+=`
+        <div id="repliesOpened_${postID}" class="publicPost" style="position: element(#popupactions_${postID});">
+            <p>Replies</p>
+            <p>---</p>
+            ${ele}
+        </div>
+    `;
+
+    document.getElementById(`replies_${postID}`).innerText = "Close replies";
+    // get message
+    // postElementCreate
+
+}
 
 async function saveBookmark(postID, list) {
     const body = {
@@ -249,6 +381,9 @@ async function showEditHistory(postID) {
     document.getElementById(`editHistory_${postID}`).innerHTML=newElement;
 };
 
+// async function postPage() {
+
+// }
 async function userPage(username) {
     searching = true
 
@@ -510,6 +645,45 @@ async function userEdit(action) {
     console.log(newUser)
 }
 
+async function postHtml(postID) {
+    const postRes = await fetch(`${apiURL}/get/post/${postID}`, {
+        method: 'GET',
+        headers,
+    })
+
+    const postData = await postRes.json()
+
+    if (!postData || !postRes.ok || postData.deleted) return console.log("error with post");
+
+    const userRes = await fetch(`${apiURL}/get/userByID/${postData.userID}`, {
+        method: 'GET',
+        headers,
+    })
+    
+    const userData = await userRes.json();
+    const ele = postElementCreate({post: postData, user: userData});
+    document.getElementById("mainFeed").innerHTML = ele
+
+    return 
+    if (postRes.isReply) {
+
+    } else {
+
+    }
+    // const ele = ``;
+
+
+    /*
+    | Mother of post  (recursivly)
+    |
+    | Actual Post (will be main, large)
+
+        scrolls down to actual post, +  half of mother post vieable
+
+        loads one comment index (most recent)
+    */
+}
+
 async function userHtml(userID) {
     const response = await fetch(`${apiURL}/get/user/${userID}`, {
         method: 'GET',
@@ -527,18 +701,18 @@ async function userHtml(userID) {
     profileData.postData.reverse()
     // profileData.included.post ? profileData.postData.reverse() : profileData.postData = []
     document.getElementById("mainFeed").innerHTML =  `
-        ${profileData.userData.profileURL || clientUser ? 
+        ${profileData.userData?.profileURL != null  || clientUser ? 
             `
                 <div class="userInfo">
-                    <p><b>Profile</b></p>
-                    <img class="profileUserHtmlLarge" src="${profileData.userData.profileURL}"></img>
-                    ${clientUser ?
-                    `
+                    <p><b>Profile Image</b></p>
+                    ${profileData.userData?.profileURL != null ?  `
+                        <img class="profileUserHtmlLarge" src="${profileData.userData.profileURL}"></img>
+                    ` : ``}
+                    ${clientUser ? `
                         <form id="userEdit_profileImage" class="contentMessage" onsubmit="userEdit('profileImage')">
                             <input id="userEdit_profileImage_text" type="text" class="userEditForm" value="${profileData.userData.profileURL}">
                         </form>
-                    ` : ``
-                }
+                    ` : `` }
                 </div>
             ` : ``
         }
@@ -682,7 +856,7 @@ async function userHtml(userID) {
             </div>
             <hr class="rounded">
             ${profileData.postData.map(function(post) {
-                return postElementCreate(post, profileData.userData)                
+                return postElementCreate({post: post, user: profileData.userData})                
             }).join(" ")}
         ` : ``}
     `
@@ -765,7 +939,7 @@ async function showBookmarks() {
             if (debug) console.log(save)
             const newData = await getPostAndProfileData(save)
             if (newData.error) ele+=`<p>error</p>`
-            else ele+= postElementCreate(newData.postData, newData.profileData, "basic")
+            else ele+= postElementCreate({post: newData.postData, user: newData.profileData, type : "basic"})
             // ele+=
         }
         ele+=`</div>`
@@ -938,7 +1112,7 @@ async function showPost(postID) {
 
     const user = await getUserDataSimple(res.userID)
     if (debug) console.log(user)
-    const ele = postElementCreate(res, user)
+    const ele = postElementCreate({post: res, user: user})
     document.getElementById('mainFeed').innerHTML=ele
 }
 /*
@@ -1444,7 +1618,7 @@ function buildView(posts) {
 
     document.getElementById("mainFeed").innerHTML = `
         ${posts.map(function(postArray) {
-            return postElementCreate(postArray.postData, postArray.userData)
+            return postElementCreate({post: postArray.postData, user: postArray.userData})
             /* 
             return `
                 <div class="postArea">
@@ -1520,7 +1694,7 @@ async function cancelEdit(postID, content, edited) {
 
     const user = await userData.json()
     if (debug) console.log(user)
-    return document.getElementById(`postElement_${postID}`).innerHTML = postElementCreate(post, user)
+    return document.getElementById(`postElement_${postID}`).innerHTML = postElementCreate({post, user})
 }
 
 async function submitEdit(postID) {
@@ -1717,7 +1891,7 @@ async function searchResult(input) {
             `
         }).join(" ")}
         ${data.postsFound.reverse().map(function(postArray) {
-            return postElementCreate(postArray.postData, postArray.userData)
+            return postElementCreate({post: postArray.postData, user: postArray.userData})
         }).join(" ")}
     `
 
@@ -1763,11 +1937,11 @@ async function createPost(params) {
 
     var quoted 
     if (params?.quoteID) quoted = params.quoteID
-    else quoted='null'
+    else quoted=undefined
 
     var replied
     if (params?.replyID) replied = params.replyID
-    else replied='null'
+    else replied=undefined
 
     const data = { 
         "userID" : currentUserLogin.userID, 
@@ -1847,7 +2021,7 @@ function getId(url) {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = url.match(regExp);
 
-    return (match && match[2].length === 11) ? match[2] : null;
+    return (match && match[2].length === 11) ? match[2] : undefined;
 }
     
 function checkForImage(content) {
