@@ -87,18 +87,22 @@ async function changeYour() {
 // USER LOGIN PAGE 
 async function loginPage() {
     document.getElementById("mainFeed").innerHTML = `
-        <h1>Please Login!</h1>
-        <form onsubmit="sendLoginRequest()" id="signInForm">
-            <div>
-                <p>Enter Username:</p>
-                <p><input id="userUsernameLogin" placeholder="Username" type="text" name="username"></p>
-            </div>
-            <div>
-                <p>Enter Password</p>
-                <p><input id="userPasswordLogin" placeholder="Password" type="password" name="password"></p>
-            </div>
-            <input class="buttonStyled" type="submit">
-        </form>
+        <div class="userInfo">
+            <h1>Please Login!</h1>
+            <form onsubmit="sendLoginRequest()" id="signInForm">
+                <div class="userInfo">
+                    <p>Enter Username:</p>
+                    <p><input class="contentMessage userEditForm" id="userUsernameLogin" placeholder="Username" type="text" name="username"></p>
+                </div>
+                <div class="userInfo">
+                    <p>Enter Password</p>
+                    <p><input class="contentMessage userEditForm" id="userPasswordLogin" placeholder="Password" type="password" name="password"></p>
+                </div>
+                <div class="signInDiv">
+                    <button class="buttonStyled" type="submit">Login</div>
+                </div>
+            </form>
+       </div>
     `
     document.getElementById("signInForm").addEventListener("submit", function (e) { e.preventDefault()})
 }
@@ -151,31 +155,34 @@ async function checkLoginUser() {
 
 function createUserPage() {
     document.getElementById("mainFeed").innerHTML = `
-        <h1>Please Create an Account!</h1>
-        <p id="errorMessage"></p>
-        <form onsubmit="createNewUserRequest()" id="createUserForm">
-            <div> 
-                <p>Enter Your New Username:</p>
-                <input type="text" id="usernameCreate" placeholder="Username" type="text" name="username">
-            </div>
-            <div> 
-                <p>Enter Your New Displayname:</p>
-                <input type="text" id="displaynameCreate" placeholder="Displayname">
-            </div>
-            <div> 
-                <p>Enter Your New Password:</p>
-                <input id="passwordCreate" placeholder="Password" type="password" name="password">
-            </div>
-            <div> 
-                <p>Enter Your Description:</p>
-                <input type="text" id="descriptionCreate" placeholder="Description">
-            </div>
-            <div> 
-                <p>Enter Your Pronouns:</p>
-                <input type="text" id="pronounsCreate" placeholder="Pronouns">
-            </div>
-            <input class="buttonStyled" type="submit">
-        </form>
+        <div class="userInfo">
+            <h1>Please Create an Account!</h1>
+            <form onsubmit="createNewUserRequest()" id="createUserForm">
+                <div class="userInfo">
+                    <p>Enter Your New Username:</p>
+                    <input type="text" class="contentMessage userEditForm" id="usernameCreate" placeholder="Username" type="text" name="username">
+                </div>
+                <div class="userInfo">
+                    <p>Enter Your New Displayname:</p>
+                    <input type="text" class="contentMessage userEditForm" id="displaynameCreate" placeholder="Displayname">
+                </div>
+                <div class="userInfo">
+                    <p>Enter Your New Password:</p>
+                    <input type="password" class="contentMessage userEditForm" id="passwordCreate" placeholder="Password" name="password">
+                </div>
+                <div class="userInfo">
+                    <p>Enter Your Description:</p>
+                    <input type="text" class="contentMessage userEditForm" id="descriptionCreate" placeholder="Description">
+                </div>
+                <div class="userInfo">
+                    <p>Enter Your Pronouns:</p>
+                    <input type="text" class="contentMessage userEditForm" id="pronounsCreate" placeholder="Pronouns">
+                </div>
+                <div class="signInDiv">
+                    <button class="buttonStyled" type="submit">Create Account</div>
+                </div>
+            </form>
+        </div>
     `
     document.getElementById("createUserForm").addEventListener("submit", function (e) { e.preventDefault()})
 }
