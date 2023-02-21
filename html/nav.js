@@ -7,7 +7,7 @@ var pathArray = window.location.pathname.split( '/' );
 
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 
-console.log(config)
+// console.log(config)
 var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
 var hostedURL = `${config ? `${config.current == "prod" ? config.prod.hosted_url : config.dev.hosted_url}` : 'https://interact-api.novapro.net/v1' }`
 var wsURL = `${config ? `${config.current == "prod" ? config.prod.websocket_url : config.dev.websocket_url}` : 'wss://interact-api.novapro.net/' }`
@@ -16,25 +16,35 @@ var headers = {
     "devtoken" : "6292d8ae-8c33-4d46-a617-4ac048bd6f11",
     "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421"
 }
+var openedSidebar = false
+var mainContentSideBarOpenClosed = false
+
+var sideBarOpenClosed = document.getElementById("expandingNavBar")
+var mainContentSideBarOpenClosed = document.getElementById("expandingMainContent")
 
 if (location.protocol !== 'https:' && !((/localhost|(127|192\.168|10)\.(\d{1,3}\.?){2,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.(\d{1,3}\.?){2}/).test(location.hostname))) {
     location.replace(`https:${location.href.substring(location.protocol.length)}`);
 }
 else {
+   startup()
+}
+async function startup(){
     addNavigation()
+    checkNavCookie()
     addTitle() 
     checkLogin()
 }
 
-console.log(hostedURL)
-console.log(baseUrl)
-console.log(pathArray)
+// console.log(hostedURL)
+// console.log(baseUrl)
+// console.log(pathArray)
 
 /*if ("WebSocket" in window) {
     ws = new WebSocket(`${wsURL}stats`)
 }*/
 
 function addNavigation() {
+    return newNavigation();
     document.getElementById('navArea').innerHTML = `
         <div class="nav"id="nav">
             <div id="page1Nav">${pathArray[1] != "" ? `<button class="buttonStyled"  onclick="switchNav(5)" id="page1">Feed</button>` : `<button class="buttonStyled"  onclick="switchNav(1)" id="page1">Live Chat</button>`}</div>
@@ -46,6 +56,49 @@ function addNavigation() {
         </div>
     `
 }
+
+function newNavigation() {
+    document.getElementById('expandingNavBar').innerHTML = `
+        <ul class="navbar-nav">
+            <li class="nav-item pointerCursor">
+                <div id="page1Nav" class="nav-link" onclick="${pathArray[1] != "" ? `switchNav(5)` : `switchNav(1)`}">
+                    <span class="link-text pointerCursor" id="page1">${pathArray[1] != "" ? `Feed` : `Live Chat`}</span>
+                </div>
+            </li>
+            <li class="nav-item pointerCursor">
+                <div id="page2Nav" class="nav-link" onclick="switchNav(2)">
+                    <span class="link-text pointerCursor" id="page2">Profile</span>
+                </div>
+            </li>
+            <li class="nav-item pointerCursor">
+                <div id="page3Nav" class="nav-link" onclick="switchNav(3)">
+                    <span class="link-text pointerCursor" id="page3">DevMode</span>
+                </div>
+            </li>
+            <li class="nav-item pointerCursor">
+                <div id="page4Nav" class="nav-link" onclick="createPostModal()">
+                    <span class="link-text pointerCursor" id="page4">Create Post</span>
+                </div>
+            </li>
+            <li class="nav-item pointerCursor">
+                <div id="page5Nav" class="nav-link" onclick="signOut()">
+                    <span class="link-text pointerCursor" id="page5">Sign Out</span>
+                </div>
+            </li>
+            <li class="nav-item pointerCursor">
+                <div id="searchBar" class="nav-link" onclick="activeSearchBar()">
+                    <span class="link-text pointerCursor" id="page6">Search</span>
+                </div>
+            </li>
+            <li class="nav-item pointerCursor expanding-button">
+                <div id="searchBar" class="nav-link" onclick="sidebarOpen()">
+                    <span class="link-text pointerCursor" id="page1">Expand</span>
+                </div>
+            </li>
+        </ul>
+    `
+    return true;
+};
 
 function addTitle() {
     document.title = 'Interact'
@@ -156,4 +209,72 @@ async function showModalClose() {
 
 async function closeModal() {
     document.getElementById('modalContainer').classList.remove("showModal")    
+}
+
+
+var openedSidebar = false
+var mainContentSideBarOpenClosed = false
+
+var sideBarOpenClosed = document.getElementById("expandingNavBar")
+var mainContentSideBarOpenClosed = document.getElementById("expandingMainContent")
+
+function sidebarOpen() {
+    if(!openedSidebar) {
+        setCookie("expandSidebar", true, 365);
+        openSideBar()
+    } else {
+        setCookie("expandSidebar", false, 365);
+        closeSideBar()
+    }
+}
+
+function openSideBar() {
+    openedSidebar = true;
+    sideBarOpenClosed.classList.add("navbar-expanded");
+    mainContentSideBarOpenClosed.classList.add("main-content-expanded");
+}
+
+function closeSideBar() {
+    openedSidebar = false;
+    sideBarOpenClosed.classList.remove("navbar-expanded");
+    mainContentSideBarOpenClosed.classList.remove("main-content-expanded");
+}
+
+// Sidebar Cookie
+function checkNavCookie() {
+    var showmenu = getCookie("expandSidebar");
+    if (showmenu == "true") {
+        openSideBar()
+        return;
+    } if (showmenu == false) {
+        closeSideBar()
+        return;
+    } else {
+        setCookie("expandSidebar", false, 365)
+        return;
+    } 
+}
+
+// Cookie Settings
+function setCookie(cname,cvalue,exdays) {
+    var d = new Date();
+    d.setTime(d.getTime() + (exdays*24*60*60*1000));
+    var expires = "expires=" + d.toGMTString();
+    document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+}
+
+function getCookie(cname) {
+    var name = cname + "=";
+    var decodedCookie = decodeURIComponent(document.cookie);
+    var ca = decodedCookie.split(';');
+
+    for(var i = 0; i < ca.length; i++) {
+        var c = ca[i];
+        while (c.charAt(0) == ' ') {
+            c = c.substring(1);
+        } if (c.indexOf(name) == 0) {
+            return c.substring(name.length, c.length);
+        }
+    }
+    return "";
 }
