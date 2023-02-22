@@ -138,7 +138,7 @@ async function searchUsers() {
         usersEle+=`
             <div class="borderArea" onclick="changeUserAddInput('${index.user.username}')">
                 <p>${index.user.username}</p>
-                ${index.user.discription ? `<p>${index.user.description}</p>` : ``}
+                ${index.user.description ? `<p>${index.user.description}</p>` : ``}
                 <p>${index.possiblity}% match</p>
             </div>
         `

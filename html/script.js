@@ -418,10 +418,69 @@ async function createPostModal() {
             <p onclick="createPost()">Upload Post</p>
             <p onclick="closeModal()">Close</p>
         </div>
-        <textarea class="postTextArea" id="newPostTextArea"></textarea>
+        <textarea class="postTextArea" onkeyup="socialTypePost()" id="newPostTextArea"></textarea>
+        <div id="foundTaggings"></div>
     `, "hide")
 }
 
+async function socialTypePost() {
+    const content = document.getElementById('newPostTextArea').value
+    const foundTags = await  findTag(content)
+    if (foundTags.found == false) {
+        if (document.getElementById('taggingsOpened')) {
+            document.getElementById('foundTaggings').innerHTML=""
+        }
+        return false;
+    };
+
+    var taggings = ""
+    if (debug) console.log("!!")
+    for (const index of foundTags.results) {
+        taggings+=`
+            <div class=""onclick="autoCompleteUser('${index.user.username}')">
+                <p>${index.user.username}</p>
+                ${index.user.description ? `<p>${index.user.description}</p>` : ``}
+                <p>${index.possiblity}% match</p>
+            </div>
+        `
+    }
+    if (debug) console.log(taggings)
+    document.getElementById('foundTaggings').innerHTML=`
+        <div id="taggingsOpened"></div>
+        ${taggings}
+    `
+}
+
+async function autoCompleteUser(username) {
+    const content = document.getElementById('newPostTextArea').value
+    const contentArgs = content.split(" ")
+
+    // replaces with new value
+    contentArgs[contentArgs.length-1] = `@${username}`;
+
+    
+    document.getElementById('newPostTextArea').value = contentArgs.join(" ")
+}
+
+async function findTag(content) {
+    const contentArgs = content.split(/[ ]+/)
+    const searchUser = contentArgs[contentArgs.length-1];
+
+    if (searchUser==''||searchUser=="@") return { found: false };
+    if (!searchUser.startsWith("@")) return { found: false };
+    const response = await fetch(`${apiURL}/get/taguserSearch/${searchUser.replace("@", "")}`, {
+        method: 'GET',
+        headers,
+    });
+    
+    if (debug) console.log(response)
+    const res = await response.json();
+    if (debug) console.log(res)
+    if (res.error) return { found: false };
+    if (!res) return { found: false }
+    if (!res[0]) return { found: false }
+    return {found: true, results: res};
+}
 
 document.addEventListener('keypress', logKey);
 
@@ -1753,7 +1812,8 @@ async function quotePost(postID) {
                 </div>
             </div>
         </div>
-        <textarea class="postTextArea" id="newPostTextArea"></textarea>
+        <textarea class="postTextArea" onkeyup="socialTypePost()" id="newPostTextArea"></textarea>
+        <div id="foundTaggings"></div>
     `, "hide")
 }
 
@@ -1781,7 +1841,8 @@ async function replyPost(postID) {
                 </div>
             </div>
         </div>
-        <textarea class="postTextArea" id="newPostTextArea"></textarea>
+        <textarea class="postTextArea" onkeyup="socialTypePost()" id="newPostTextArea"></textarea>
+        <div id="foundTaggings"></div>
     `, "hide")
 }
 function checkIfLiked(postID) {
