@@ -72,6 +72,18 @@ var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 
 var debug = false
 
+var mobileClient = checkifMobile();
+
+function checkifMobile() {
+    const width = document.getElementById("html").clientWidth
+        console.log(width)
+    if (width < 900) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 // good luck
 if (location.protocol !== 'https:' && !((/localhost|(127|192\.168|10)\.(\d{1,3}\.?){2,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.(\d{1,3}\.?){2}/).test(location.hostname))) {
     location.replace(`https:${location.href.substring(location.protocol.length)}`);
@@ -144,10 +156,15 @@ function postElementCreate({ post, user, type, hideParent, hideReplies }) {
     var timesince
     if (post.timePosted) timesince = checkDate(post.timePosted)
     const imageContent = checkForImage(post.content)
+    const owner = post.userID == currentUserLogin.userID ? true : false;
+
     const options = {
-        hideParent, hideReplies
+        hideParent : hideParent ? true : false, 
+        hideReplies : hideReplies ? true : false,
+        owner: owner,
     }
-   // imageContent.attachments
+    
+    // imageContent.attachments
     if (imageContent.imageFound)if (debug) console.log(imageContent.attachments)
     if (type=="basic"){
         return `
@@ -196,31 +213,47 @@ function postElementCreate({ post, user, type, hideParent, hideReplies }) {
                     }
                     ${post.totalQuotes ? 
                         `<p onclick="quotePost('${post._id}')">${post.totalQuotes} quotes</p>` : 
-                        `<p id="quoteButton_${post._id}"><p onclick="quotePost('${post._id}')">quote</p></p>`
+                        `<p id="quoteButton_${post._id}">
+                            <p onclick="quotePost('${post._id}')">quote</p>
+                        </p>`
                     }
-                    ${post.userID == currentUserLogin.userID ? `
-                        <p onclick="deletePost('${post._id}')">delete post</p>
-                        <p id='editButton_${post._id}'><p onclick="editPost('${post._id}', '${post.edited}')">edit post</p></p>
-                    ` : '' }</p>
-                    <p id="popupactions_${post._id}" onclick="popupActions('${post._id}', '${options}')">more</p>
+                    ${!mobileClient ? `
+                        ${post.userID == currentUserLogin.userID ? `
+                            <p onclick="deletePost('${post._id}')">delete post</p>
+                            <p id='editButton_${post._id}'>
+                                <p onclick="editPost('${post._id}', '${post.edited}')">edit post</p>
+                            </p>
+                        ` : ''}
+                    ` : ''}
+                    </p>
+                    <p id="popupactions_${post._id}" onclick="popupActions('${post._id}', '${options.hideParent}', '${options.hideReplies}', '${options.owner}')">more</p>
                 </div>
             </div>
         </div>
     `
 }
 
-async function popupActions(postID, options) {
+async function popupActions(postID, hideParent, hideReplies, owner) {
+    // options = JSON.parse(options)
     var elementPopup = document.getElementById(`popupOpen_${postID}`);
     if (elementPopup) return elementPopup.remove();
 
     document.getElementById(`postElement_${postID}`).innerHTML+=`
         <div id="popupOpen_${postID}" class="publicPost" style="position: element(#popupactions_${postID});">
+            ${owner && mobileClient? `
+                <p>Owner Actions</p>
+                <p>---</p>
+                <p onclick="deletePost('${postID}')">delete post</p>
+                <p id='editButton_${postID}'>
+                    <p onclick="editPost('${postID}')">edit post</p>
+                </p>
+            ` : ``}
             <p>Menu Actions</p>
             <p>---</p>
             <p class="pointerCursor" onclick="saveBookmark('${postID}')" id="saveBookmark_${postID}">Save to Bookmarks</p>
             <p class="pointerCursor" onclick="showEditHistory('${postID}')" id="editHistory_${postID}">Check Edit History</p>
             <p class="pointerCursor" onclick="showLikes('${postID}')" id="likedBy_${postID}">Check Who Liked</p>
-            ${options.hideReplies != true ? `<p class="pointerCursor" onclick="viewReplies('${postID}')" id="replies_${postID}">Check Replies</p>` : ``}
+            ${hideReplies != true ? `<p class="pointerCursor" onclick="viewReplies('${postID}')" id="replies_${postID}">Check Replies</p>` : ``}
         </div>
     `;
 };
@@ -1721,7 +1754,11 @@ async function deletePost(postID) {
     if (debug) console.log(`deleting post ${postID}`)
     const response = await fetch(`${apiURL}/delete/removePost/${postID}`, { method: 'DELETE', headers})
 
-    if (response.status == 200) return document.getElementById(`postdiv_${postID}`).remove()
+    if (response.status == 200)  {
+        if (debug) console.log("post deleted")
+        document.getElementById(`popupOpen_${postID}`).remove()
+        return document.getElementById(`postdiv_${postID}`).remove()
+    }
     else return showModal("Error", "Something went wrong, please try again later")
 }
 //postContent_${post._id}
