@@ -6,8 +6,10 @@
         <meta name="apple-mobile-web-app-capable" content="yes">
         <link rel="manifest" href="/manifest.json">
         <script src="/config.js" defer></script>
+        <!-- Navigation section-->
+        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
         <script src="/nav.js" defer></script>
-        <script src="./script.js" defer></script>
+        <!-- Navigation section-->        <script src="./script.js" defer></script>
         <link rel="icon" type="image/png" href="/favicon.ico">
         <meta property="og:image" content="https://interact.novapro.net/apple-touch-icon.png">
         <meta property="og:title" content="Interact">
@@ -22,12 +24,12 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#1c1c1e"/>
         <link rel="stylesheet" type="text/css" href="./style.css">
-        <link rel="stylesheet" type="text/css" href="/mainStyle.css">
+        <link rel="stylesheet" type="text/css" href="/mainStyle.css"> 
    </head>
    <body>
         <div class="allArea">
-            <div id="navArea"></div>
-            <div class="mainArea">
+            <div id="expandingNavBar" class="navbar"></div>
+            <div class="mainArea" id="expandingMainContent">
                 <h1 class="main-header">Interact Live Chat</h1>
                 <p id="userCount">Current User Count: 0</p>
                 <p id="actiondescription">Action</p>

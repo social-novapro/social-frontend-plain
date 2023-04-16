@@ -60,38 +60,52 @@ function addNavigation() {
 function newNavigation() {
     document.getElementById('expandingNavBar').innerHTML = `
         <ul class="navbar-nav">
-            <li class="nav-item pointerCursor">
+            <li class="nav-item pointerCursor" id="navSection1">
                 <div id="page1Nav" class="nav-link" onclick="${pathArray[1] != "" ? `switchNav(5)` : `switchNav(1)`}">
+                    ${pathArray[1] != "" ? `
+                        <span class="material-symbols-outlined nav-button";>home</span>
+                    ` : `
+                        <span class="material-symbols-outlined nav-button";>chat</span>
+                    `}
+
                     <span class="link-text pointerCursor" id="page1">${pathArray[1] != "" ? `Feed` : `Live Chat`}</span>
                 </div>
             </li>
-            <li class="nav-item pointerCursor">
-                <div id="page2Nav" class="nav-link" onclick="switchNav(2)">
-                    <span class="link-text pointerCursor" id="page2">Profile</span>
-                </div>
+            ${pathArray[1] != "" ? `` : `
+            <li class="nav-item pointerCursor" id="navSection2">
+            <div id="page2Nav" class="nav-link" onclick="switchNav(2)">
+                <span class="material-symbols-outlined nav-button";>person</span>
+                <span class="link-text pointerCursor" id="page2">Profile</span>
+            </div>
             </li>
-            <li class="nav-item pointerCursor">
+            <li class="nav-item pointerCursor" id="navSection3">
                 <div id="page3Nav" class="nav-link" onclick="switchNav(3)">
+                    <span class="material-symbols-outlined nav-button";>dvr</span>
                     <span class="link-text pointerCursor" id="page3">DevMode</span>
                 </div>
             </li>
-            <li class="nav-item pointerCursor">
+            <li class="nav-item pointerCursor" id="navSection4">
                 <div id="page4Nav" class="nav-link" onclick="createPostModal()">
+                    <span class="material-symbols-outlined nav-button";>post_add</span>
                     <span class="link-text pointerCursor" id="page4">Create Post</span>
                 </div>
-            </li>
-            <li class="nav-item pointerCursor">
+            </li> `}
+            <li class="nav-item pointerCursor" id="navSection4">
                 <div id="page5Nav" class="nav-link" onclick="signOut()">
+                    <span class="material-symbols-outlined nav-button";>logout</span>
                     <span class="link-text pointerCursor" id="page5">Sign Out</span>
                 </div>
             </li>
-            <li class="nav-item pointerCursor">
+            ${pathArray[1] != "" ? `` : `
+            <li class="nav-item pointerCursor" id="navSection5">
                 <div id="searchBar" class="nav-link" onclick="activeSearchBar()">
+                    <span class="material-symbols-outlined nav-button";>search</span>
                     <span class="link-text pointerCursor" id="page6">Search</span>
                 </div>
-            </li>
+            </li>`}
             <li class="nav-item pointerCursor expanding-button">
                 <div id="searchBar" class="nav-link" onclick="sidebarOpen()">
+                    <span class="material-symbols-outlined nav-button";>arrow_forward_ios</span>
                     <span class="link-text pointerCursor" id="page1">Expand</span>
                 </div>
             </li>

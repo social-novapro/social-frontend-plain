@@ -46,6 +46,7 @@ function setDimennsions() {
     // var width = window.innerWidth;
     // console.log(width)
     width = width - 201;
+    width = width*0.6;
     // console.log(width)
     // console.log(document.getElementById('mainGroupArea').style.width)
 

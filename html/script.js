@@ -424,8 +424,10 @@ async function createPostModal() {
 }
 
 async function socialTypePost() {
+    return false; // remove once feature is done
+
     const content = document.getElementById('newPostTextArea').value
-    const foundTags = await  findTag(content)
+    const foundTags = await findTag(content)
     if (foundTags.found == false) {
         if (document.getElementById('taggingsOpened')) {
             document.getElementById('foundTaggings').innerHTML=""
@@ -929,7 +931,12 @@ async function userHtml(userID) {
         document.getElementById("userEdit_profileImage").addEventListener("submit", function (e) { e.preventDefault()})
     }
   
-    return document.getElementById("page2Nav").innerHTML = `<div id="page2Nav"><button class="buttonStyled"  onclick="switchNav(5)" id="page2">Home</button>`
+    return document.getElementById("navSection2").innerHTML = `
+        <div id="page2Nav" class="nav-link" onclick="switchNav(5)">
+            <span class="material-symbols-outlined nav-button";>home</span>
+            <span class="link-text pointerCursor" id="page1">Feed</span>
+        </div>
+    `
 }
 
 async function subNotifi(subUser) {
