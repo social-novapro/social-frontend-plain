@@ -142,6 +142,7 @@ async function redirectPage() {
 }
 
 async function checkLogin() {
+    if (window.pathArray[1]=="staff") return
     const userStorageLogin = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
     if (!userStorageLogin) return redirectPage()
     else {
