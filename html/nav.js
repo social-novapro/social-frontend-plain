@@ -104,7 +104,7 @@ function newNavigation() {
                 </div>
             </li>`}
             <li class="nav-item pointerCursor expanding-button">
-                <div id="searchBar" class="nav-link" onclick="sidebarOpen()">
+                <div id="expand" class="nav-link" onclick="sidebarOpen()">
                     <span class="material-symbols-outlined nav-button";>arrow_forward_ios</span>
                     <span class="link-text pointerCursor" id="page1">Expand</span>
                 </div>
