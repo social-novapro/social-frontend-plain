@@ -1509,14 +1509,22 @@ function activeSearchBar() {
             <input id="searchBarArea" onkeyup="searchSocial()" placeholder="Search for Posts and Users...">
         </div>
     `
-    document.getElementById('searchBar').innerHTML = `
-        <button class="buttonStyled" onclick="unactiveSearchBar()" id="page6">Remove Search</button>
+    document.getElementById('navSection5').innerHTML = `
+        <div id="searchBar" class="nav-link" onclick="unactiveSearchBar()">
+            <span class="material-symbols-outlined nav-button";>search</span>
+            <span class="link-text pointerCursor" id="page6">Remove</span>
+        </div>
+
     `
 }
 function unactiveSearchBar() {
     document.getElementById("searchArea").innerHTML = ``
-    document.getElementById('searchBar').innerHTML = `
-        <button class="buttonStyled" onclick="activeSearchBar()" id="page6">Search</button>
+    document.getElementById('navSection5').innerHTML = `
+        <div id="searchBar" class="nav-link" onclick="activeSearchBar()">
+            <span class="material-symbols-outlined nav-button";>search</span>
+            <span class="link-text pointerCursor" id="page6">Search</span>
+        </div>
+
     `
 }
 
