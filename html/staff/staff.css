@@ -13,33 +13,33 @@
 }
 
 .danAss {
-    position: absolute;
-    top: 200px ;
+    position: relative;
+    top: 50px ;
     left: 400px ;
 }
 
 .samAss {
-    position: absolute;
-    top: 200px ;
-    left: 815px ;
+    position: relative;
+    top: 50px ;
+    left: 440px ;
 }
 
 .leoAss {
-    position: absolute;
-    top: 200px ;
-    left: 1250px ;
+    position: relative;
+    top: 50px ;
+    left: 485px ;
 }
 
 .syrxAss {
-    position: absolute;
-    top: 600px ;
-    left: 550px ;
+    position: relative;
+    top: 400px ;
+    left: -350px ;
 }
 
 .flavioAss {
-    position: absolute;
-    top: 600px ;
-    left: 1000px ;
+    position: relative;
+    top: 400px ;
+    left: -300px ;
 }
 
 /* .louieAss {
@@ -57,13 +57,13 @@ img {
 /* STAFF PAGES STYLES */
 
 .staffPage {
-    position: absolute;
+    position: relative;
     top: 200px ;
     left: 215px ;
 }
 
 .p1Staff {
-    text-align: center;
+    text-align: relative;
     font-size: 20px;
     color: #E6E6E6;
 }
