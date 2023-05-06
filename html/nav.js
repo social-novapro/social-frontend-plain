@@ -29,10 +29,15 @@ else {
    startup()
 }
 async function startup(){
+    addAlertPopup()
     addNavigation()
     checkNavCookie()
     addTitle() 
     checkLogin()
+}
+
+async function addAlertPopup() {
+    // fetch newest one
 }
 
 // console.log(hostedURL)
