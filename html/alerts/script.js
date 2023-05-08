@@ -12,7 +12,12 @@ var headers = {
     "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421"
 }
 
+
 var verifiedConnection = false
+
+// remove these 2
+var adminUser = true;
+var devMode = true;
 
 var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
 
@@ -121,7 +126,7 @@ async function listAlerts() {
 }
 
 async function sendCreateAlert() {
-    var title = document.getElementById('createAlertForm').value;
+    var title = document.getElementById('alertTitleCreate').value;
     var content = document.getElementById('alertContentCreate').value;
     var linked = document.getElementById('alertLinkedCreate').value;
 
@@ -185,12 +190,20 @@ function setupCreate() {
     `
 
     document.getElementById("createAlertForm").addEventListener("submit", function (e) { e.preventDefault()})
-
 }
 
+async function archiveAlert(alertID) {
+    const response = await fetch(`${apiURL}/alert/archive/${alertID}`, {
+        method: 'PUT',
+        headers
+    })
+
+    const alertData = await response.json()
+    console.log(alertData)
+}
 
 function alertEle(alert) {
-    const { alertID, title, content } = alert;
+    const { _id: alertID, title, content, isArchived } = alert;
     return `
         <div class="publicPost" id="alertID">
             ${title ? 
@@ -199,6 +212,23 @@ function alertEle(alert) {
                 ` : ``
             }
             <p>${content}</p>
+            ${isArchived == true ?
+                `
+                    <p>Archived</p>
+                ` : ``
+            }
+            ${adminUser == true && isArchived != true ? 
+                `
+                    <p onclick="archiveAlert('${alertID}')">Archive</p>
+                ` : `
+                    not an admin or is already archived
+                `
+            }
+            ${devMode ? 
+                `
+                    <p>${alertID}</p>
+                ` : ` `
+            }
         </div>
     `;
 }
