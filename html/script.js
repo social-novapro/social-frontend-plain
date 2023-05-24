@@ -178,7 +178,7 @@ function postElementCreate({ post, user, type, hideParent, hideReplies }) {
         `
     }
     
-    return `
+    const element = `
         <div id="postElement_${post._id}" class="postElement">
             ${!hideParent==true && post.isReply ? `
                 <div id="parent_${post._id}"></div>` 
@@ -201,7 +201,12 @@ function postElementCreate({ post, user, type, hideParent, hideReplies }) {
                         ${imageContent.image ? `<div>${imageContent.attachments.map(function(attachment) {return `${attachment}`}).join(" ")}</div>`:''}
                     </div>
                 </div>
-                <p class="debug">${post._id} - from: ${post.userID}</p>
+                ${post.pollID ? `<div class="poll_option" id="pollContainer_${post._id}"></div>` : `` }
+                <div class="debug">
+                    <p>postID: ${post._id}</p>
+                    <p>userID: ${post.userID}</p>
+                    <p>${post.pollID ? `pollID: ${post.pollID}` : `` }</p>
+                </div>
                 <div class="actionOptions pointerCursor"> 
                     ${post.totalLikes ? 
                         `<p onclick="likePost('${post._id}')" id="likePost_${post._id}">${post.totalLikes} likes</p>` :
@@ -231,6 +236,15 @@ function postElementCreate({ post, user, type, hideParent, hideReplies }) {
             </div>
         </div>
     `
+
+    if (post.pollID) {
+        createPollElement(post._id, post.pollID)
+        .then(function(ele) { 
+            if (ele) document.getElementById(`pollContainer_${post._id}`).innerHTML = ele; 
+        })
+    }
+
+    return element;
 }
 
 async function popupActions(postID, hideParent, hideReplies, owner) {
@@ -414,6 +428,50 @@ async function showEditHistory(postID) {
     document.getElementById(`editHistory_${postID}`).innerHTML=newElement;
 };
 
+async function createPollElement(postID, pollID) {
+    return getPollData(pollID, {
+        method: 'GET',
+        headers,
+    })
+    .then(function (pollData) {
+        if (debug) console.log(pollData);
+        return `
+            <div id="pollElement_${postID}" class="pollElement">
+                <p id="pollQuestion_${postID}">${pollData.pollName}</p>
+                <hr />
+                <div id="pollOptions${postID}">
+                    ${pollData.pollOptions.map((option, index) => { 
+                        return `
+                            <div id="pollOption_${postID}_${option._id}" class="pollOption" onclick="votePoll('${postID}', '${pollID}', '${index}')">
+                                <p>${option.optionTitle}</p>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    })
+    .catch(function (err) {
+      console.log(err);
+    });
+}
+
+
+async function getPollData(pollID) {
+    return fetch(`${apiURL}/polls/get/${pollID}`, {
+        method: 'GET',
+        headers,
+    })
+    .then(function (res) {
+        return res.json();
+    })
+    .then(function (data) {
+        return data;
+    })
+    .catch(function (err) {
+        console.log(err);
+    });
+}
 // async function postPage() {
 
 // }
@@ -452,6 +510,9 @@ async function createPostModal() {
             <p onclick="closeModal()">Close</p>
         </div>
         <textarea class="postTextArea" onkeyup="socialTypePost()" id="newPostTextArea"></textarea>
+        <div class="search">
+            <input type="text" id="pollCreateLink" placeholder="Link Poll via ID">
+        </div>
         <div id="foundTaggings"></div>
     `, "hide")
 }
@@ -2056,11 +2117,15 @@ async function createPost(params) {
     if (params?.replyID) replied = params.replyID
     else replied=undefined
 
+    var pollID = document.getElementById('pollID').value
+    if (debug) console.log(pollID)
+
     const data = { 
         "userID" : currentUserLogin.userID, 
         "content" : input,
         "quoteReplyPostID" : quoted,
-        "replyingPostID" : replied
+        "replyingPostID" : replied,
+        "linkedPollID" : pollID || null
     };
 
     closeModal()
