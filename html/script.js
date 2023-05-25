@@ -470,6 +470,7 @@ async function createPollElement(postID, pollID) {
                                     <p>${option.optionTitle}</p>
                                     <div class="debug">
                                         <p>optionID: ${option._id}</p>
+                                        <p>indexID: ${option.currentIndexID || "unknown"}</p>
                                     </div>
                                 </div>
                             </div>
