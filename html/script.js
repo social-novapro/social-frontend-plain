@@ -240,11 +240,30 @@ function postElementCreate({ post, user, type, hideParent, hideReplies }) {
     if (post.pollID) {
         createPollElement(post._id, post.pollID)
         .then(function(ele) { 
-            if (ele) document.getElementById(`pollContainer_${post._id}`).innerHTML = ele; 
+            if (ele) {
+                document.getElementById(`pollContainer_${post._id}`).innerHTML = ele; 
+                checkIfUserVoted(post.pollID)
+                .then(function(data) {
+                    if (data.voted && data.foundVote && data.foundVote.pollOptionID && data.foundVote.pollID == post.pollID) {
+                        colorizeOption(post.pollID, data.foundVote.pollOptionID);
+                    }
+                })
+            }
         })
     }
 
     return element;
+}
+
+function colorizeOption(pollID, optionID) {
+    const elementID = `poll_option_${pollID}_${optionID}`;
+    if (debug) console.log(elementID);
+    document.getElementById(elementID).classList.add("voted");
+}
+function removeColorOption(pollID, optionID) {
+    const elementID = `poll_option_${pollID}_${optionID}`;
+    if (debug) console.log(elementID)
+    document.getElementById(elementID).classList.remove("voted");
 }
 
 async function popupActions(postID, hideParent, hideReplies, owner) {
@@ -435,27 +454,54 @@ async function createPollElement(postID, pollID) {
     })
     .then(function (pollData) {
         if (debug) console.log(pollData);
+        var totalVotes = 0;
+        for (const option of pollData.pollOptions) {
+            if (option.amountVoted) totalVotes+=option.amountVoted;
+        }
+
         return `
             <div id="pollElement_${postID}" class="pollElement">
                 <p id="pollQuestion_${postID}">${pollData.pollName}</p>
-                <hr />
-                <div id="pollOptions${postID}">
+                <div id="pollOptions_${postID}">
                     ${pollData.pollOptions.map((option, index) => { 
                         return `
-                            <div id="pollOption_${postID}_${option._id}" class="pollOption" onclick="votePoll('${postID}', '${pollID}', '${index}')">
-                                <p>${option.optionTitle}</p>
+                            <div id="pollOption_${postID}_${option._id}" class="pollOption">
+                                <div id="poll_option_${pollData._id}_${option._id}" class="poll_option" onclick="voteOption('${pollID}', '${option._id}')">
+                                    <p>${option.optionTitle}</p>
+                                    <div class="debug">
+                                        <p>optionID: ${option._id}</p>
+                                    </div>
+                                </div>
                             </div>
                         `;
                     }).join('')}
                 </div>
+                <p>Total votes: ${totalVotes}</p>
             </div>
         `;
     })
     .catch(function (err) {
-      console.log(err);
+        console.log(err);
     });
 }
 
+async function checkIfUserVoted(pollID) {
+    if (debug) console.log("check " + pollID)
+    // ttp://localhost:5002/v1/polls/
+    return fetch(`${apiURL}/polls/userVote/${pollID}`, {
+        method: 'GET',
+        headers,
+    })
+    .then(function (res) {
+        return res.json();
+    })
+    .then(function (data) {
+        return data;
+    })
+    .catch(function (err) {
+        console.log(err);
+    });
+}
 
 async function getPollData(pollID) {
     return fetch(`${apiURL}/polls/get/${pollID}`, {
@@ -472,6 +518,31 @@ async function getPollData(pollID) {
         console.log(err);
     });
 }
+
+async function voteOption(pollID, optionID) {
+    if (!pollID || !optionID) return alert("Error while voting");
+
+    const body = {
+        pollID,
+        pollOptionID: optionID
+    }
+    
+    const response = await fetch(`${apiURL}/polls/createVote`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(body)
+    });
+
+    const res = await response.json();
+    if (debug) console.log(res)
+    if (res.error) return alert(`Error: ${res.error}`);
+    
+    if (res.oldVote) removeColorOption(res.oldVote.pollID, res.oldVote.pollOptionID)
+    colorizeOption(pollID, optionID)
+
+    if (debug) console.log("Voted!")
+}
+
 // async function postPage() {
 
 // }
@@ -2117,8 +2188,11 @@ async function createPost(params) {
     if (params?.replyID) replied = params.replyID
     else replied=undefined
 
-    var pollID = document.getElementById('pollID').value
+    var pollID
+    const pollELe = document.getElementById('pollCreateLink')
+    if (pollELe) pollID = pollELe.value
     if (debug) console.log(pollID)
+    // console.log(pollID)
 
     const data = { 
         "userID" : currentUserLogin.userID, 

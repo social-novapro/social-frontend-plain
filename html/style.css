@@ -281,8 +281,15 @@
     color: var(--main-border-color)
 }
 .poll_option .poll_option {
-    color: var(--main-border-color)
+    color: var(--main-border-color);
+    border: 2px solid var(--main-border-color);
+    border-radius: 15px;
+
 }
 .poll_option .poll_option .poll_selected{
     color: var(--main-border-color)
+}
+.voted {
+    color: var(--main-border-color);
+    background-color:rgba(0, 82, 224, 0.465);
 }
