@@ -222,7 +222,7 @@ async function showModalClose() {
 }
 
 async function closeModal() {
-    document.getElementById('modalContainer').classList.remove("showModal")    
+    document.getElementById('modalContainer')?.classList.remove("showModal")    
 }
 
 

@@ -43,6 +43,9 @@ async function checkLoginUser() {
     return checkLogin.data
 }
 */
+var getUrl = window.location;
+var baseUrl = getUrl .protocol + "//" + getUrl.host + "/" + getUrl.pathname.split('/')[1];
+var pathArray = window.location.pathname.split( '/' );
 
 var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
 
@@ -112,6 +115,7 @@ async function checkURLParams() {
     const ifSearch = params.has("search")
     const ifLoginRequest = params.has("login")
     const ifNewAccountLogin = params.has("newAccount")
+    const ifPostPage = params.has("posting");
 
     if (ifUsername) {
         paramsFound = true
@@ -147,6 +151,12 @@ async function checkURLParams() {
         paramsInfo.paramsFound = true
 
         loginSplashScreen()
+    }
+    else if (ifPostPage) {
+        paramsFound = true
+        paramsInfo.paramsFound = true
+
+        createPostPage()
     }
    
     return paramsInfo
@@ -577,20 +587,21 @@ async function userPage(username) {
 async function createPostModal() {
     await showModal(`
         <h1>Create a new Post</h1>
-        <div class="postModalActions">
+        <div id="postModel" class="postModalActions">
             <p onclick="createPost()">Upload Post</p>
             <p onclick="closeModal()">Close</p>
         </div>
-        <textarea class="postTextArea" onkeyup="socialTypePost()" id="newPostTextArea"></textarea>
+        <textarea class="postTextArea" id="newPostTextArea"></textarea>
         <div class="search">
             <input type="text" id="pollCreateLink" placeholder="Link Poll via ID">
+            <p onclick="createPostPage()">Create Post Page</p>
         </div>
         <div id="foundTaggings"></div>
     `, "hide")
 }
 
 async function socialTypePost() {
-    return false; // remove once feature is done
+    // return false; // remove once feature is done
 
     const content = document.getElementById('newPostTextArea').value
     const foundTags = await findTag(content)
@@ -918,6 +929,9 @@ async function userHtml(userID) {
     })
     
     const profileData = await response.json()
+
+    if (!response.ok) return console.log("error with user");
+    changeHeader('?username='+profileData.userData.username, 'Profile')
 
     var timesince
     if (profileData.userData.creationTimestamp) timesince = checkDate(profileData.userData.creationTimestamp)
@@ -1997,7 +2011,7 @@ async function quotePost(postID) {
                 </div>
             </div>
         </div>
-        <textarea class="postTextArea" onkeyup="socialTypePost()" id="newPostTextArea"></textarea>
+        <textarea class="postTextArea" id="newPostTextArea"></textarea>
         <div id="foundTaggings"></div>
     `, "hide")
 }
@@ -2026,7 +2040,7 @@ async function replyPost(postID) {
                 </div>
             </div>
         </div>
-        <textarea class="postTextArea" onkeyup="socialTypePost()" id="newPostTextArea"></textarea>
+        <textarea class="postTextArea" id="newPostTextArea"></textarea>
         <div id="foundTaggings"></div>
     `, "hide")
 }
@@ -2146,9 +2160,139 @@ async function searchResult(input) {
 }
 
 async function createPostPage() {
+    var preinput = false;
+    var data = { };
+    console.log(getUrl.search!="?posting")
 
+    changeHeader('?posting')
+    changePostPageNavButton('goto')
+
+    const foundModal = document.getElementById("postModel")?.innerHTML;
+    if (foundModal) {
+        closeModal()
+        
+        const content = document.getElementById('newPostTextArea')?.value
+        if (content) {
+            data.content = content
+            preinput = true
+        };
+    }
+
+    if (debug) console.log("creating post")
+    const ele = `
+        <div class="postPageDiv">
+            <h1>Create a new Post</h1>
+            <div class="mainActions">
+                <p onclick="leavePostPage()">Back</p>
+                <p onclick="publishFromPostPage()">Upload Post</p>
+            </div>
+            <div>
+                <textarea class="postTextArea" onkeyup="socialTypePost()" id="newPostTextArea"></textarea>
+            </div>
+            <div>
+                <input type="text" id="pollCreateLink" placeholder="Link Poll via ID">
+            </div>
+            <p onclick="showPollCreation()">Add Poll</p>
+            <div id="pollCreate"></div>
+            <div id="foundTaggings"></div>
+        </div>
+    `;
+
+    document.getElementById("mainFeed").innerHTML = ele;
+};
+
+async function publishFromPostPage() {
+    /* if poll then publish poll first */
+    return createPost();
+};
+
+function changePostPageNavButton(method) {
+    if (method == "goto") {
+        document.getElementById('navSection4').innerHTML = `
+            <div id="page4Nav" class="nav-link" onclick="leavePostPage()">
+                <span class="material-symbols-outlined nav-button";>home</span>
+                <span class="link-text pointerCursor" id="page4">Home</span>
+            </div>
+        `
+    } else {
+        document.getElementById('navSection4').innerHTML = `
+            <div id="page4Nav" class="nav-link" onclick="createPostModal()">
+                <span class="material-symbols-outlined nav-button";>post_add</span>
+                <span class="link-text pointerCursor" id="page4">Create Post</span>
+            </div>
+        `
+    };
+};
+
+/*
+    user opens post page
+    - can get data from modal 
+
+    user types in post
+
+    user can add poll
+    when user press create, it will create a poll, then add the poll to the post via id
+*/
+
+async function leavePostPage() {
+    if (debug) console.log("leaving post")
+    if (getUrl.search=="?posting") changeHeader('')
+    changePostPageNavButton('leave')
+    getFeed()
 }
 
+async function showPollCreation() {
+    if (debug) console.log("creating poll")
+    
+    const content = document.getElementById('newPostTextArea')?.value
+    if (content) showinput = true
+
+    var ele = `
+        <hr class="rounded">
+        <h1>Create a new Post</h1>
+        <hr class="rounded">
+        <p onclick="addExtraOption()">Add Another Option</p>
+        <div>
+            <div id="optionAmount"></div>
+            <input type="text" id="pollCreateTitle" placeholder="Question">
+            <div id="options">${addOption(1)}${addOption(2)}</div>
+        </div>
+    `;
+
+    document.getElementById("pollCreate").innerHTML = ele;
+}
+
+function checkPollOptionAmount() {
+    const options = document.getElementsByClassName("pollOption");
+    return options.length || 1;
+};
+
+function addExtraOption() {
+    if (debug) console.log("adding option")
+    const currentNum = checkPollOptionAmount();
+    if (currentNum >= 10) {
+        if (document.getElementById("cantAddMoreOptions")) return console.log("cant add more options, stop asking")
+        return document.getElementById("options").innerHTML += '<p id="cantAddMoreOptions">cant create more than 10 options</p>';
+    }
+    return document.getElementById("options").innerHTML += addOption();
+};
+
+function addOption(num) {
+    const amount = num || checkPollOptionAmount()+1;
+    return `
+        <div class="pollOption">
+            <input type="text" id="poll_option_${num}" placeholder="Option ${amount}">
+        </div>
+    `;
+}
+
+function getOption(num) {
+    return document.getElementById(`poll_option_${num}`).value;
+}
+
+async function publishPoll() {
+
+}
 /*
 // BASE FOR CREATING POSTS (posts when you press create post)
 async function createPost() {
@@ -2207,6 +2351,8 @@ async function createPost(params) {
 
     if (debug) console.log(currentUserLogin) 
     if (debug) console.log(data)
+
+    changeHeader('')
 
     const response = await fetch(`${apiURL}/post/createPost`, {
         method: 'POST',
