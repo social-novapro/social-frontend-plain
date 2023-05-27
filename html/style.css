@@ -93,7 +93,7 @@
     color: var(--main-p-color)
 
 }
-.debug {
+.debug p {
     font-size: smaller;
     color: rgb(112, 112, 112);
 }

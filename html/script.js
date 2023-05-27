@@ -215,7 +215,7 @@ function postElementCreate({ post, user, type, hideParent, hideReplies }) {
                 <div class="debug">
                     <p>postID: ${post._id}</p>
                     <p>userID: ${post.userID}</p>
-                    <p>${post.pollID ? `pollID: ${post.pollID}` : `` }</p>
+                    ${post.pollID ? `<p>pollID: ${post.pollID}</p>` : `` }
                 </div>
                 <div class="actionOptions pointerCursor"> 
                     ${post.totalLikes ? 
