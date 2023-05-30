@@ -586,6 +586,7 @@ async function userPage(username) {
 
 async function createPostModal() {
     await showModal(`
+        <div id="postingModel">
         <h1>Create a new Post</h1>
         <div id="postModel" class="postModalActions">
             <p onclick="createPost()">Upload Post</p>
@@ -597,6 +598,7 @@ async function createPostModal() {
             <p onclick="createPostPage()">Create Post Page</p>
         </div>
         <div id="foundTaggings"></div>
+        </div>
     `, "hide")
 }
 
@@ -1873,6 +1875,7 @@ function buildView(posts) {
 
 
     document.getElementById("mainFeed").innerHTML = `
+        <div id="addToTop"></div>
         ${posts.map(function(postArray) {
             return postElementCreate({post: postArray.postData, user: postArray.userData})
             /* 
@@ -2164,40 +2167,56 @@ async function searchResult(input) {
 async function createPostPage() {
     var preinput = false;
     var data = { };
-    console.log(getUrl.search)
-    console.log(getUrl.search!="?posting")
+    if (debug) console.log("params? " + getUrl.search)
+    if (debug) console.log("params != ?posting " + getUrl.search.includes("?posting"))
 
-    const content = params.get('content');
-    if (content) changeHeader(`?posting&content=${content}`)
-    else changeHeader('?posting')
+    const foundContentParam = params.get('content');
+    if (foundContentParam) {
+        changeHeader(`?posting&content=${encodeURIComponent(foundContentParam)}`)
+        preinput = true
+        data.content = foundContentParam
+    }
+   
     changePostPageNavButton('goto')
 
-    const foundModal = document.getElementById("postModel")?.innerHTML;
+    const foundModal = document.getElementById("postingModel");
+    if (debug) console.log("foundModal: " + foundModal)
     if (foundModal) {
-        closeModal()
-        
         const content = document.getElementById('newPostTextArea')?.value
+        if (debug) console.log("content: " + content)
+        foundModal.remove()
         if (content) {
             data.content = content
             preinput = true
         };
+        closeModal()
+
     }
 
+    if (data.content) changeHeader(`?posting&content=${encodeURIComponent(data.content)}`)
+    else changeHeader('?posting')
+
     if (debug) console.log("creating post")
+
     const ele = `
-        <div class="postPageDiv">
+        <div id="postPageDiv" class="postPageDiv">
             <h1>Create a new Post</h1>
             <div class="mainActions">
                 <p onclick="leavePostPage()">Back</p>
                 <p onclick="publishFromPostPage()">Upload Post</p>
             </div>
             <div>
-                <textarea class="postTextArea" onkeyup="onTypePostPage()" id="newPostTextArea">${content ? content : ""}</textarea>
+                <textarea class="postTextArea" onkeyup="onTypePostPage()" id="newPostTextArea">${data?.content ? data.content : ""}</textarea>
             </div>
             <div>
                 <input type="text" id="pollCreateLink" placeholder="Link Poll via ID">
             </div>
             <p onclick="showPollCreation()">Add Poll</p>
+            <div class="publicPost">
+                <p onclick="exportPostURL()">Create Post Template</p>
+                <p id="postURL_preview"></p>
+                <p id="postURL_messageURL"></p>
+            </div>
             <div id="pollCreate"></div>
             <div id="foundTaggings"></div>
         </div>
@@ -2206,16 +2225,41 @@ async function createPostPage() {
     document.getElementById("mainFeed").innerHTML = ele;
 };
 
+function exportPostURL() {
+    const content = document.getElementById('newPostTextArea')?.value
+    const params = []
+
+    if (content != undefined && content != null && content != "") {
+        if (debug) console.log("content")
+        const newParam = createNewParam("content", content)
+        params.push(newParam);
+    } else if (debug) console.log("no content")
+
+    var newString = `${baseUrl}?posting`
+    for (const param of params) {
+        newString += param
+    }
+
+    if (debug) console.log(newString)
+    copyToClipboard(newString);
+    document.getElementById("postURL_messageURL").innerHTML = `Copied!`
+    document.getElementById("postURL_preview").innerHTML = newString
+    
+}
+
 async function onTypePostPage(e) {
     socialTypePost()
 
+    return 
+    // this would change the top url. works, but not needed
     const content = document.getElementById('newPostTextArea')?.value
     if (content != null) newPostHeader("content", content) 
     // createHeaderParamString('posting', true)
 }
 
 function newPostHeader(paramName, data) {
-    const newString = `&${paramName}=${data}`;
+    const newString = createNewParam(paramName, data);
+    if (debug) console.log("new param: " + newString)
     const current = getUrl.search;
     const hasParam = current.includes(paramName);
 
@@ -2223,14 +2267,20 @@ function newPostHeader(paramName, data) {
         const oldData = encodeURIComponent(params.get(paramName));
         const newHeader = current.replace(`&${paramName}=${oldData}`, newString);
         changeHeader(newHeader);
+        if (debug) console.log("newURL: " + getUrl.search)
+
     } else {
         const newHeader = current + newString;
         changeHeader(newHeader);
+        if (debug) console.log("newURL: " + getUrl.search)
     }
-    
+
     params = new URLSearchParams(getUrl.search)
 }
 
+function createNewParam(paramName, data) {
+    return `&${paramName}=${encodeURIComponent(data)}`;
+}
 
 async function publishFromPostPage() {
     /* if poll then publish poll first */
@@ -2356,7 +2406,8 @@ async function createPost(params) {
     var input = document.getElementById('newPostTextArea').value
     if (debug) console.log(input)
 
-    var isFromPostPage = params.has("posting");
+    var isFromPostPage = false;
+    if (document.getElementById('postPageDiv')) isFromPostPage = true;
     if (debug) console.log("isFromPostPage: " + isFromPostPage)
 
     var quoted 
@@ -2381,7 +2432,8 @@ async function createPost(params) {
         "linkedPollID" : pollID || null
     };
 
-    closeModal()
+    if (isFromPostPage) leavePostPage()
+    else closeModal();
 
     if (debug) console.log(currentUserLogin) 
     if (debug) console.log(data)
@@ -2397,8 +2449,20 @@ async function createPost(params) {
     const postData = await response.json()
     if (debug) console.log(postData)
 
-    if (response.ok) return showModal(`<h1>Your post was sent!</h1> <p>${postData.content}</p>`)
-    else return showModal(`<h1>something went wrong.</h1> <p>${postData.code}\n${postData.msg}</p>`)
+    if (!response.ok)  return showModal(`<h1>something went wrong.</h1> <p>${postData.code}\n${postData.msg}</p>`)
+    
+    const userData = await getUserDataSimple(postData.userID)
+
+    /* add to top */
+    const newEle = `${postElementCreate({post: postData, user: userData })}`;
+
+    showModal(`<h1>Your post was sent!</h1> <p>${postData.content}</p>`)
+
+    const topEle = document.getElementById("addToTop")
+    if (!topEle || !newEle ) return;
+
+    topEle.innerHTML = newEle + topEle.innerHTML
+
 }
 
 // BLANK FUNCTION FOR LATER BUTTONS TO LIKE / REPLY / REPOST
