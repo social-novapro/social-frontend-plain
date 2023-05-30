@@ -2216,34 +2216,18 @@ async function onTypePostPage(e) {
 
 function newPostHeader(paramName, data) {
     const newString = `&${paramName}=${data}`;
-    console.log(`1: newString ${newString}`)
     const current = getUrl.search;
-    console.log(`2: current ${current}`)
-
-    // const removeOl
     const hasParam = current.includes(paramName);
-    console.log(`3: hasParam ${hasParam}`)
 
     if (hasParam) {
-        
         const oldData = encodeURIComponent(params.get(paramName));
-        console.log(`4: oldData ${oldData}`)
-
-        console.log(`4.2 : ${current.replace(`&${paramName}=${oldData}`, newString)}`)
-        
         const newHeader = current.replace(`&${paramName}=${oldData}`, newString);
-        // console.log(`5: replaced ${replaced}`)
-        console.log(`6: current ${current}`)
-        // const newHeader = replaced + newString
-        console.log(`7: newHeader ${newHeader}`)
-
         changeHeader(newHeader);
     } else {
         const newHeader = current + newString;
-        console.log(`8: newHeader ${newHeader}`)
         changeHeader(newHeader);
     }
-
+    
     params = new URLSearchParams(getUrl.search)
 }
 
