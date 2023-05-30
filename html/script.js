@@ -76,6 +76,7 @@ var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 var debug = false
 
 var mobileClient = checkifMobile();
+var params = new URLSearchParams(window.location.search)
 
 function checkifMobile() {
     const width = document.getElementById("html").clientWidth
@@ -109,7 +110,6 @@ async function checkURLParams() {
         paramsFound: false
     }
 
-    const params = new URLSearchParams(window.location.search)
     const ifUsername = params.has('username')
     const ifPostID = params.has("postID")
     const ifSearch = params.has("search")
@@ -602,7 +602,7 @@ async function createPostModal() {
 
 async function socialTypePost() {
     // return false; // remove once feature is done
-
+    console.log("socialTypePost")
     const content = document.getElementById('newPostTextArea').value
     const foundTags = await findTag(content)
     if (foundTags.found == false) {
@@ -635,10 +635,12 @@ async function autoCompleteUser(username) {
     const contentArgs = content.split(" ")
 
     // replaces with new value
-    contentArgs[contentArgs.length-1] = `@${username}`;
+    contentArgs[contentArgs.length-1] = `@${username} `;
+    document.getElementById('foundTaggings').innerHTML=""
 
     
     document.getElementById('newPostTextArea').value = contentArgs.join(" ")
+    document.getElementById('newPostTextArea').focus()
 }
 
 async function findTag(content) {
@@ -2162,9 +2164,12 @@ async function searchResult(input) {
 async function createPostPage() {
     var preinput = false;
     var data = { };
+    console.log(getUrl.search)
     console.log(getUrl.search!="?posting")
 
-    changeHeader('?posting')
+    const content = params.get('content');
+    if (content) changeHeader(`?posting&content=${content}`)
+    else changeHeader('?posting')
     changePostPageNavButton('goto')
 
     const foundModal = document.getElementById("postModel")?.innerHTML;
@@ -2187,7 +2192,7 @@ async function createPostPage() {
                 <p onclick="publishFromPostPage()">Upload Post</p>
             </div>
             <div>
-                <textarea class="postTextArea" onkeyup="socialTypePost()" id="newPostTextArea"></textarea>
+                <textarea class="postTextArea" onkeyup="onTypePostPage()" id="newPostTextArea">${content ? content : ""}</textarea>
             </div>
             <div>
                 <input type="text" id="pollCreateLink" placeholder="Link Poll via ID">
@@ -2200,6 +2205,48 @@ async function createPostPage() {
 
     document.getElementById("mainFeed").innerHTML = ele;
 };
+
+async function onTypePostPage(e) {
+    socialTypePost()
+
+    const content = document.getElementById('newPostTextArea')?.value
+    if (content != null) newPostHeader("content", content) 
+    // createHeaderParamString('posting', true)
+}
+
+function newPostHeader(paramName, data) {
+    const newString = `&${paramName}=${data}`;
+    console.log(`1: newString ${newString}`)
+    const current = getUrl.search;
+    console.log(`2: current ${current}`)
+
+    // const removeOl
+    const hasParam = current.includes(paramName);
+    console.log(`3: hasParam ${hasParam}`)
+
+    if (hasParam) {
+        
+        const oldData = encodeURIComponent(params.get(paramName));
+        console.log(`4: oldData ${oldData}`)
+
+        console.log(`4.2 : ${current.replace(`&${paramName}=${oldData}`, newString)}`)
+        
+        const newHeader = current.replace(`&${paramName}=${oldData}`, newString);
+        // console.log(`5: replaced ${replaced}`)
+        console.log(`6: current ${current}`)
+        // const newHeader = replaced + newString
+        console.log(`7: newHeader ${newHeader}`)
+
+        changeHeader(newHeader);
+    } else {
+        const newHeader = current + newString;
+        console.log(`8: newHeader ${newHeader}`)
+        changeHeader(newHeader);
+    }
+
+    params = new URLSearchParams(getUrl.search)
+}
+
 
 async function publishFromPostPage() {
     /* if poll then publish poll first */
@@ -2324,6 +2371,9 @@ async function createPost(params) {
   //   var input = document.getElementById('postBarArea').value;
     var input = document.getElementById('newPostTextArea').value
     if (debug) console.log(input)
+
+    var isFromPostPage = params.has("posting");
+    if (debug) console.log("isFromPostPage: " + isFromPostPage)
 
     var quoted 
     if (params?.quoteID) quoted = params.quoteID
