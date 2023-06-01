@@ -2170,28 +2170,44 @@ async function createPostPage() {
     if (debug) console.log("params? " + getUrl.search)
     if (debug) console.log("params != ?posting " + getUrl.search.includes("?posting"))
 
+    // content from header
     const foundContentParam = params.get('content');
     if (foundContentParam) {
         changeHeader(`?posting&content=${encodeURIComponent(foundContentParam)}`)
         preinput = true
         data.content = foundContentParam
     }
+
+    // pollID from header
+    const foundPollIDParam = params.get('pollID');
+    if (foundPollIDParam) {
+        changeHeader(`?posting&pollID=${encodeURIComponent(foundPollIDParam)}`)
+        preinput = true
+        data.pollID = foundPollIDParam
+    }
    
     changePostPageNavButton('goto')
 
+    // from old post modal 
     const foundModal = document.getElementById("postingModel");
     if (debug) console.log("foundModal: " + foundModal)
     if (foundModal) {
-        const content = document.getElementById('newPostTextArea')?.value
+        const content = document.getElementById('newPostTextArea')
         if (debug) console.log("content: " + content)
-        foundModal.remove()
         if (content) {
-            data.content = content
-            preinput = true
+            content.remove()
+            if (content.value)data.content = content.value;
+            preinput = true;
         };
-        closeModal()
 
+        const foundPollLink = document.getElementById('pollCreateLink');
+        if (foundPollLink) {
+            if (foundPollLink.value) data.pollID = foundPollLink.value
+        }
+
+        closeModal();
     }
+
 
     if (data.content) changeHeader(`?posting&content=${encodeURIComponent(data.content)}`)
     else changeHeader('?posting')
@@ -2201,21 +2217,21 @@ async function createPostPage() {
     const ele = `
         <div id="postPageDiv" class="postPageDiv">
             <h1>Create a new Post</h1>
+            <div class="postPageInput">
+            <textarea class="postTextArea" onkeyup="onTypePostPage()" id="newPostTextArea">${data?.content ? data.content : ""}</textarea>
+            </div>
             <div class="mainActions">
-                <p onclick="leavePostPage()">Back</p>
-                <p onclick="publishFromPostPage()">Upload Post</p>
+                <p class="publicPost" onclick="leavePostPage()">Back</p>
+                <p class="publicPost" onclick="publishFromPostPage()">Upload Post</p>
+                <p class="publicPost" onclick="showPollCreation()">Add Poll</p>
+                <div class="publicPost">
+                    <p onclick="exportPostURL()">Create Post Template</p>
+                    <p id="postURL_preview"></p>
+                    <p id="postURL_messageURL"></p>
+                </div>
             </div>
             <div>
-                <textarea class="postTextArea" onkeyup="onTypePostPage()" id="newPostTextArea">${data?.content ? data.content : ""}</textarea>
-            </div>
-            <div>
-                <input type="text" id="pollCreateLink" placeholder="Link Poll via ID">
-            </div>
-            <p onclick="showPollCreation()">Add Poll</p>
-            <div class="publicPost">
-                <p onclick="exportPostURL()">Create Post Template</p>
-                <p id="postURL_preview"></p>
-                <p id="postURL_messageURL"></p>
+                <input type="text" id="pollCreateLink" placeholder="Link Poll via ID" ${data.pollID ? `value="${data.pollID}"` : ""}></input>
             </div>
             <div id="pollCreate"></div>
             <div id="foundTaggings"></div>
@@ -2227,24 +2243,34 @@ async function createPostPage() {
 
 function exportPostURL() {
     const content = document.getElementById('newPostTextArea')?.value
+    const pollID = document.getElementById('pollCreateLink')?.value
+
     const params = []
 
+    // content to post page header
     if (content != undefined && content != null && content != "") {
         if (debug) console.log("content")
         const newParam = createNewParam("content", content)
         params.push(newParam);
     } else if (debug) console.log("no content")
 
+    // pollID to post page header
+    if (pollID != undefined && pollID != null && pollID != "") {
+        if (debug) console.log("pollID")
+        const newParam = createNewParam("pollID", pollID)
+        params.push(newParam);
+    } else if (debug) console.log("no pollID")
+
     var newString = `${baseUrl}?posting`
     for (const param of params) {
         newString += param
-    }
+    };
 
-    if (debug) console.log(newString)
+    if (debug) console.log(newString);
     copyToClipboard(newString);
+
     document.getElementById("postURL_messageURL").innerHTML = `Copied!`
     document.getElementById("postURL_preview").innerHTML = newString
-    
 }
 
 async function onTypePostPage(e) {
