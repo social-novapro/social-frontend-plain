@@ -2167,15 +2167,18 @@ async function searchResult(input) {
 async function createPostPage() {
     var preinput = false;
     var data = { };
+    var paramsFound = [];
     if (debug) console.log("params? " + getUrl.search)
     if (debug) console.log("params != ?posting " + getUrl.search.includes("?posting"))
 
     // content from header
     const foundContentParam = params.get('content');
+    console.log("foundContentParam: " + foundContentParam)
     if (foundContentParam) {
         changeHeader(`?posting&content=${encodeURIComponent(foundContentParam)}`)
         preinput = true
         data.content = foundContentParam
+        paramsFound.push({ "paramName" : "content", "paramValue" : foundContentParam})
     }
 
     // pollID from header
@@ -2184,6 +2187,7 @@ async function createPostPage() {
         changeHeader(`?posting&pollID=${encodeURIComponent(foundPollIDParam)}`)
         preinput = true
         data.pollID = foundPollIDParam
+        paramsFound.push({ "paramName" : "pollID", "paramValue" : foundPollIDParam})
     }
    
     changePostPageNavButton('goto')
@@ -2203,14 +2207,21 @@ async function createPostPage() {
         const foundPollLink = document.getElementById('pollCreateLink');
         if (foundPollLink) {
             if (foundPollLink.value) data.pollID = foundPollLink.value
+            preinput = true;
         }
 
         closeModal();
     }
 
 
-    if (data.content) changeHeader(`?posting&content=${encodeURIComponent(data.content)}`)
-    else changeHeader('?posting')
+    var paramString = ""
+    for (const param of paramsFound) {
+        if (debug) console.log(param.paramName, param.paramValue);
+        const str = createNewParam(param.paramName, param.paramValue);
+        if (str) paramString += str;
+    }
+    // if (data.content) changeHeader(`?posting&content=${encodeURIComponent(data.content)}`)
+    changeHeader(`?posting${paramString}`)
 
     if (debug) console.log("creating post")
 
@@ -2225,7 +2236,7 @@ async function createPostPage() {
                 <p class="publicPost" onclick="publishFromPostPage()">Upload Post</p>
                 <p class="publicPost" onclick="showPollCreation()">Add Poll</p>
                 <div class="publicPost">
-                    <p onclick="exportPostURL()">Create Post Template</p>
+                    <p onclick="exportPostHeaderURL()">Create Post Template</p>
                     <p id="postURL_preview"></p>
                     <p id="postURL_messageURL"></p>
                 </div>
@@ -2241,7 +2252,7 @@ async function createPostPage() {
     document.getElementById("mainFeed").innerHTML = ele;
 };
 
-function exportPostURL() {
+function createPostPageHeaders() {
     const content = document.getElementById('newPostTextArea')?.value
     const pollID = document.getElementById('pollCreateLink')?.value
 
@@ -2261,10 +2272,20 @@ function exportPostURL() {
         params.push(newParam);
     } else if (debug) console.log("no pollID")
 
-    var newString = `${baseUrl}?posting`
+    var newString = `?posting`
+
     for (const param of params) {
         newString += param
     };
+    console.log(newString);
+
+    return newString;
+}
+
+function exportPostHeaderURL() {
+    const newParam = createPostPageHeaders();
+    
+    const newString = `${baseUrl}${newParam}`
 
     if (debug) console.log(newString);
     copyToClipboard(newString);
