@@ -256,6 +256,7 @@ function postElementCreate({ post, user, type, hideParent, hideReplies }) {
                 .then(function(data) {
                     if (data.voted && data.foundVote && data.foundVote.pollOptionID && data.foundVote.pollID == post.pollID) {
                         colorizeOption(post.pollID, data.foundVote.pollOptionID);
+                        changeVoteOption(post.pollID, data.foundVote.pollOptionID);
                     }
                 })
             }
@@ -263,6 +264,23 @@ function postElementCreate({ post, user, type, hideParent, hideReplies }) {
     }
 
     return element;
+}
+
+function changeVoteOption(pollID, optionID) {
+    return false;//doesnt work properly, changed how it works
+
+    const element = document.getElementById(`poll_option_${pollID}_${optionID}`);
+    console.log(element);
+    if (debug) console.log(pollID);
+    if (userVoted == true) {
+        // colo
+        
+        // const myElement = document.getElementById('myElement');
+        element.onclick = `removeVote('${pollID}', '${optionID}')`;
+    } else {
+        // const myElement = document.getElementById('myElement');
+        element.onclick = `voteOption('${pollID}', '${optionID}')`;
+    }
 }
 
 function colorizeOption(pollID, optionID) {
@@ -530,8 +548,39 @@ async function getPollData(pollID) {
     });
 }
 
+async function removeVote(pollID, optionID) {
+    if (!pollID || !optionID) return alert("Error while removing vote");
+
+    const body = {
+        pollID,
+        pollOptionID: optionID
+    }
+    
+    const response = await fetch(`${apiURL}/polls/removeVote`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(body)
+    });
+
+    const res = await response.json();
+    if (debug) console.log(res)
+    if (res.error) return alert(`Error: ${res.error}`);
+    
+    removeColorOption(pollID, optionID)
+    
+    if (debug) console.log("Removed vote!")
+}
+
 async function voteOption(pollID, optionID) {
     if (!pollID || !optionID) return alert("Error while voting");
+
+    const element = document.getElementById(`poll_option_${pollID}_${optionID}`);
+    if (element.classList.contains("voted")) {
+        if (debug) console.log("Already voted for this option");
+        
+        await removeVote(pollID, optionID);
+        return;
+    }
 
     const body = {
         pollID,
