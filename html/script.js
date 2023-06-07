@@ -178,7 +178,7 @@ function postElementCreate({ post, user, type, hideParent, hideReplies }) {
     if (imageContent.imageFound)if (debug) console.log(imageContent.attachments)
     if (type=="basic"){
         return `
-            <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'} | ${timesince}</p>
+            <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'} | ${timesince} | ${getTimeSince(post.timePosted)}</p>
             <div class="postContent" id="postContentArea_${post._id}">
                 <div class="textAreaPost">
                     <p id="postContent_${post._id}">${imageContent.content}</p>
@@ -199,7 +199,7 @@ function postElementCreate({ post, user, type, hideParent, hideReplies }) {
                         <p onclick="viewParentPost('${post._id}', '${post.replyData.postID}')" id="parentViewing_${post._id}">This was a reply, click here to see.</p>
                     ` : ``}
                 `: ``}
-                <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'} | ${timesince}</p>
+                <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'}<br class="spacer_2px">${timesince} | ${getTimeSince(post.timePosted).value} ago</p>
                 <div class="postContent" id="postContentArea_${post._id}">
                     <div class="textAreaPost">
                         <p id="postContent_${post._id}">${imageContent.content}</p>
@@ -475,6 +475,39 @@ async function showEditHistory(postID) {
     document.getElementById(`editHistory_${postID}`).innerHTML=newElement;
 };
 
+function getTime() {
+    const d = new Date();
+    const currentTime = d.getTime()
+    return currentTime
+}
+
+function getTimeSince(time) {
+    var currentTime = getTime()
+
+    var diff = (currentTime - time)
+    if (currentTime < time) diff = (time - currentTime);
+
+    var years = Math.floor(diff / 31556952000)
+    var days = Math.floor(diff / 86400000) % 365;
+    var hours = Math.floor(diff / 3600000) % 24;
+    var minutes = Math.floor(diff / 60000) % 60;
+    var seconds = Math.floor(diff / 1000) % 60;
+    
+    var finalReturn = {
+        "sinceOrUntil" : currentTime < time ? "until" : "since",
+        "value" : ""
+    }
+
+    if (years) finalReturn.value = `${years}y ${days}d`
+    if (!years) finalReturn.value = `${days}d ${hours}h`
+    if (!years && !days) finalReturn.value = `${hours}h ${minutes}m`
+    if (!years && !days && !hours) finalReturn.value = `${minutes}m ${seconds}s`
+    if (!years && !days && !hours && !minutes) finalReturn.value = `${seconds}s`
+    if (!years && !days && !hours && !minutes && !seconds) finalReturn.value = `now`
+
+    return finalReturn;
+}
+
 async function createPollElement(postID, pollID) {
     return getPollData(pollID, {
         method: 'GET',
@@ -486,6 +519,8 @@ async function createPollElement(postID, pollID) {
         for (const option of pollData.pollOptions) {
             if (option.amountVoted) totalVotes+=option.amountVoted;
         }
+
+        const timesinceData = getTimeSince(pollData.timestampEnding);
 
         return `
             <div id="pollElement_${postID}" class="pollElement">
@@ -505,7 +540,7 @@ async function createPollElement(postID, pollID) {
                         `;
                     }).join('')}
                 </div>
-                <p>Total votes: ${totalVotes}</p>
+                <p>Total votes: ${totalVotes} | ${timesinceData.sinceOrUntil=="since" ? ` ended ${timesinceData.value} ago` : `${timesinceData.value} time left`} </p>
             </div>
         `;
     })
@@ -564,7 +599,7 @@ async function removeVote(pollID, optionID) {
 
     const res = await response.json();
     if (debug) console.log(res)
-    if (res.error) return alert(`Error: ${res.error}`);
+    if (res.error) return alert(`Error: ${res.error.msg}`);
     
     removeColorOption(pollID, optionID)
     
@@ -595,7 +630,7 @@ async function voteOption(pollID, optionID) {
 
     const res = await response.json();
     if (debug) console.log(res)
-    if (res.error) return alert(`Error: ${res.error}`);
+    if (res.error) return alert(`Error: ${res.error.msg}`);
     
     if (res.oldVote) removeColorOption(res.oldVote.pollID, res.oldVote.pollOptionID)
     colorizeOption(pollID, optionID)
@@ -638,14 +673,14 @@ async function createPostModal() {
         <div id="postingModel">
         <h1>Create a new Post</h1>
         <div id="postModel" class="postModalActions">
+            <p onclick="createPostPage()">Create Post Page</p>
             <p onclick="createPost()">Upload Post</p>
             <p onclick="closeModal()">Close</p>
         </div>
-        <textarea class="postTextArea" id="newPostTextArea"></textarea>
         <div class="search">
             <input type="text" id="pollCreateLink" placeholder="Link Poll via ID">
-            <p onclick="createPostPage()">Create Post Page</p>
         </div>
+        <textarea class="postTextArea" id="newPostTextArea"></textarea>
         <div id="foundTaggings"></div>
         </div>
     `, "hide")
@@ -2239,11 +2274,22 @@ async function createPostPage() {
         paramsFound.push({ "paramName" : "pollID", "paramValue" : foundPollIDParam})
     }
    
+    // poll data from header
+    const foundPollOptionsParam = params.get('pollOptions');
+    if (foundPollOptionsParam) {
+        changeHeader(`?posting&pollOptions=${encodeURIComponent(foundPollOptionsParam)}`)
+        preinput = true
+        data.pollOptions = foundPollOptionsParam
+        paramsFound.push({ "paramName" : "pollOptions", "paramValue" : foundPollOptionsParam})
+    }
+
+
     changePostPageNavButton('goto')
 
     // from old post modal 
     const foundModal = document.getElementById("postingModel");
-    if (debug) console.log("foundModal: " + foundModal)
+    if (debug) console.log("foundModal: " + foundModal);
+
     if (foundModal) {
         const content = document.getElementById('newPostTextArea')
         if (debug) console.log("content: " + content)
@@ -2261,7 +2307,6 @@ async function createPostPage() {
 
         closeModal();
     }
-
 
     var paramString = ""
     for (const param of paramsFound) {
@@ -2321,6 +2366,29 @@ function createPostPageHeaders() {
         params.push(newParam);
     } else if (debug) console.log("no pollID")
 
+    // poll in ceation
+    const createPoll = document.getElementById('pollCreation')
+    if (createPoll) {
+        if (debug) console.log("poll")
+        const newParam = createNewParam("poll", true)
+        params.push(newParam);
+
+        const amountOptions = checkPollOptionAmount();
+        if (amountOptions) {
+            const newParam = createNewParam("pollOptions", amountOptions)
+
+            params.push(newParam);
+
+            for (let i = 1; i <= amountOptions; i++) {
+                const getOption = document.getElementById(`poll_option_${i}`);
+                const option = document.getElementById(`poll_option_${i}`).value
+                const newParam = createNewParam(`poll_option_${i}`, option)
+                params.push(newParam);
+            }
+        }
+    } else if (debug) console.log("no poll")
+
+    console.log(params)
     var newString = `?posting`
 
     for (const param of params) {
@@ -2378,9 +2446,74 @@ function createNewParam(paramName, data) {
     return `&${paramName}=${encodeURIComponent(data)}`;
 }
 
+async function publishPoll() {
+    console.log("__________")
+    console.log("__________")
+    console.log("__________")
+    console.log("__________")
+    if (debug) console.log("creating poll")
+    const amountOptions = checkPollOptionAmount();
+    if (amountOptions<2 || amountOptions>10) return alert("Please enter between 2 and 10 options")
+
+    var options = [];
+    for (let i = 1; i <= amountOptions; i++) {
+        const option = getOption(i);
+        if (option) options.push(option);
+        console.log(option)
+    }
+
+    if (options.length < 2 || options.length > 10) return alert("Please enter between 2 and 10 options");
+
+    /*
+        pollName
+        timeLive
+        optioNAmount
+        option_[num]
+    */
+    var body = {
+        pollName: document.getElementById('pollCreateTitle')?.value,
+        // timeLive: document.getElementById('timeLive')?.value, add later
+        optionAmount: amountOptions,
+    };
+
+    for (let i = 0; i < options.length; i++) {
+        body[`option_${i+1}`] = options[i];
+    }
+
+    if (debug) console.log(body);
+
+    const response = await fetch(`${apiURL}/polls/create`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body)
+    });
+
+    const pollData = await response.json()
+    if (debug) console.log(pollData)
+
+    if (!response.ok) {
+        if (pollData.msg) showModal(`<h1>something went wrong.</h1> <p>${pollData.code}\n${pollData.msg}</p>`)
+        else if (pollData.error.msg) showModal(`<h1>something went wrong.</h1> <p>${pollData.error.code}\n${pollData.error.msg}</p>`)
+        else showModal(`<h1>something went wrong.</h1> <p>${JSON.stringify(pollData)}</p>`)
+        return null;
+    }
+    
+    return pollData.pollData;
+};
+
 async function publishFromPostPage() {
+    if (debug) console.log("publishing post")
+    const createPoll = document.getElementById('pollCreation');
+
+    var pollID = null;
+    if (createPoll) {
+        const pollData = await publishPoll();
+        if (pollData) pollID = pollData._id;
+        if (debug) console.log("pollID: " + pollID)
+    }
+
     /* if poll then publish poll first */
-    return createPost();
+    return createPost({ pollID: pollID ? pollID : null });
 };
 
 function changePostPageNavButton(method) {
@@ -2418,7 +2551,7 @@ async function leavePostPage() {
     getFeed()
 }
 
-async function showPollCreation() {
+function showPollCreation() {
     if (debug) console.log("creating poll")
     
     const content = document.getElementById('newPostTextArea')?.value
@@ -2426,10 +2559,10 @@ async function showPollCreation() {
 
     var ele = `
         <hr class="rounded">
-        <h1>Create a new Post</h1>
+        <h1>Create New Poll</h1>
         <hr class="rounded">
         <p onclick="addExtraOption()">Add Another Option</p>
-        <div>
+        <div id="pollCreation">
             <div id="optionAmount"></div>
             <input type="text" id="pollCreateTitle" placeholder="Question">
             <div id="options">${addOption(1)}${addOption(2)}</div>
@@ -2451,7 +2584,7 @@ function addExtraOption() {
         if (document.getElementById("cantAddMoreOptions")) return console.log("cant add more options, stop asking")
         return document.getElementById("options").innerHTML += '<p id="cantAddMoreOptions">cant create more than 10 options</p>';
     }
-    return document.getElementById("options").innerHTML += addOption();
+    return document.getElementById("options").innerHTML += addOption(currentNum+1);
 };
 
 function addOption(num) {
@@ -2464,12 +2597,11 @@ function addOption(num) {
 }
 
 function getOption(num) {
-    return document.getElementById(`poll_option_${num}`).value;
+    const foundOption = document.getElementById(`poll_option_${num}`)?.value;
+    if (foundOption) return foundOption;
+    else return false;
 }
 
-async function publishPoll() {
-
-}
 /*
 // BASE FOR CREATING POSTS (posts when you press create post)
 async function createPost() {
@@ -2495,6 +2627,7 @@ async function createPost() {
     `
 }
 */
+
 // PUBLISH WRITTEN POST
 async function createPost(params) {
     if (debug) console.log(params)
@@ -2514,9 +2647,15 @@ async function createPost(params) {
     if (params?.replyID) replied = params.replyID
     else replied=undefined
 
+    // var 
     var pollID
-    const pollELe = document.getElementById('pollCreateLink')
-    if (pollELe) pollID = pollELe.value
+    if (params?.pollID) pollID = params.pollID
+    else {
+        const pollELe = document.getElementById('pollCreateLink')
+        if (pollELe) pollID = pollELe.value
+        else pollID = undefined
+    }
+
     if (debug) console.log(pollID)
     // console.log(pollID)
 
