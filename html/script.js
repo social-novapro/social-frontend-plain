@@ -2257,9 +2257,7 @@ async function createPostPage() {
 
     // content from header
     const foundContentParam = params.get('content');
-    console.log("foundContentParam: " + foundContentParam)
     if (foundContentParam) {
-        changeHeader(`?posting&content=${encodeURIComponent(foundContentParam)}`)
         preinput = true
         data.content = foundContentParam
         paramsFound.push({ "paramName" : "content", "paramValue" : foundContentParam})
@@ -2268,21 +2266,42 @@ async function createPostPage() {
     // pollID from header
     const foundPollIDParam = params.get('pollID');
     if (foundPollIDParam) {
-        changeHeader(`?posting&pollID=${encodeURIComponent(foundPollIDParam)}`)
         preinput = true
         data.pollID = foundPollIDParam
         paramsFound.push({ "paramName" : "pollID", "paramValue" : foundPollIDParam})
     }
    
     // poll data from header
-    const foundPollOptionsParam = params.get('pollOptions');
-    if (foundPollOptionsParam) {
-        changeHeader(`?posting&pollOptions=${encodeURIComponent(foundPollOptionsParam)}`)
+    const foundPollParam = params.get('poll');
+    if (foundPollParam) {
         preinput = true
-        data.pollOptions = foundPollOptionsParam
-        paramsFound.push({ "paramName" : "pollOptions", "paramValue" : foundPollOptionsParam})
-    }
+        data.poll = foundPollParam
+        paramsFound.push({ "paramName" : "poll", "paramValue" : foundPollParam})
+        
+        // poll options from header
+        const foundPollOptionsParam = params.get('pollOptions');
+        if (foundPollOptionsParam) {
+            preinput = true
+            data.pollOptions = foundPollOptionsParam
+            paramsFound.push({ "paramName" : "pollOptions", "paramValue" : foundPollOptionsParam})
+        }
 
+        // poll title from header
+        const foundPollTitleParam = params.get('pollTitle');
+        if (foundPollTitleParam) {
+            preinput = true
+            data.pollTitle = foundPollTitleParam
+            paramsFound.push({ "paramName" : "pollTitle", "paramValue" : foundPollTitleParam})
+        }
+
+        for (let i=1; i<=data.pollOptions;i++) {
+            const foundPollOptionParam = params.get(`poll_option_${i}`);
+            if (foundPollOptionParam) {
+                data[`poll_option_${i}`] = foundPollOptionParam
+                paramsFound.push({ "paramName" : `poll_option_${i}`, "paramValue" : foundPollOptionParam })
+            }
+        }
+    }
 
     changePostPageNavButton('goto')
 
@@ -2344,6 +2363,26 @@ async function createPostPage() {
     `;
 
     document.getElementById("mainFeed").innerHTML = ele;
+
+    // add all data found from headers
+    if (data.poll) {
+        if (data.pollOptions) {
+            showPollCreation();
+            const currentAmountOptions = checkPollOptionAmount();
+            for (let i=currentAmountOptions+1; i<=data.pollOptions; i++) {
+                console.log("adding option: " + i)
+                document.getElementById("options").innerHTML += addOption(i);
+            }
+        }
+        if (data.pollTitle) {
+            document.getElementById("pollCreateTitle").value = data.pollTitle;
+        }
+
+        for (let i=1; i <= data.pollOptions; i++) {
+            const foundOption = data[`poll_option_${i}`];
+            if (foundOption) document.getElementById(`poll_option_${i}`).value = data[`poll_option_${i}`]
+        }
+    }
 };
 
 function createPostPageHeaders() {
@@ -2365,7 +2404,7 @@ function createPostPageHeaders() {
         const newParam = createNewParam("pollID", pollID)
         params.push(newParam);
     } else if (debug) console.log("no pollID")
-
+    
     // poll in ceation
     const createPoll = document.getElementById('pollCreation')
     if (createPoll) {
@@ -2373,28 +2412,35 @@ function createPostPageHeaders() {
         const newParam = createNewParam("poll", true)
         params.push(newParam);
 
+        // pollTitle
+        const pollTitle = document.getElementById('pollCreateTitle')?.value
+        if (pollTitle) {
+            const newParam = createNewParam("pollTitle", pollTitle)
+            params.push(newParam);
+        }
+
+        // options + amount of options 
         const amountOptions = checkPollOptionAmount();
         if (amountOptions) {
             const newParam = createNewParam("pollOptions", amountOptions)
-
             params.push(newParam);
 
             for (let i = 1; i <= amountOptions; i++) {
-                const getOption = document.getElementById(`poll_option_${i}`);
-                const option = document.getElementById(`poll_option_${i}`).value
-                const newParam = createNewParam(`poll_option_${i}`, option)
-                params.push(newParam);
+                const option = document.getElementById(`poll_option_${i}`)?.value
+                if (option !=null && option != undefined && option != "") {
+                    const newParam = createNewParam(`poll_option_${i}`, option)
+                    params.push(newParam);
+                }
             }
         }
     } else if (debug) console.log("no poll")
 
-    console.log(params)
+    if (debug) console.log(params)
     var newString = `?posting`
 
     for (const param of params) {
         newString += param
     };
-    console.log(newString);
 
     return newString;
 }
@@ -2447,10 +2493,6 @@ function createNewParam(paramName, data) {
 }
 
 async function publishPoll() {
-    console.log("__________")
-    console.log("__________")
-    console.log("__________")
-    console.log("__________")
     if (debug) console.log("creating poll")
     const amountOptions = checkPollOptionAmount();
     if (amountOptions<2 || amountOptions>10) return alert("Please enter between 2 and 10 options")
