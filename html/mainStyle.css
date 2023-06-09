@@ -86,6 +86,9 @@ p {
     text-decoration: none;
     color: var(--main-p-color)
 }
+.spacer_2px {
+    padding: 2px;
+}
 .spacer {
     padding: 5px;
     background-color: red;
