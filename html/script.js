@@ -673,12 +673,13 @@ async function createPostModal() {
         <div id="postingModel">
         <h1>Create a new Post</h1>
         <div id="postModel" class="postModalActions">
-            <p onclick="createPostPage()">Create Post Page</p>
+            <p onclick="createPostPage()">Open Post Page</p>
+            <hr class="rounded">
             <p onclick="createPost()">Upload Post</p>
             <p onclick="closeModal()">Close</p>
         </div>
         <div class="search">
-            <input type="text" id="pollCreateLink" placeholder="Link Poll via ID">
+            <input type="text" class="addPollOption" id="pollCreateLink" placeholder="Link Poll via ID">
         </div>
         <textarea class="postTextArea" id="newPostTextArea"></textarea>
         <div id="foundTaggings"></div>
@@ -2325,6 +2326,7 @@ async function createPostPage() {
         }
 
         closeModal();
+        foundModal.remove();
     }
 
     var paramString = ""
@@ -2347,7 +2349,7 @@ async function createPostPage() {
             <div class="mainActions">
                 <p class="publicPost" onclick="leavePostPage()">Back</p>
                 <p class="publicPost" onclick="publishFromPostPage()">Upload Post</p>
-                <p class="publicPost" onclick="showPollCreation()">Add Poll</p>
+                <p class="publicPost" id="pollCreationButton" onclick="showPollCreation()">Add Poll</p>
                 <div class="publicPost">
                     <p onclick="exportPostHeaderURL()">Create Post Template</p>
                     <p id="postURL_preview"></p>
@@ -2355,7 +2357,7 @@ async function createPostPage() {
                 </div>
             </div>
             <div>
-                <input type="text" id="pollCreateLink" placeholder="Link Poll via ID" ${data.pollID ? `value="${data.pollID}"` : ""}></input>
+                <input type="text" id="pollCreateLink" class="addPollOption" placeholder="Link Poll via ID" ${data.pollID ? `value="${data.pollID}"` : ""}></input>
             </div>
             <div id="pollCreate"></div>
             <div id="foundTaggings"></div>
@@ -2495,7 +2497,7 @@ function createNewParam(paramName, data) {
 async function publishPoll() {
     if (debug) console.log("creating poll")
     const amountOptions = checkPollOptionAmount();
-    if (amountOptions<2 || amountOptions>10) return alert("Please enter between 2 and 10 options")
+    if (amountOptions<2 || amountOptions>10) return showModal("<h1>Something went wrong.</h1><p>Please enter between 2 and 10 poll options</p>")
 
     var options = [];
     for (let i = 1; i <= amountOptions; i++) {
@@ -2504,7 +2506,7 @@ async function publishPoll() {
         console.log(option)
     }
 
-    if (options.length < 2 || options.length > 10) return alert("Please enter between 2 and 10 options");
+    if (options.length < 2 || options.length > 10) return showModal("<h1>Something went wrong.</h1><p>Please enter between 2 and 10 poll options</p>");
 
     /*
         pollName
@@ -2534,9 +2536,9 @@ async function publishPoll() {
     if (debug) console.log(pollData)
 
     if (!response.ok) {
-        if (pollData.msg) showModal(`<h1>something went wrong.</h1> <p>${pollData.code}\n${pollData.msg}</p>`)
-        else if (pollData.error.msg) showModal(`<h1>something went wrong.</h1> <p>${pollData.error.code}\n${pollData.error.msg}</p>`)
-        else showModal(`<h1>something went wrong.</h1> <p>${JSON.stringify(pollData)}</p>`)
+        if (pollData.msg) showModal(`<h1>Something went wrong.</h1> <p>${pollData.code}\n${pollData.msg}</p>`)
+        else if (pollData.error.msg) showModal(`<h1>Something went wrong.</h1> <p>${pollData.error.code}\n${pollData.error.msg}</p>`)
+        else showModal(`<h1>Something went wrong.</h1> <p>${JSON.stringify(pollData)}</p>`)
         return null;
     }
     
@@ -2550,8 +2552,9 @@ async function publishFromPostPage() {
     var pollID = null;
     if (createPoll) {
         const pollData = await publishPoll();
+        if (debug && pollID) console.log("new pollID: " + pollID)
         if (pollData) pollID = pollData._id;
-        if (debug) console.log("pollID: " + pollID)
+        else return null;
     }
 
     /* if poll then publish poll first */
@@ -2593,8 +2596,17 @@ async function leavePostPage() {
     getFeed()
 }
 
+function removePollCreation() {
+    if (debug) console.log("removing poll")
+    document.getElementById("pollCreate").innerHTML = "";
+    document.getElementById("pollCreationButton").onclick=showPollCreation;
+    document.getElementById("pollCreationButton").innerHTML="Add Poll";
+}
+
 function showPollCreation() {
     if (debug) console.log("creating poll")
+    document.getElementById("pollCreationButton").onclick=removePollCreation;
+    document.getElementById("pollCreationButton").innerHTML="Remove Poll";
     
     const content = document.getElementById('newPostTextArea')?.value
     if (content) showinput = true
@@ -2603,10 +2615,17 @@ function showPollCreation() {
         <hr class="rounded">
         <h1>Create New Poll</h1>
         <hr class="rounded">
-        <p onclick="addExtraOption()">Add Another Option</p>
+        <div class="mainActions">
+            <p class="publicPost" onclick="addExtraOption()">Add Another Option</p>
+            <p class="publicPost" onclick="removeLastOption()">Remove Newest Option</p>
+        </div>
+        <hr class="rounded">
         <div id="pollCreation">
             <div id="optionAmount"></div>
-            <input type="text" id="pollCreateTitle" placeholder="Question">
+            <div>
+                <p><u>Question</u></p>
+                <input type="text" id="pollCreateTitle" class="addPollOption" placeholder="Question">
+            </div>
             <div id="options">${addOption(1)}${addOption(2)}</div>
         </div>
     `;
@@ -2619,21 +2638,67 @@ function checkPollOptionAmount() {
     return options.length || 1;
 };
 
+function removeLastOption() {
+    console.log("removing option")
+    const currentNum = checkPollOptionAmount();
+    if (currentNum <= 2) return console.log("cant remove more options");
+
+    const option = document.getElementById(`option_${currentNum}`);
+    if (option) option.remove();
+
+    /* restore old values when add */
+    const values=[];
+    for (let i = 0; i < currentNum-1; i++) {
+        const option = getOption(i+1);
+        if (option) values.push({value: option, num: i+1});
+    }
+
+    const questionTitle = document.getElementById('pollCreateTitle')?.value;
+
+    // document.getElementById("options").innerHTML += addOption(currentNum+1)
+    for (let i = 0; i < values.length; i++) {
+        const optionData = values[i];
+        document.getElementById(`poll_option_${optionData.num}`).value = optionData.value;
+    }
+    document.getElementById('pollCreateTitle').value = questionTitle;
+    
+    document.getElementById(`poll_option_${currentNum-1}`).focus();
+    return;
+}
+
 function addExtraOption() {
     if (debug) console.log("adding option")
     const currentNum = checkPollOptionAmount();
     if (currentNum >= 10) {
-        if (document.getElementById("cantAddMoreOptions")) return console.log("cant add more options, stop asking")
+        if (document.getElementById("cantAddMoreOptions")) return console.log("cant add more options")
         return document.getElementById("options").innerHTML += '<p id="cantAddMoreOptions">cant create more than 10 options</p>';
     }
-    return document.getElementById("options").innerHTML += addOption(currentNum+1);
+
+    /* restore old values when add */
+    const values=[];
+    for (let i = 0; i < currentNum; i++) {
+        const option = getOption(i+1);
+        if (option) values.push({value: option, num: i+1});
+    }
+    const questionTitle = document.getElementById('pollCreateTitle')?.value;
+
+    document.getElementById("options").innerHTML += addOption(currentNum+1)
+    for (let i = 0; i < values.length; i++) {
+        const optionData = values[i];
+        document.getElementById(`poll_option_${optionData.num}`).value = optionData.value;
+    }
+    document.getElementById('pollCreateTitle').value = questionTitle;
+    
+    document.getElementById(`poll_option_${currentNum+1}`).focus();
+    return
 };
 
 function addOption(num) {
     const amount = num || checkPollOptionAmount()+1;
     return `
-        <div class="pollOption">
-            <input type="text" id="poll_option_${num}" placeholder="Option ${amount}">
+        <div class="pollOption" id="option_${num}">
+            <p><u>Option ${amount}</u></p>
+            <input type="text" class="addPollOption" id="poll_option_${num}" placeholder="Option ${amount}">
         </div>
     `;
 }

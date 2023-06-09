@@ -1,6 +1,6 @@
 var config = {
     // "prod" or "dev" only
-    "current" : "dev",
+    "current" : "prod",
     "dev" : {
         "api_url" : "http://localhost:5002/v1",
         "websocket_url" : "ws://localhost:5002/",

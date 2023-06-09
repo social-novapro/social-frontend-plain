@@ -337,3 +337,15 @@
 .hiddenData {
     display: none;
 }
+.addPollOption {
+    border: 2px solid var(--main-border-color);
+    background-color:  var(--main-button-color);
+    color: var(--main-p-color);
+    padding: 5px;
+    border-radius: 10px;
+    margin: 15px;
+    width: 50%
+}
+.pollOption p{
+    padding: 0px;
+}
