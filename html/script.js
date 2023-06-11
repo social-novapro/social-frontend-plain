@@ -1029,7 +1029,9 @@ async function userHtml(userID) {
     if (profileData?.userData?.displayName) document.title = `${profileData?.userData?.displayName} | Interact`
     
     profileData.postData.reverse()
+
     // profileData.included.post ? profileData.postData.reverse() : profileData.postData = []
+    
     document.getElementById("mainFeed").innerHTML =  `
         ${profileData.userData?.profileURL != null  || clientUser ? 
             `
@@ -1086,6 +1088,22 @@ async function userHtml(userID) {
                 `
             }
         </div>
+        ${clientUser ? 
+            `
+                <div class="userInfo">
+                    <p><b>Email</b></p>
+                    <p>${profileData.userPriv?.email ? `${profileData.userPriv.email}` : `Please submit an email.` }</p>
+                    <form id="userEdit_email" class="contentMessage" onsubmit="editEmailRequest()">
+                        <input type="email" id="userEdit_email_text" class="userEditForm" value="New Email">
+                    </form>
+                </div>
+                <div class="userInfo">
+                    <p><b>Password</b></p>
+                    <p onclick="changePasswordPage()">Change Password</p>
+                </div>
+            ` : 
+            ``
+        }
         ${profileData.userData.statusTitle  || clientUser ? 
             `
                 <div class="userInfo">
@@ -1193,6 +1211,7 @@ async function userHtml(userID) {
 
     if (clientUser) {
         document.getElementById("userEdit_displayName").addEventListener("submit", function (e) { e.preventDefault()})
+        document.getElementById("userEdit_email").addEventListener("submit", function (e) { e.preventDefault()})
         document.getElementById("userEdit_username").addEventListener("submit", function (e) { e.preventDefault()})
         document.getElementById("userEdit_description").addEventListener("submit", function (e) { e.preventDefault()})
         document.getElementById("userEdit_pronouns").addEventListener("submit", function (e) { e.preventDefault()})
@@ -1206,6 +1225,82 @@ async function userHtml(userID) {
             <span class="link-text pointerCursor" id="page1">Feed</span>
         </div>
     `
+}
+
+async function changePasswordPage() {
+    const ele = `
+        <div>
+            <p><b>Change Password</b></p>
+            <form id="userEdit_password" class="contentMessage")">
+                <label for="password_text">New Password</label>
+                <input type="password" id="password_text" autocomplete="new-password" class="userEditForm" value="New Password">
+            </form>
+            <form id="userEdit_password_confirm" class="contentMessage")">
+                <label for="password_confirm">Confirm Password</label>
+                <input type="password" id="password_confirm" autocomplete="new-password" class="userEditForm" value="Confirm New Password">
+            </form>
+            <form id="userEdit_password_old" class="contentMessage">
+                <label for="userEdit_password_old_text">Old Password</label>
+                <input type="text" id="userEdit_password_old_text" autocomplete="current-password" class="userEditForm" value="Old Password">
+            </form>
+            <a onclick="changePassword()">Change Password</a>
+        </div>
+    `
+    await showModal(ele)
+}
+
+// change password
+async function changePassword() {
+    // get old password
+    // get new password
+    // get new password confirm
+    // compare passwords
+    // submit api call
+}
+
+// change email
+async function editEmailRequest(hasCurrent) {
+    const email = document.getElementById("userEdit_email_text")?.value
+    if (!email) return showModal("Please enter an email");
+
+    const validated = await validateEmail(email)
+    console.log(validated)
+    if (validated.valid != true) return showModal("<div><p>Please enter a valid email</p></div>");
+
+    // if (!hasCurrent) {
+        await addEmailAccount({email: email});    
+    // } else {
+
+    // }
+}
+async function validateEmail(email) {
+    const response = await fetch(`${apiURL}/emails/requests/validEmail/${email}`, {
+        method: 'GET',
+        headers
+    });
+
+    const res = await response.json();
+    if (debug) console.log(res)
+    return res
+}
+
+async function editEmailAccount() {
+    // change email
+}
+
+async function addEmailAccount({ email }) {
+    const response = await fetch(`${apiURL}/emails/set/`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({"email" : email})
+    });
+
+    const res = await response.json();
+    
+    console.log(res)
+    if (!res.ok || res.error) return false
+
+    // else popup saying susccesful
 }
 
 async function subNotifi(subUser) {
