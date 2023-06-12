@@ -1029,6 +1029,7 @@ async function userHtml(userID) {
     if (profileData?.userData?.displayName) document.title = `${profileData?.userData?.displayName} | Interact`
     
     profileData.postData.reverse()
+    console.log(profileData)
 
     // profileData.included.post ? profileData.postData.reverse() : profileData.postData = []
     
@@ -1092,10 +1093,7 @@ async function userHtml(userID) {
             `
                 <div class="userInfo">
                     <p><b>Email</b></p>
-                    <p>${profileData.userPriv?.email ? `${profileData.userPriv.email}` : `Please submit an email.` }</p>
-                    <form id="userEdit_email" class="contentMessage" onsubmit="editEmailRequest()">
-                        <input type="email" id="userEdit_email_text" class="userEditForm" value="New Email">
-                    </form>
+                    <p onclick="changeEmailPage()">Change Email</p>
                 </div>
                 <div class="userInfo">
                     <p><b>Password</b></p>
@@ -1249,6 +1247,60 @@ async function changePasswordPage() {
     await showModal(ele)
 }
 
+async function fetchClientEmailData() {
+    const response = await fetch(`${apiURL}/emails/userData/`, {
+        method: 'GET',
+        headers
+    });
+
+    console.log(response)
+    const res = await response.json();
+    if (debug) console.log(res)
+    return res
+}
+
+async function changeEmailPage() {
+    const emailData = await fetchClientEmailData();
+    console.log(emailData)
+    // fetch
+    const ele = `
+        <div>
+            <div> 
+                <h1>Current Email Settings</h1>
+                <hr class="rounded">
+                <p>Current Email: ${emailData.email}</p>
+                <p>Email Verified: ${emailData.verified}</p>
+                ${emailData.emailSetting != emailData.email ? `
+                    <p>Attempting Verification for: ${emailData.emailSetting}</p>
+                    ` : ``
+                }
+            </div>
+            <div>
+                <hr class="rounded">
+                <h1>Change Email</h1>
+                <hr class="rounded">
+                <form id="userEdit_email" class="contentMessage" onsubmit="editEmailRequest()">
+                    <label for="userEdit_email_text"><p>New Email</p></label>
+                    <input type="email" id="userEdit_email_text" class="userEditForm" value="New Email">
+                </form>
+                <form id="userEdit_password" class="contentMessage" onsubmit="editEmailRequest()">
+                    <label for="userEdit_email_pass"><p>Password</p></label>
+                    <input type="password" id="userEdit_email_pass" class="userEditForm" value="Password">
+                </form>
+                <a onclick="editEmailRequest()">Submit Email</a>
+            </div>
+        </div>
+    `
+    await showModal(ele)
+    
+    document.getElementById("userEdit_email").addEventListener("submit", function (e) { e.preventDefault()})
+    document.getElementById("userEdit_password").addEventListener("submit", function (e) { e.preventDefault()})
+}
+
+async function updateEmail() {
+
+}
+
 // change password
 async function changePassword() {
     // get old password
@@ -1261,17 +1313,19 @@ async function changePassword() {
 // change email
 async function editEmailRequest(hasCurrent) {
     const email = document.getElementById("userEdit_email_text")?.value
+    console.log(email)
+    const password = document.getElementById("userEdit_email_pass")?.value
     if (!email) return showModal("Please enter an email");
+    if (!password) return showModal("Please enter your password");
 
     const validated = await validateEmail(email)
-    console.log(validated)
     if (validated.valid != true) return showModal("<div><p>Please enter a valid email</p></div>");
 
-    // if (!hasCurrent) {
-        await addEmailAccount({email: email});    
-    // } else {
-
-    // }
+    const updatedEmail = await addEmailAccount({email, password});
+    if (!updatedEmail) return showModal("<div><p>There was an error updating your email</p></div>");
+    else {
+        console.log(updatedEmail)
+    }
 }
 async function validateEmail(email) {
     const response = await fetch(`${apiURL}/emails/requests/validEmail/${email}`, {
@@ -1288,19 +1342,19 @@ async function editEmailAccount() {
     // change email
 }
 
-async function addEmailAccount({ email }) {
+async function addEmailAccount({ email, password }) {
     const response = await fetch(`${apiURL}/emails/set/`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({"email" : email})
+        body: JSON.stringify({"email" : email, "password" : password})
     });
 
     const res = await response.json();
     
     console.log(res)
-    if (!res.ok || res.error) return false
+    if (!response.ok || res.error) return false
 
-    // else popup saying susccesful
+    return res;
 }
 
 async function subNotifi(subUser) {
