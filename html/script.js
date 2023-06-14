@@ -176,6 +176,8 @@ function postElementCreate({ post, user, type, hideParent, hideReplies }) {
     
     const timeSinceData = getTimeSince(post.timePosted);
 
+    const postIsLiked = post.liked ? true : false;
+
     // imageContent.attachments
     if (imageContent.imageFound)if (debug) console.log(imageContent.attachments)
     if (type=="basic"){
@@ -221,15 +223,15 @@ function postElementCreate({ post, user, type, hideParent, hideReplies }) {
                 </div>
                 <div class="actionOptions pointerCursor"> 
                     ${post.totalLikes ? 
-                        `<p onclick="likePost('${post._id}')" id="likePost_${post._id}">${post.totalLikes} likes</p>` :
+                        `<p onclick="likePost('${post._id}')" ${postIsLiked == true ? 'class="likedColour"':''} id="likePost_${post._id}">${puralDataType('like', post.totalLikes)}</p>` :
                         `<p onclick="likePost('${post._id}')" id="likePost_${post._id}">like</p>`
                     }
                     ${post.totalReplies ? 
-                        `<p onclick="replyPost('${post._id}')">${post.totalReplies} replies</p>` : 
+                        `<p onclick="replyPost('${post._id}')">${puralDataType('reply', post.totalReplies)}</p>` : 
                         `<p onclick="replyPost('${post._id}')">reply</p>`
                     }
                     ${post.totalQuotes ? 
-                        `<p onclick="quotePost('${post._id}')">${post.totalQuotes} quotes</p>` : 
+                        `<p onclick="quotePost('${post._id}')">${puralDataType('quote', post.totalQuotes)}</p>` : 
                         `<p id="quoteButton_${post._id}">
                             <p onclick="quotePost('${post._id}')">quote</p>
                         </p>`
@@ -699,7 +701,7 @@ async function createPostModal() {
 
 async function socialTypePost() {
     // return false; // remove once feature is done
-    console.log("socialTypePost")
+    if (debug) console.log("socialTypePost")
     const content = document.getElementById('newPostTextArea').value
     const foundTags = await findTag(content)
     if (foundTags.found == false) {
@@ -979,7 +981,7 @@ async function userEdit(action) {
     if (!response.ok) return console.log("error")
 
     // return window.location.href = `${document.getElementById('userEdit_username_text').value}`
-    console.log(newUser)
+    if (debug) console.log(newUser)
 }
 
 async function postHtml(postID) {
@@ -1434,13 +1436,10 @@ async function dismissNotification(notificationID) {
     document.getElementById(`notification_${notificationID}`).remove();
 
     var input = document.getElementById("amount_notifications").innerText
-    console.log(input)
+
     var newInput = input.replace(" Notifications", "")
-    console.log(input)
-    console.log(newInput)
 
     newInput--
-    console.log(newInput)
 
     document.getElementById("amount_notifications").innerHTML=`${newInput} Notifications` 
 };
@@ -2149,6 +2148,25 @@ function checkIfLiked(postID) {
     else return false
 }
 
+// take in data then return the correct pural form of the data
+function puralDataType(type, amount) {
+    if (!amount || !type) return `${type}`
+
+    switch (type) {
+        case "like":
+            if (amount == 1) return `${amount} like`
+            else return `${amount} likes`;
+        case "reply":
+            if (amount == 1) return `${amount} reply`
+            else return `${amount} replies`;
+        case "quote":
+            if (amount == 1) return `${amount} quote`
+            else return `${amount} quotes`;
+        default:
+            return `${amount} ${type} (!!update puralDataType func!!)`
+    }
+}
+
 async function likePost(postID) {
     if (debug) console.log("liking post")
 
@@ -2160,11 +2178,13 @@ async function likePost(postID) {
         const response = await fetch(`${apiURL}/delete/unlikePost/${postID}`, { method: 'DELETE', headers})
         data = await response.json()
 
-
-
-        if (!response.ok || data.error) return 
+        if (!response.ok || data.error) {
+            if (debug) console.log("something went wrong while liking");
+            return false;
+        }
+        
         document.getElementById(`likePost_${postID}`).classList.remove("likedColour");
-        document.getElementById(`likePost_${postID}`).innerText = `${data.totalLikes} likes`
+        document.getElementById(`likePost_${postID}`).innerText = puralDataType('like', data.totalLikes);
     }
     else {
         if (debug) console.log("liking post")
@@ -2172,10 +2192,13 @@ async function likePost(postID) {
 
         data = await response.json()
 
-        if (!response.ok || data.error) return 
+        if (!response.ok || data.error) {
+            if (debug) console.log("something went wrong while liking");
+            return false;
+        }
 
         document.getElementById(`likePost_${postID}`).classList.add("likedColour");
-        document.getElementById(`likePost_${postID}`).innerText = `${data.totalLikes} likes`
+        document.getElementById(`likePost_${postID}`).innerText = puralDataType('like', data.totalLikes)
     }
     
     if (debug) console.log(data)
@@ -2382,7 +2405,7 @@ async function createPostPage() {
             showPollCreation();
             const currentAmountOptions = checkPollOptionAmount();
             for (let i=currentAmountOptions+1; i<=data.pollOptions; i++) {
-                console.log("adding option: " + i)
+                if (debug) console.log("adding option: " + i)
                 document.getElementById("options").innerHTML += addOption(i);
             }
         }
@@ -2513,7 +2536,7 @@ async function publishPoll() {
     for (let i = 1; i <= amountOptions; i++) {
         const option = getOption(i);
         if (option) options.push(option);
-        console.log(option)
+        if (debug) console.log(option)
     }
 
     if (options.length < 2 || options.length > 10) return showModal("<h1>Something went wrong.</h1><p>Please enter between 2 and 10 poll options</p>");
@@ -2649,7 +2672,7 @@ function checkPollOptionAmount() {
 };
 
 function removeLastOption() {
-    console.log("removing option")
+    if (debug) console.log("removing option")
     const currentNum = checkPollOptionAmount();
     if (currentNum <= 2) return console.log("cant remove more options");
 
