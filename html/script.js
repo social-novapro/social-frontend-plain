@@ -174,11 +174,13 @@ function postElementCreate({ post, user, type, hideParent, hideReplies }) {
         owner: owner,
     }
     
+    const timeSinceData = getTimeSince(post.timePosted);
+
     // imageContent.attachments
     if (imageContent.imageFound)if (debug) console.log(imageContent.attachments)
     if (type=="basic"){
         return `
-            <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'} | ${timesince} | ${getTimeSince(post.timePosted)}</p>
+            <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'} | ${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
             <div class="postContent" id="postContentArea_${post._id}">
                 <div class="textAreaPost">
                     <p id="postContent_${post._id}">${imageContent.content}</p>
@@ -199,7 +201,7 @@ function postElementCreate({ post, user, type, hideParent, hideReplies }) {
                         <p onclick="viewParentPost('${post._id}', '${post.replyData.postID}')" id="parentViewing_${post._id}">This was a reply, click here to see.</p>
                     ` : ``}
                 `: ``}
-                <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'}<br class="spacer_2px">${timesince} | ${getTimeSince(post.timePosted).value} ago</p>
+                <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'}<br class="spacer_2px">${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
                 <div class="postContent" id="postContentArea_${post._id}">
                     <div class="textAreaPost">
                         <p id="postContent_${post._id}">${imageContent.content}</p>
@@ -493,8 +495,13 @@ function getTimeSince(time) {
     var minutes = Math.floor(diff / 60000) % 60;
     var seconds = Math.floor(diff / 1000) % 60;
     
+    var sinceNowUntil
+    if (currentTime < time) sinceNowUntil = "until"
+    else if (currentTime > time) sinceNowUntil = "since"
+    else if (currentTime == time) sinceNowUntil = "current"
+
     var finalReturn = {
-        "sinceOrUntil" : currentTime < time ? "until" : "since",
+        "sinceOrUntil" : sinceNowUntil,
         "value" : ""
     }
 
@@ -503,7 +510,10 @@ function getTimeSince(time) {
     if (!years && !days) finalReturn.value = `${hours}h ${minutes}m`
     if (!years && !days && !hours) finalReturn.value = `${minutes}m ${seconds}s`
     if (!years && !days && !hours && !minutes) finalReturn.value = `${seconds}s`
-    if (!years && !days && !hours && !minutes && !seconds) finalReturn.value = `now`
+    if (!years && !days && !hours && !minutes && !seconds) {
+        finalReturn.value = `now`
+        finalReturn.sinceOrUntil = "current"
+    }
 
     return finalReturn;
 }
@@ -540,7 +550,7 @@ async function createPollElement(postID, pollID) {
                         `;
                     }).join('')}
                 </div>
-                <p>Total votes: ${totalVotes} | ${timesinceData.sinceOrUntil=="since" ? ` ended ${timesinceData.value} ago` : `${timesinceData.value} time left`} </p>
+                <p>Total votes: ${totalVotes} | ${timesinceData.sinceOrUntil=="current" ? "ended just now" : `${timesinceData.sinceOrUntil=="since" ? ` ended ${timesinceData.value} ago` : `${timesinceData.value} time left`}`} </p>
             </div>
         `;
     })
