@@ -116,6 +116,7 @@ async function checkURLParams() {
     const ifLoginRequest = params.has("login")
     const ifNewAccountLogin = params.has("newAccount")
     const ifPostPage = params.has("posting");
+    const ifUserEdit = params.has("userEdit");
 
     if (ifUsername) {
         paramsFound = true
@@ -157,6 +158,11 @@ async function checkURLParams() {
         paramsInfo.paramsFound = true
 
         createPostPage()
+    } else if (ifUserEdit) {
+        paramsFound = true
+        paramsInfo.paramsFound = true
+
+        userEditPage()
     }
    
     return paramsInfo
@@ -970,15 +976,37 @@ async function profile() {
 }
 
 async function userEdit(action) {
-    const newValue = document.getElementById(`userEdit_${action}_text`).value
-    headers[`new${action.toLowerCase()}`] = newValue
+    const possibleEdits = ["profileImage", "displayName", "username", "status", "description", "pronouns"];
+    var actions = []; 
+    
+    if (!action) {
+        for (const possible of possibleEdits) {
+            const value = document.getElementById(`userEdit_${possible}_text`).value
+            if (value) actions.push({action: possible, value})
+        }
+    }
+
+    if (action) {
+        if (!possibleEdits.includes(action)) return showModal(`<p>Error: ${action} is not a valid action</p>`)
+        actions.push({action, value: document.getElementById(`userEdit_${action}_text`).value})
+    }
+
+    if (!actions|| !actions[0]) return showModal(`<p>Error: No actions to perform</p>`)
+
+    var tempHeaders = headers;
+
+    for (const actionData of actions) {
+        tempHeaders[`new${actionData.action.toLowerCase()}`] = actionData.value
+    }
+    console.log(tempHeaders)
+    console.log(headers)
 
     const response = await fetch(`${apiURL}/put/userEdit`, {
         method: 'PUT',
         headers
     })
     const newUser = await response.json()
-    if (!response.ok) return console.log("error")
+    if (!response.ok) return console.log(newUser)
 
     // return window.location.href = `${document.getElementById('userEdit_username_text').value}`
     if (debug) console.log(newUser)
@@ -1022,8 +1050,7 @@ async function postHtml(postID) {
         loads one comment index (most recent)
     */
 }
-
-async function userHtml(userID) {
+async function getFullUserData(userID) {
     const response = await fetch(`${apiURL}/get/user/${userID}`, {
         method: 'GET',
         headers,
@@ -1032,6 +1059,143 @@ async function userHtml(userID) {
     const profileData = await response.json()
 
     if (!response.ok) return console.log("error with user");
+    return profileData;
+}
+
+async function userEditPage() {
+    await userEditHtml(currentUserLogin.userID);
+    //alert("ok")
+    return true;
+}
+
+async function userEditHtml(userID) {
+    const profileData = await getFullUserData(userID)
+    if (!profileData) return showModal("<div><p>Sorry, this user does not exist!</p></div>")
+
+    if (userID != currentUserLogin.userID) return showModal("<div><p>Sorry, you can't edit this user!</p></div>");
+    changeHeader("?userEdit")
+
+
+    var timesince
+    if (profileData.userData.creationTimestamp) timesince = checkDate(profileData.userData.creationTimestamp)
+
+    var clientUser = profileData.userData._id === currentUserLogin.userID ? true : false
+    if (profileData?.userData?.displayName) document.title = `${profileData?.userData?.displayName} | Interact`
+    
+    document.getElementById("mainFeed").innerHTML =  `
+        <div class="userEdit">
+            <div class="userEditArea">
+                <p><b>View Profile Profile</b></p>
+                <p onclick="userEdit()">Save Changes</p>
+            </div>
+            <div class="userEditArea">
+                <p><b>Profile Image</b></p>
+                ${profileData.userData.profileURL ? `<img src="${profileData.userData.profileURL}" class="profileImage">` : ""}
+                <form id="userEdit_profileImage" class="contentMessage" onsubmit="userEdit('profileImage')">
+                    <input id="userEdit_profileImage_text" type="text" class="userEditForm" placeholder="Profile Image URL">
+                </form>
+            </div>
+            <div class="userEditArea">
+                <p><b>Display Name</b></p>
+                ${profileData.userData.displayName ? `<p>${profileData.userData.displayName}` : "No display name set"}
+                <form id="userEdit_displayName" class="contentMessage" onsubmit="userEdit('displayName')">
+                    <input id="userEdit_displayName_text" type="text" class="userEditForm" placeholder="Display Name">
+                </form>
+            </div>
+            <div class="userEditArea">
+                <p><b>Username</b></p>
+                ${profileData.userData.username ? `<p>${profileData.userData.username}` : "No username set"}
+                <form id="userEdit_username" class="contentMessage" onsubmit="userEdit('username')">
+                    <input type="text" id="userEdit_username_text" class="userEditForm" placeholder="Username">
+                </form>
+            </div>
+            <div class="userEditArea">
+                <p><b>Status</b></p>
+                ${profileData.userData.status ? `<p>${profileData.userData.status}` : "No status set"}
+                <form id="userEdit_status" class="contentMessage" onsubmit="userEdit('status')">
+                    <input type="text" id="userEdit_status_text" class="userEditForm" placeholder="Status">
+                </form> 
+            </div>
+            <div class="userEditArea">
+                <p><b>Description</b></p>
+                ${profileData.userData.description ? `<p>${profileData.userData.description}` : "No description set"}
+                <form id="userEdit_description" class="contentMessage" onsubmit="userEdit('description')">
+                    <input type="text" id="userEdit_description_text" class="userEditForm" placeholder="description">
+                </form>
+            </div>
+            <div class="userEditArea"><p><b>Pronouns</b></p>
+                ${profileData.userData.pronouns ? `<p>${profileData.userData.pronouns}` : "No pronouns set"}
+                <form id="userEdit_pronouns" class="contentMessage" onsubmit="userEdit('pronouns')">
+                    <input type="text" id="userEdit_pronouns_text" class="userEditForm" placeholder="pronouns">
+                </form>
+            </div> 
+            ${profileData.userData.creationTimestamp ? 
+                `  
+                    <div class="userEditArea">
+                        <p><b>Creation</b></p>
+                        <p>${timesince}</p>
+                    </div>
+                `: ``
+            }
+            <div class="userEditArea">
+                <p><b>Notifications</b></p>
+                <div>
+                    <button class="buttonStyled" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
+                    <div id="notificationsDIv"></div>
+                </div>
+                <div>
+                    <button class="buttonStyled" id="showSubscriptionsButton" onclick="showSubscriptions()">Show Subscriptions</button>
+                    <div id="subscriptionsDiv"></div>
+                </div>
+            </div>
+            <div class="userEditArea">
+                <p><b>Bookmarks</b></p>
+                <button class="buttonStyled" id="showBookmarksButton" onclick="showBookmarks()">Show Bookmarks</button>
+                <div id="bookmarksdiv"></div>
+            </div>
+            <div class="userEditArea">
+                <p><b>Developer</b></p>
+                <button class="buttonStyled" id="showDevOptionsButton" onclick="showDevOptions()">Show Dev Settings</button>
+                <div id="showDevDiv"></div>
+            </div>
+            ${profileData.verified ? 
+                `
+                    <div class="userEditArea">
+                        <p>Verified</p>
+                    </div>
+                ` : `
+                    <div class="userEditArea">
+                        <p><b>Verify ✔️</b></p>
+                        <div class="searchSelect search">
+                            <input id="content_request_verification"  placeholder="Why do you want to verify?">
+                            <button onclick="requestVerification()">Request</button>
+                        </div>
+                    </div>
+                `
+                /*
+                <form onsubmit="requestVerification()" id="verifyUserForm">
+                        <input type="text" id="content_request_verification" placeholder="Why do you want to verify?">
+                    </form>
+                */
+            }
+        </div>
+    `
+
+    if (clientUser) {
+        document.getElementById("userEdit_displayName").addEventListener("submit", function (e) { e.preventDefault()})
+        document.getElementById("userEdit_username").addEventListener("submit", function (e) { e.preventDefault()})
+        document.getElementById("userEdit_description").addEventListener("submit", function (e) { e.preventDefault()})
+        document.getElementById("userEdit_pronouns").addEventListener("submit", function (e) { e.preventDefault()})
+        document.getElementById("userEdit_status").addEventListener("submit", function (e) { e.preventDefault()})
+        document.getElementById("userEdit_profileImage").addEventListener("submit", function (e) { e.preventDefault()})
+    }
+    return true; 
+}
+
+async function userHtml(userID) {
+    const profileData = await getFullUserData(userID)
+    if (!profileData) return showModal("<div><p>Sorry, this user does not exist!</p></div>")
+
     changeHeader('?username='+profileData.userData.username, 'Profile')
 
     var timesince
@@ -1043,143 +1207,60 @@ async function userHtml(userID) {
     profileData.postData.reverse()
     // profileData.included.post ? profileData.postData.reverse() : profileData.postData = []
     document.getElementById("mainFeed").innerHTML =  `
-        ${profileData.userData?.profileURL != null  || clientUser ? 
+        ${clientUser ? `
+            <div class="userInfo">
+                <p><b>Edit Profile</b></p>
+                <button class="buttonStyled" onclick="userEditPage()">Edit Page</button>
+            </div>
+            `: ""
+        }
+        ${profileData.userData?.profileURL != null ? 
             `
                 <div class="userInfo">
                     <p><b>Profile Image</b></p>
                     ${profileData.userData?.profileURL != null ?  `
                         <img class="profileUserHtmlLarge" src="${profileData.userData.profileURL}"></img>
                     ` : ``}
-                    ${clientUser ? `
-                        <form id="userEdit_profileImage" class="contentMessage" onsubmit="userEdit('profileImage')">
-                            <input id="userEdit_profileImage_text" type="text" class="userEditForm" value="${profileData.userData.profileURL}">
-                        </form>
-                    ` : `` }
                 </div>
             ` : ``
         }
         <div class="userInfo">
             <p><b>Notifications</b></p>
             <a id="notificationSub" onclick="subNotifi('${profileData.userData._id}')">Subscribe</a>
-            ${clientUser ? 
-                `
-                    <div>
-                        <button class="buttonStyled" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
-                        <div id="notificationsDIv"></div>
-                    </div>
-                    <div>
-                        <button class="buttonStyled" id="showSubscriptionsButton" onclick="showSubscriptions()">Show Subscriptions</button>
-                        <div id="subscriptionsDiv"></div>
-                    </div>
-                ` : `` 
-            }
         </div>
         <div class="userInfo">
             <p><b>Display Name</b></p>
-            ${clientUser ? 
-                `
-                    <form id="userEdit_displayName" class="contentMessage" onsubmit="userEdit('displayName')">
-                        <input id="userEdit_displayName_text" type="text" class="userEditForm" value="${profileData.userData.displayName}">
-                    </form>
-                ` : `
-                    <p>${profileData.userData.displayName}</p>
-                `
-            }
+            <p>${profileData.userData.displayName}</p>
         </div>
         <div class="userInfo">
             <p><b>Username</b></p>
-            ${clientUser ? 
-                `
-                    <form id="userEdit_username" class="contentMessage" onsubmit="userEdit('username')">
-                        <input type="text" id="userEdit_username_text" class="userEditForm" value="${profileData.userData.username}">
-                    </form>
-                ` : `
-                    <p>${profileData.userData.username}</p>
-                `
-            }
+            <p>${profileData.userData.username}</p>
         </div>
-        ${profileData.userData.statusTitle  || clientUser ? 
+        ${profileData.userData.statusTitle ? 
             `
                 <div class="userInfo">
                     <p><b>Status</b></p>
-                    ${clientUser ?
-                        `
-                            <form id="userEdit_status" class="contentMessage" onsubmit="userEdit('status')">
-                                <input type="text" id="userEdit_status_text" class="userEditForm" value="${profileData.userData.statusTitle}">
-                            </form> 
-                        ` : `
-                            <p>${profileData.userData.statusTitle}</p>
-                        `
-                    }
+                    <p>${profileData.userData.statusTitle}</p>
                 </div>
             ` : ``
         }
         <div class="userInfo">
             <p><b>Description</b></p>
-            ${clientUser ? 
-                `
-                    <form id="userEdit_description" class="contentMessage" onsubmit="userEdit('description')">
-                        <input type="text" id="userEdit_description_text" class="userEditForm" value="${profileData.userData.description}">
-                    </form>
-                ` : `
-                    <p>${profileData.userData.description}</p>
-                `
-            }
+            <p>${profileData.userData.description}</p>
         </div> 
-        ${clientUser ?
-            `
-                <div class="userInfo">
-                    <p><b>Bookmarks</b></p>
-                    <button class="buttonStyled" id="showBookmarksButton" onclick="showBookmarks()">Show Bookmarks</button>
-                    <div id="bookmarksdiv"></div>
-                </div>
-            ` : ``
-        }
-        ${clientUser ?
-            `
-                <div class="userInfo">
-                    <p><b>Developer</b></p>
-                    <button class="buttonStyled" id="showDevOptionsButton" onclick="showDevOptions()">Show Dev Settings</button>
-                    <div id="showDevDiv"></div>
-                </div>
-            ` : ``
-        }
         ${profileData.verified ? 
             `
                 <div class="userInfo">
                     <p>Verified</p>
                 </div>
             ` : `
-                ${clientUser ? 
-                `
-                    <div class="userInfo">
-                        <p><b>Verify ✔️</b></p>
-                        <div class="searchSelect search">
-                            <input id="content_request_verification"  placeholder="Why do you want to verify?">
-                            <button onclick="requestVerification()">Request</button>
-                        </div>
-                    </div>
-                ` : ``}
             `
-            /*
-             <form onsubmit="requestVerification()" id="verifyUserForm">
-                    <input type="text" id="content_request_verification" placeholder="Why do you want to verify?">
-                </form>
-            */
         }   
     
-        ${profileData.userData.pronouns || clientUser ? 
+        ${profileData.userData.pronouns ? 
             `
                 <div class="userInfo"><p><b>Pronouns</b></p>
-                    ${clientUser ? 
-                        `
-                            <form id="userEdit_pronouns" class="contentMessage" onsubmit="userEdit('pronouns')">
-                                <input type="text" id="userEdit_pronouns_text" class="userEditForm" value="${profileData.userData.pronouns}">
-                            </form>
-                        ` : `
-                            <p>${profileData.userData.pronouns}</p>
-                        `
-                    }
+                    <p>${profileData.userData.pronouns}</p>
                 </div>
             ` : ``
         }
