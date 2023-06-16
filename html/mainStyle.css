@@ -84,7 +84,9 @@ p {
 }
 .buttonStyled {
     text-decoration: none;
-    color: var(--main-p-color)
+    cursor: pointer;
+    color: var(--main-p-color);
+    user-select: none;
 }
 .spacer_2px {
     padding: 2px;

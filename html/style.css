@@ -376,3 +376,10 @@
         var(--main-shadow-color);
     transition: transform 400ms, border-color 400ms, background-color 400ms;
 }
+
+.inline {
+    /*display: flex;
+    align-items: center;
+    text-align: center;*/
+    /*word-wrap: inline;*/
+}

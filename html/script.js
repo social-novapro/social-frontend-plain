@@ -117,6 +117,7 @@ async function checkURLParams() {
     const ifNewAccountLogin = params.has("newAccount")
     const ifPostPage = params.has("posting");
     const ifUserEdit = params.has("userEdit");
+    const ifSettings = params.has("settings");
 
     if (ifUsername) {
         paramsFound = true
@@ -163,6 +164,11 @@ async function checkURLParams() {
         paramsInfo.paramsFound = true
 
         userEditPage()
+    } else if (ifSettings) {
+        paramsFound = true
+        paramsInfo.paramsFound = true
+
+        settingsPage()
     }
    
     return paramsInfo
@@ -268,6 +274,7 @@ function postElementCreate({ post, user, type, hideParent, hideReplies }) {
                         colorizeOption(post.pollID, data.foundVote.pollOptionID);
                         changeVoteOption(post.pollID, data.foundVote.pollOptionID);
                     }
+                    devMode()
                 })
             }
         })
@@ -534,8 +541,9 @@ async function createPollElement(postID, pollID) {
     .then(function (pollData) {
         if (debug) console.log(pollData);
         var totalVotes = 0;
+
         for (const option of pollData.pollOptions) {
-            if (option.amountVoted) totalVotes+=option.amountVoted;
+            if (option?.amountVoted) totalVotes+=option.amountVoted;
         }
 
         const timesinceData = getTimeSince(pollData.timestampEnding);
@@ -1010,6 +1018,7 @@ async function userEdit(action) {
 
     // return window.location.href = `${document.getElementById('userEdit_username_text').value}`
     if (debug) console.log(newUser)
+    return showModal("<p>Success! You can now close this page.</p>")
 }
 
 async function postHtml(postID) {
@@ -1062,6 +1071,83 @@ async function getFullUserData(userID) {
     return profileData;
 }
 
+function settingsPage() {
+    changeHeader("?settings")
+
+    const ele = `
+        <div id="settingsPage">
+            <div class="" id="settingsPageContent">
+                <div class="userInfo">
+                    <h1>Settings</h1>
+                </div>
+                <div class="inline">
+                    <div class="userInfo">
+                        <p>View your profile. As shown to other users.</p>
+                        <button class="userInfo buttonStyled" onclick="profile()">View Profile</button>
+                    </div>
+                    <div class="userInfo">
+                        <p>Edit your profile.</p>
+                        <button class="userInfo buttonStyled" onclick="userEditPage()">Edit Profile</button>
+                    </div>
+                    <div class="userInfo">
+                        <p>Sign out of your account.</p>
+                        <button class="userInfo buttonStyled" onclick="signOutPage()">Sign Out</button>
+                    </div>
+                    <div class="userInfo">
+                        <p>Enable / Disable dev mode. This will allow you to see more information about the different elements of Interact.</p>
+                        <button class="userInfo buttonStyled" onclick="devModePage()">Dev Mode Settings</button>
+                    </div>
+                </div>
+
+            </div>
+            <div id="settingsContent">
+        </div>
+    `;
+
+    document.getElementById("mainFeed").innerHTML = ele;
+    devMode();
+
+    return true;
+}
+
+function signOutPage() {
+    const ele = `
+        <div class="userInfo" id="signOutPage">
+            <p><b>Sign Out</b></p>
+            <p>Are you sure you want to sign out?</p>
+            <div class="signInDiv">
+                <p class="buttonStyled"onclick="signOut()">Sign Out</p>
+            </div>
+        </div>
+    `;
+
+    document.getElementById("settingsContent").innerHTML = ele;
+    return true;
+}
+
+function devModePage() {
+    const ele = `
+        <div class="userInfo" id="devModePage">
+            <p><b>Dev Mode</b></p>
+                <p>Dev Mode is ${debug ? "enabled" : "disabled"}</p>
+                <p>Are you sure you want to enter dev mode?</p>
+                <div class="signInDiv">
+                    <p class="buttonStyled" onclick="switchDevMode()">Dev Mode</p>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById("settingsContent").innerHTML = ele;
+    return true;
+}
+
+function switchDevMode() {
+    debugModeSwitch()
+    devMode();
+    devModePage()
+}
+
 async function userEditPage() {
     await userEditHtml(currentUserLogin.userID);
     //alert("ok")
@@ -1090,7 +1176,7 @@ async function userEditHtml(userID) {
             </div>
             <div class="userEditArea">
                 <p><b>Profile Image</b></p>
-                ${profileData.userData.profileURL ? `<img src="${profileData.userData.profileURL}" class="profileImage">` : ""}
+                ${profileData.userData.profileURL ? `<img src="${profileData.userData.profileURL}" class="profileImage">` : "No image set"}
                 <form id="userEdit_profileImage" class="contentMessage" onsubmit="userEdit('profileImage')">
                     <input id="userEdit_profileImage_text" type="text" class="userEditForm" placeholder="Profile Image URL">
                 </form>
@@ -1118,15 +1204,15 @@ async function userEditHtml(userID) {
             </div>
             <div class="userEditArea">
                 <p><b>Description</b></p>
-                ${profileData.userData.description ? `<p>${profileData.userData.description}` : "No description set"}
+                ${profileData.userData.description ? `<p>${profileData.userData.description}` : "No description set" }
                 <form id="userEdit_description" class="contentMessage" onsubmit="userEdit('description')">
-                    <input type="text" id="userEdit_description_text" class="userEditForm" placeholder="description">
+                    <input type="text" id="userEdit_description_text" class="userEditForm" placeholder="Description">
                 </form>
             </div>
             <div class="userEditArea"><p><b>Pronouns</b></p>
                 ${profileData.userData.pronouns ? `<p>${profileData.userData.pronouns}` : "No pronouns set"}
                 <form id="userEdit_pronouns" class="contentMessage" onsubmit="userEdit('pronouns')">
-                    <input type="text" id="userEdit_pronouns_text" class="userEditForm" placeholder="pronouns">
+                    <input type="text" id="userEdit_pronouns_text" class="userEditForm" placeholder="Pronouns">
                 </form>
             </div> 
             ${profileData.userData.creationTimestamp ? 
@@ -1256,7 +1342,6 @@ async function userHtml(userID) {
             ` : `
             `
         }   
-    
         ${profileData.userData.pronouns ? 
             `
                 <div class="userInfo"><p><b>Pronouns</b></p>
@@ -1293,12 +1378,7 @@ async function userHtml(userID) {
         document.getElementById("userEdit_profileImage").addEventListener("submit", function (e) { e.preventDefault()})
     }
   
-    return document.getElementById("navSection2").innerHTML = `
-        <div id="page2Nav" class="nav-link" onclick="switchNav(5)">
-            <span class="material-symbols-outlined nav-button";>home</span>
-            <span class="link-text pointerCursor" id="page1">Feed</span>
-        </div>
-    `
+    return;
 }
 
 async function subNotifi(subUser) {
@@ -1902,9 +1982,14 @@ function checkLoginUser() {
 
 // DEBUGGING MODE
 function devMode() {
-    debug = getCookie("debugMode");
-    if (debug == "true") addDebug()
-    else removeDebug()
+    const debugStr = getCookie("debugMode");
+    if (debugStr == "true") {
+        debug = true;
+        addDebug();
+    } else {
+        debug=false;
+        removeDebug();
+    }
 }
 
 // ADDING DEBUG INFO TO EVERYTHING
@@ -1985,12 +2070,14 @@ async function getFeed() {
     if (currentFeed) return buildView(currentFeed)
     if (debug) console.log("loading feed")
 
+    const params = await checkURLParams()
+    if (params.paramsFound != false) return 
+
     const response = await fetch(`${apiURL}/get/allPosts`, { method: 'GET', headers})
     var data = await response.json()
 
     currentFeed = data.reverse()
 
-    const params = await checkURLParams()
 
     if (params.paramsFound == false) return buildView(data)
     else return
@@ -2676,6 +2763,7 @@ async function publishFromPostPage() {
 };
 
 function changePostPageNavButton(method) {
+    return false;
     if (method == "goto") {
         document.getElementById('navSection4').innerHTML = `
             <div id="page4Nav" class="nav-link" onclick="leavePostPage()">
@@ -2706,7 +2794,7 @@ function changePostPageNavButton(method) {
 async function leavePostPage() {
     if (debug) console.log("leaving post")
     if (getUrl.search=="?posting") changeHeader('')
-    changePostPageNavButton('leave')
+    //changePostPageNavButton('leave')
     getFeed()
 }
 
