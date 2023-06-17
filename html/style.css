@@ -33,8 +33,9 @@
     border: 2px solid var(--main-border-color);
     overflow-wrap: break-word;
     word-wrap: break-word;
-    margin-left: 20%;
-    margin-right: 20%;
+    margin-left: 10%;
+    margin-right: 10%;
+    
     margin-top: 20px;
     /*
         display: inline-block;
@@ -64,8 +65,8 @@
     border: 2px solid var(--main-border-color);
     overflow-wrap: break-word;
     word-wrap: break-word;
-    margin-left: 20%;
-    margin-right: 20%;
+    margin-left: 10%;
+    margin-right: 10%;
     margin-top: 20px;
     /*
     display: inline-block;
@@ -368,8 +369,8 @@
     text-decoration: none;
     color: var(--main-a-color);
     text-align: center;
-    padding: 15px;
-
+    padding-top: 15px;
+    padding-bottom: 15px;
     width: 80%;
     border-radius: 15px;
     box-shadow: 

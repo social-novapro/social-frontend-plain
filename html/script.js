@@ -1084,29 +1084,61 @@ function settingsPage() {
                     <div class="userInfo">
                         <p>View your profile. As shown to other users.</p>
                         <button class="userInfo buttonStyled" onclick="profile()">View Profile</button>
+                        <hr class="rounded">
+                        <p>Edit your public profile.</p>
+                        <button class="userInfo buttonStyled" onclick="userEditPage()">Edit Profile</button>
                     </div>
                     <div class="userInfo">
-                        <p>Edit your profile.</p>
-                        <button class="userInfo buttonStyled" onclick="userEditPage()">Edit Profile</button>
+                        <p><b>Notifications</b></p>
+                        <div>
+                            <button class="userInfo buttonStyled" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
+                            <div id="notificationsDiv"></div>
+                        </div>
+                        <div>
+                            <button class="userInfo buttonStyled" id="showSubscriptionsButton" onclick="showSubscriptions()">Show Subscriptions</button>
+                            <div id="subscriptionsDiv"></div>
+                        </div>
+                    </div>
+                    <div class="userInfo">
+                        <p><b>Bookmarks</b></p>
+                        <button class="userInfo buttonStyled" id="showBookmarksButton" onclick="showBookmarks()">Show Bookmarks</button>
+                        <div id="bookmarksdiv"></div>
                     </div>
                     <div class="userInfo">
                         <p>Sign out of your account.</p>
                         <button class="userInfo buttonStyled" onclick="signOutPage()">Sign Out</button>
+                        <div id="signOutConfirm"></div>
                     </div>
                     <div class="userInfo">
                         <p>Enable / Disable dev mode. This will allow you to see more information about the different elements of Interact.</p>
                         <button class="userInfo buttonStyled" onclick="devModePage()">Dev Mode Settings</button>
+                        <div id="devModeConfirm"></div>
+                    </div>
+                    <div class="userInfo">
+                        <p><b>Developer</b></p>
+                        <p>Access your developer account, and any apps that has access to your account</p>
+                        <button class="userInfo buttonStyled" id="showDevOptionsButton" onclick="showDevOptions()">Show Dev Settings</button>
+                        <div id="showDevDiv"></div>
                     </div>
                 </div>
-
             </div>
-            <div id="settingsContent">
+            <div id="settingsContent"></div>
         </div>
     `;
 
     document.getElementById("mainFeed").innerHTML = ele;
     devMode();
 
+    return true;
+}
+
+function removeDevModeConfirm() {
+    document.getElementById("devModeConfirm").innerHTML = "";
+    return true;
+}
+
+function removeSignOutConfirm() {
+    document.getElementById("signOutConfirm").innerHTML = "";
     return true;
 }
 
@@ -1118,10 +1150,11 @@ function signOutPage() {
             <div class="signInDiv">
                 <p class="buttonStyled"onclick="signOut()">Sign Out</p>
             </div>
+            <button class="userInfo buttonStyled" onclick="removeSignOutConfirm()">Cancel</button></div>
         </div>
     `;
 
-    document.getElementById("settingsContent").innerHTML = ele;
+    document.getElementById("signOutConfirm").innerHTML = ele;
     return true;
 }
 
@@ -1129,16 +1162,16 @@ function devModePage() {
     const ele = `
         <div class="userInfo" id="devModePage">
             <p><b>Dev Mode</b></p>
-                <p>Dev Mode is ${debug ? "enabled" : "disabled"}</p>
-                <p>Are you sure you want to enter dev mode?</p>
-                <div class="signInDiv">
-                    <p class="buttonStyled" onclick="switchDevMode()">Dev Mode</p>
-                </div>
+            <p>Dev Mode is ${debug ? "enabled" : "disabled"}</p>
+            <p>Are you sure you want to enter dev mode?</p>
+            <div class="signInDiv">
+                <p class="buttonStyled" onclick="switchDevMode()">Dev Mode</p>
             </div>
+            <button class="userInfo buttonStyled" onclick="removeDevModeConfirm()">Cancel</button></div>
         </div>
     `;
 
-    document.getElementById("settingsContent").innerHTML = ele;
+    document.getElementById("devModeConfirm").innerHTML = ele;
     return true;
 }
 
@@ -1170,9 +1203,12 @@ async function userEditHtml(userID) {
     
     document.getElementById("mainFeed").innerHTML =  `
         <div class="userEdit">
+            <div class="userInfo">
+                <h1>Edit Profile</h1>
+            </div>
             <div class="userEditArea">
-                <p><b>View Profile Profile</b></p>
-                <p onclick="userEdit()">Save Changes</p>
+                <p><b>Save any changes made</b></p>
+                <button class="userInfo buttonStyled" onclick="userEdit()">Save</button>
             </div>
             <div class="userEditArea">
                 <p><b>Profile Image</b></p>
@@ -1197,7 +1233,7 @@ async function userEditHtml(userID) {
             </div>
             <div class="userEditArea">
                 <p><b>Status</b></p>
-                ${profileData.userData.status ? `<p>${profileData.userData.status}` : "No status set"}
+                ${profileData.userData.statusTitle ? `<p>${profileData.userData.statusTitle}` : "No status set"}
                 <form id="userEdit_status" class="contentMessage" onsubmit="userEdit('status')">
                     <input type="text" id="userEdit_status_text" class="userEditForm" placeholder="Status">
                 </form> 
@@ -1223,27 +1259,6 @@ async function userEditHtml(userID) {
                     </div>
                 `: ``
             }
-            <div class="userEditArea">
-                <p><b>Notifications</b></p>
-                <div>
-                    <button class="buttonStyled" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
-                    <div id="notificationsDIv"></div>
-                </div>
-                <div>
-                    <button class="buttonStyled" id="showSubscriptionsButton" onclick="showSubscriptions()">Show Subscriptions</button>
-                    <div id="subscriptionsDiv"></div>
-                </div>
-            </div>
-            <div class="userEditArea">
-                <p><b>Bookmarks</b></p>
-                <button class="buttonStyled" id="showBookmarksButton" onclick="showBookmarks()">Show Bookmarks</button>
-                <div id="bookmarksdiv"></div>
-            </div>
-            <div class="userEditArea">
-                <p><b>Developer</b></p>
-                <button class="buttonStyled" id="showDevOptionsButton" onclick="showDevOptions()">Show Dev Settings</button>
-                <div id="showDevDiv"></div>
-            </div>
             ${profileData.verified ? 
                 `
                     <div class="userEditArea">
@@ -1368,15 +1383,6 @@ async function userHtml(userID) {
             }).join(" ")}
         ` : ``}
     `
-
-    if (clientUser) {
-        document.getElementById("userEdit_displayName").addEventListener("submit", function (e) { e.preventDefault()})
-        document.getElementById("userEdit_username").addEventListener("submit", function (e) { e.preventDefault()})
-        document.getElementById("userEdit_description").addEventListener("submit", function (e) { e.preventDefault()})
-        document.getElementById("userEdit_pronouns").addEventListener("submit", function (e) { e.preventDefault()})
-        document.getElementById("userEdit_status").addEventListener("submit", function (e) { e.preventDefault()})
-        document.getElementById("userEdit_profileImage").addEventListener("submit", function (e) { e.preventDefault()})
-    }
   
     return;
 }
@@ -1541,7 +1547,7 @@ async function showNotifications() {
     if (!response.ok) return document.getElementById('showNotificationsButton').innerHTML=`error`
     
 
-    var ele = `<hr class="rounded" id="bookmarksAreShown"><p id="amount_notifications">${res.amountFound} Notifications</p><hr class="rounded">`
+    var ele = `<hr class="rounded" id="notificationsAreShown"><p id="amount_notifications">${res.amountFound} Notifications</p><hr class="rounded">`
     /*
         type: String (one)
             1: someone followed
@@ -1583,7 +1589,7 @@ async function showNotifications() {
         }
     }
    
-    document.getElementById("notificationsDIv").innerHTML=ele
+    document.getElementById("notificationsDiv").innerHTML=ele
 }
 async function dismissNotification(notificationID) {
     const response = await fetch(`${apiURL}/delete/dismissNotification/${notificationID}`, {
