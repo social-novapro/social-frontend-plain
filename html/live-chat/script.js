@@ -459,8 +459,11 @@ function dateFromEpoch(time) {
     const day = date.getDate()
     const month = date.getMonth()
     const monthReadable = checkMonth(month)
+    const hoursRaw = date.getHours()
+    const hours = `${hoursRaw > 12 ? hoursRaw - 12 : hoursRaw}`;
+    const minutes = date.getMinutes();
 
-    return `${monthReadable} ${day}, ${year}`
+    return `${monthReadable} ${day}, ${year} at ${hours}:${minutes} ${hoursRaw > 12 ? 'PM' : 'AM'}`
 }
 
 function checkMonth(month) {
