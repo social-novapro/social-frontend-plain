@@ -84,7 +84,9 @@ p {
 }
 .buttonStyled {
     text-decoration: none;
-    color: var(--main-p-color)
+    cursor: pointer;
+    color: var(--main-p-color);
+    user-select: none;
 }
 .spacer_2px {
     padding: 2px;
@@ -267,7 +269,7 @@ p {
     color:red;
 }
 .mainArea {
-    padding-top: 80px;
+    padding-top: 40px;
 }
 .modalContainer {
     background-color: rgba(0,0,0,0.3);
