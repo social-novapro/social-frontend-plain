@@ -453,7 +453,7 @@ async function saveBookmark(postID, list) {
     const res = await response.json();
     if (debug) console.log(res)
     if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.error}`;
-    document.getElementById(`saved post to bookmarks`)
+    document.getElementById(`saveBookmark_${postID}`).innerText="Saved"
 }
 
 async function showLikes(postID) {
