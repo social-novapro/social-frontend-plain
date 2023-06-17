@@ -1259,6 +1259,19 @@ async function userEditHtml(userID) {
                     </div>
                 `: ``
             }
+            ${clientUser ? 
+            `
+                <div class="userInfo">
+                    <p><b>Email</b></p>
+                    <p onclick="changeEmailPage()">Change Email</p>
+                </div>
+                <div class="userInfo">
+                    <p><b>Password</b></p>
+                    <p onclick="changePasswordPage()">Change Password</p>
+                </div>
+            ` : 
+            ``
+        }
             ${profileData.verified ? 
                 `
                     <div class="userEditArea">
@@ -1306,7 +1319,10 @@ async function userHtml(userID) {
     if (profileData?.userData?.displayName) document.title = `${profileData?.userData?.displayName} | Interact`
     
     profileData.postData.reverse()
+    console.log(profileData)
+
     // profileData.included.post ? profileData.postData.reverse() : profileData.postData = []
+    
     document.getElementById("mainFeed").innerHTML =  `
         ${clientUser ? `
             <div class="userInfo">
@@ -1338,6 +1354,7 @@ async function userHtml(userID) {
             <p>${profileData.userData.username}</p>
         </div>
         ${profileData.userData.statusTitle ? 
+
             `
                 <div class="userInfo">
                     <p><b>Status</b></p>
@@ -1383,8 +1400,140 @@ async function userHtml(userID) {
             }).join(" ")}
         ` : ``}
     `
-  
+
     return;
+}
+
+async function changePasswordPage() {
+    const ele = `
+        <div>
+            <p><b>Change Password</b></p>
+            <form id="userEdit_password" class="contentMessage")">
+                <label for="password_text">New Password</label>
+                <input type="password" id="password_text" autocomplete="new-password" class="userEditForm" value="New Password">
+            </form>
+            <form id="userEdit_password_confirm" class="contentMessage")">
+                <label for="password_confirm">Confirm Password</label>
+                <input type="password" id="password_confirm" autocomplete="new-password" class="userEditForm" value="Confirm New Password">
+            </form>
+            <form id="userEdit_password_old" class="contentMessage">
+                <label for="userEdit_password_old_text">Old Password</label>
+                <input type="text" id="userEdit_password_old_text" autocomplete="current-password" class="userEditForm" value="Old Password">
+            </form>
+            <a onclick="changePassword()">Change Password</a>
+        </div>
+    `
+    await showModal(ele)
+}
+
+async function fetchClientEmailData() {
+    const response = await fetch(`${apiURL}/emails/userData/`, {
+        method: 'GET',
+        headers
+    });
+
+    console.log(response)
+    const res = await response.json();
+    if (debug) console.log(res)
+    return res
+}
+
+async function changeEmailPage() {
+    const emailData = await fetchClientEmailData();
+    console.log(emailData)
+    // fetch
+    const ele = `
+        <div>
+            <div> 
+                <h1>Current Email Settings</h1>
+                <hr class="rounded">
+                <p>Current Email: ${emailData.email}</p>
+                <p>Email Verified: ${emailData.verified}</p>
+                ${emailData.emailSetting != emailData.email ? `
+                    <p>Attempting Verification for: ${emailData.emailSetting}</p>
+                    ` : ``
+                }
+            </div>
+            <div>
+                <hr class="rounded">
+                <h1>Change Email</h1>
+                <hr class="rounded">
+                <form id="userEdit_email" class="contentMessage" onsubmit="editEmailRequest()">
+                    <label for="userEdit_email_text"><p>New Email</p></label>
+                    <input type="email" id="userEdit_email_text" class="userEditForm" value="New Email">
+                </form>
+                <form id="userEdit_password" class="contentMessage" onsubmit="editEmailRequest()">
+                    <label for="userEdit_email_pass"><p>Password</p></label>
+                    <input type="password" id="userEdit_email_pass" class="userEditForm" value="Password">
+                </form>
+                <a onclick="editEmailRequest()">Submit Email</a>
+            </div>
+        </div>
+    `
+    await showModal(ele)
+    
+    document.getElementById("userEdit_email").addEventListener("submit", function (e) { e.preventDefault()})
+    document.getElementById("userEdit_password").addEventListener("submit", function (e) { e.preventDefault()})
+}
+
+async function updateEmail() {
+
+}
+
+// change password
+async function changePassword() {
+    // get old password
+    // get new password
+    // get new password confirm
+    // compare passwords
+    // submit api call
+}
+
+// change email
+async function editEmailRequest(hasCurrent) {
+    const email = document.getElementById("userEdit_email_text")?.value
+    console.log(email)
+    const password = document.getElementById("userEdit_email_pass")?.value
+    if (!email) return showModal("Please enter an email");
+    if (!password) return showModal("Please enter your password");
+
+    const validated = await validateEmail(email)
+    if (validated.valid != true) return showModal("<div><p>Please enter a valid email</p></div>");
+
+    const updatedEmail = await addEmailAccount({email, password});
+    if (!updatedEmail) return showModal("<div><p>There was an error updating your email</p></div>");
+    else {
+        console.log(updatedEmail)
+    }
+}
+async function validateEmail(email) {
+    const response = await fetch(`${apiURL}/emails/requests/validEmail/${email}`, {
+        method: 'GET',
+        headers
+    });
+
+    const res = await response.json();
+    if (debug) console.log(res)
+    return res
+}
+
+async function editEmailAccount() {
+    // change email
+}
+
+async function addEmailAccount({ email, password }) {
+    const response = await fetch(`${apiURL}/emails/set/`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({"email" : email, "password" : password})
+    });
+
+    const res = await response.json();
+    
+    console.log(res)
+    if (!response.ok || res.error) return false
+
+    return res;
 }
 
 async function subNotifi(subUser) {
