@@ -216,13 +216,17 @@ p {
         font-size: 25px;
         color: var(--main-h2-color);
     }
+    .mainArea {
+        margin-left: 0rem;
+        padding: 0rem;
+    }
 }
 /* BIG SCREENS */
 @media only screen and (min-width: 601px) {
-    /*.mainArea {
+    .mainArea {
         margin-left: 5rem;
         padding: 1rem;
-    }*/
+    }
     .navbar {
         top: 0;
         width: 5rem;
