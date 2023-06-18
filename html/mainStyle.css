@@ -219,10 +219,10 @@ p {
 }
 /* BIG SCREENS */
 @media only screen and (min-width: 601px) {
-    .mainArea {
+    /*.mainArea {
         margin-left: 5rem;
         padding: 1rem;
-    }
+    }*/
     .navbar {
         top: 0;
         width: 5rem;
@@ -304,8 +304,8 @@ p {
     background-color:  var(--main-button-color);
     border: 2px solid var(--main-border-color);
     overflow-wrap: break-word;
-    margin-left: 20%;
-    margin-right: 20%;
+    margin-left: 10%;
+    margin-right: 10%;
     margin-top: 20px;
     text-decoration: none;
     color: var(--main-a-color);
