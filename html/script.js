@@ -257,7 +257,7 @@ function postElementCreate({ post, user, type, hideParent, hideReplies }) {
                         ` : ''}
                     ` : ''}
                     </p>
-                    <p id="popupactions_${post._id}" onclick="popupActions('${post._id}', '${options.hideParent}', '${options.hideReplies}', '${options.owner}')">more</p>
+                    <p id="popupactions_${post._id}" onclick="popupActions('${post._id}', '${options.hideParent}', '${options.hideReplies}', ${options.owner})">more</p>
                 </div>
             </div>
         </div>

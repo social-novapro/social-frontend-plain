@@ -197,22 +197,24 @@ async function switchNav(pageVal) {
     }
 }
 
-async function showModal(html, showClose) {
+function showModal(html, showClose) {
     document.getElementById('modalContainer').classList.add("showModal");
-    document.getElementById('modal').innerHTML = html
+    document.getElementById('modal').innerHTML = html;
 
-    if (showClose == "hide") return
-    else return showModalClose()
+    if (showClose == "hide") return true;
+    else return showModalClose();
 }
 
-async function showModalClose() {
+function showModalClose() {
     document.getElementById('modal').innerHTML+=`
         <button class="buttonStyled" onclick="closeModal()">Close</button>
-    `
+    `;
 }
 
-async function closeModal() {
-    document.getElementById('modalContainer')?.classList.remove("showModal")    
+function closeModal() {
+    document.getElementById('modalContainer')?.classList.remove("showModal");
+    document.getElementById('modal').innerHTML = "";
+    return true;
 }
 
 
