@@ -1263,12 +1263,14 @@ async function userEditHtml(userID) {
             `
                 <div class="userInfo">
                     <p><b>Email</b></p>
-                    <p onclick="changeEmailPage()">Change Email</p>
+                    <p onclick="changeEmailPage()">Email Settings</p>
                 </div>
+                <div id="emailPopup"></div>
                 <div class="userInfo">
                     <p><b>Password</b></p>
                     <p onclick="changePasswordPage()">Change Password</p>
                 </div>
+                <div id="passwordPopup"></div>
             ` : 
             ``
         }
@@ -1406,24 +1408,31 @@ async function userHtml(userID) {
 
 async function changePasswordPage() {
     const ele = `
-        <div>
+        <div class="userInfo">
             <p><b>Change Password</b></p>
+            <hr class="rounded">
             <form id="userEdit_password" class="contentMessage")">
-                <label for="password_text">New Password</label>
-                <input type="password" id="password_text" autocomplete="new-password" class="userEditForm" value="New Password">
+                <label for="password_text"><p>New Password</p></label>
+                <input type="password" id="password_text" autocomplete="new-password" class="userEditForm" placeholder="New Password">
             </form>
-            <form id="userEdit_password_confirm" class="contentMessage")">
-                <label for="password_confirm">Confirm Password</label>
-                <input type="password" id="password_confirm" autocomplete="new-password" class="userEditForm" value="Confirm New Password">
+            <form id="userEdit_password_confirm" class="contentMessage">
+                <label for="password_confirm"><p>Confirm Password</p></label>
+                <input type="password" id="password_confirm" autocomplete="new-password" class="userEditForm" placeholder="Confirm New Password">
             </form>
             <form id="userEdit_password_old" class="contentMessage">
-                <label for="userEdit_password_old_text">Old Password</label>
-                <input type="text" id="userEdit_password_old_text" autocomplete="current-password" class="userEditForm" value="Old Password">
+                <label for="userEdit_password_old_text"><p>Old Password</p></label>
+                <input type="text" id="userEdit_password_old_text" autocomplete="current-password" class="userEditForm" placeholder="Old Password">
             </form>
             <a onclick="changePassword()">Change Password</a>
         </div>
     `
-    await showModal(ele)
+    //await showModal(ele)
+
+    document.getElementById("passwordPopup").innerHTML = ele;
+
+    document.getElementById("password_text").addEventListener("submit", function (e) { e.preventDefault()})
+    document.getElementById("userEdit_password_old_text").addEventListener("submit", function (e) { e.preventDefault()})
+    document.getElementById("password_confirm").addEventListener("submit", function (e) { e.preventDefault()})
 }
 
 async function fetchClientEmailData() {
@@ -1443,9 +1452,9 @@ async function changeEmailPage() {
     console.log(emailData)
     // fetch
     const ele = `
-        <div>
+        <div class="userInfo">
             <div> 
-                <h1>Current Email Settings</h1>
+                <p><b>Current Email Settings</b></p>
                 <hr class="rounded">
                 <p>Current Email: ${emailData.email}</p>
                 <p>Email Verified: ${emailData.verified}</p>
@@ -1456,24 +1465,55 @@ async function changeEmailPage() {
             </div>
             <div>
                 <hr class="rounded">
-                <h1>Change Email</h1>
+                <p><b>Change Email</b></p>
                 <hr class="rounded">
                 <form id="userEdit_email" class="contentMessage" onsubmit="editEmailRequest()">
                     <label for="userEdit_email_text"><p>New Email</p></label>
-                    <input type="email" id="userEdit_email_text" class="userEditForm" value="New Email">
+                    <input type="email" id="userEdit_email_text" autocomplete="false" class="userEditForm" placeholder="New Email">
                 </form>
                 <form id="userEdit_password" class="contentMessage" onsubmit="editEmailRequest()">
                     <label for="userEdit_email_pass"><p>Password</p></label>
-                    <input type="password" id="userEdit_email_pass" class="userEditForm" value="Password">
+                    <input type="password" id="userEdit_email_pass" class="userEditForm" placeholder="Password">
                 </form>
                 <a onclick="editEmailRequest()">Submit Email</a>
             </div>
+            ${emailData.verified ? `
+            <div>
+                <hr class="rounded">
+                <p><b>Remove Email</b></p>
+                <hr class="rounded">
+                <form id="userEdit_password" class="contentMessage" onsubmit="removeEmailRequest('${emailData.email}')">
+                    <label for="userEdit_email_pass"><p>Password</p></label>
+                    <input type="password" id="userEdit_email_pass_remove" class="userEditForm" placeholder="Password">
+                </form>
+                <a onclick="removeEmailRequest('${emailData.email}')">Remove Email</a>
+            </div> 
+            ` : ``}
         </div>
     `
-    await showModal(ele)
+    //await showModal(ele)
+    document.getElementById("emailPopup").innerHTML = ele;
     
     document.getElementById("userEdit_email").addEventListener("submit", function (e) { e.preventDefault()})
     document.getElementById("userEdit_password").addEventListener("submit", function (e) { e.preventDefault()})
+}
+
+async function removeEmailRequest(currentEmail) {
+    const password = document.getElementById("userEdit_email_pass_remove")?.value;
+    if (!password) return showModal("Please enter your password");
+
+    const response = await fetch(`${apiURL}/emails/remove`, {
+        method: 'DELETE',
+        headers,
+        body: JSON.stringify({
+            email: currentEmail,
+            password: password
+        })
+    });
+
+    const res = await response.json();
+    if (debug) console.log(res);
+    return res;
 }
 
 async function updateEmail() {
@@ -1506,6 +1546,7 @@ async function editEmailRequest(hasCurrent) {
         console.log(updatedEmail)
     }
 }
+
 async function validateEmail(email) {
     const response = await fetch(`${apiURL}/emails/requests/validEmail/${email}`, {
         method: 'GET',
