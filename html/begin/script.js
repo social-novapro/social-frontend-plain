@@ -91,8 +91,8 @@ async function loginPage() {
             <h1>Please Login!</h1>
             <form onsubmit="sendLoginRequest()" id="signInForm">
                 <div class="userInfo">
-                    <p>Enter Username:</p>
-                    <p><input class="contentMessage userEditForm" id="userUsernameLogin" placeholder="Username" type="text" name="username"></p>
+                    <p>Enter Username or Email:</p>
+                    <p><input class="contentMessage userEditForm" id="userUsernameLogin" placeholder="Username/Email" type="username" name="username"></p>
                 </div>
                 <div class="userInfo">
                     <p>Enter Password</p>
