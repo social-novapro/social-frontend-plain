@@ -1105,6 +1105,16 @@ function settingsPage() {
                         <div id="bookmarksdiv"></div>
                     </div>
                     <div class="userInfo">
+                        <p><b>Email</b></p>
+                        <button class="userInfo buttonStyled" onclick="changeEmailPage()">Email Settings</p>
+                    </div>
+                    <div id="emailPopup"></div>
+                    <div class="userInfo">
+                        <p><b>Password</b></p>
+                        <button class="userInfo buttonStyled"  onclick="changePasswordPage()">Change Password</p>
+                    </div>
+                    <div id="passwordPopup"></div>
+                    <div class="userInfo">
                         <p>Sign out of your account.</p>
                         <button class="userInfo buttonStyled" onclick="signOutPage()">Sign Out</button>
                         <div id="signOutConfirm"></div>
@@ -1259,21 +1269,6 @@ async function userEditHtml(userID) {
                     </div>
                 `: ``
             }
-            ${clientUser ? 
-            `
-                <div class="userInfo">
-                    <p><b>Email</b></p>
-                    <p onclick="changeEmailPage()">Email Settings</p>
-                </div>
-                <div id="emailPopup"></div>
-                <div class="userInfo">
-                    <p><b>Password</b></p>
-                    <p onclick="changePasswordPage()">Change Password</p>
-                </div>
-                <div id="passwordPopup"></div>
-            ` : 
-            ``
-        }
             ${profileData.verified ? 
                 `
                     <div class="userEditArea">
@@ -1458,10 +1453,15 @@ async function changeEmailPage() {
                 <hr class="rounded">
                 <p>Current Email: ${emailData.email}</p>
                 <p>Email Verified: ${emailData.verified}</p>
+                ${emailData.verified && emailData.timestampVerified ? `
+                    <p>Verified Since: ${checkDate(emailData.timestampVerified)}</p>
+                ` : ``}
                 ${emailData.emailSetting != emailData.email ? `
                     <p>Attempting Verification for: ${emailData.emailSetting}</p>
-                    ` : ``
-                }
+                ` : ``}
+                ${emailData.removeRequest ? `
+                    <p>Attempting Removal for: ${emailData.removeRequest}</p>
+                ` : ``}
             </div>
             <div>
                 <hr class="rounded">
