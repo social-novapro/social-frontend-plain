@@ -18,7 +18,23 @@ if (location.protocol !== 'https:' && !((/localhost|(127|192\.168|10)\.(\d{1,3}\
 } else startup()
 
 async function startup() {
+    setupUI();
     checkURLParams();
+}
+
+function setupUI() {
+    document.getElementById('mainFeed').innerHTML = `
+        <div class="userInfo">
+            <p><b>Hello!</b></p>
+            <br />
+            <p>You seem to have gotten here on accident, go back home to explore interact!</p>
+            <button class="userInfo buttonStyled" onclick="redirectHome()">Home</button>
+        </div>
+    `;
+}
+
+function redirectHome() {
+    window.location.href='/'
 }
 
 async function checkURLParams() {
@@ -27,32 +43,95 @@ async function checkURLParams() {
     }
 
     const ifReqVer = params.has('verification');
-    const ifReqRemoveVer = params.has("removeVerification");
+    const ifReqRemoveEmail = params.has("removeEmail");
 
     if (ifReqVer) {
         paramsInfo.paramsFound = true
         paramsInfo.verification = params.get('verification')
-    } else if (ifReqRemoveVer) {
+        setupVerRequest(paramsInfo.verification)
+    } else if (ifReqRemoveEmail) {
         paramsInfo.paramsFound = true
-        paramsInfo.removeVerification = params.get('removeVerification')
+        paramsInfo.removeEmail = params.get('removeEmail')
+        setupRemoveEmailRequest(paramsInfo.removeEmail)
     }
 
-   
     return paramsInfo
 }
 
 function setupVerRequest(verID) {
-    document.getElementById('mainFeed').innerHTML = ``;
-
+    document.getElementById('mainFeed').innerHTML = `
+        <div class="userInfo">
+            <p><b>Verification Request</b></p>
+            <p>Verification ID: ${verID}</p>
+            <button class="userInfo buttonStyled" onclick="acceptVerRequest('${verID}')">Accept</button>
+            <div id="verResult"></div>
+            <button class="userInfo buttonStyled" onclick="redirectHome()">Go Home</button>
+            <p> <br/>Press accept to add email to account, or go back home.</p> 
+        </div>
+    `;
 }
 
-function removeVerRequest(removeVerID) {
-    document.getElementById('mainFeed').innerHTML = ``;
+async function acceptVerRequest(verID) {
+    document.getElementById('verResult').innerHTML = "<p>loading...</p>";
+    const url = `${apiURL}/emails/requests/verification/${verID}`
+    
+    const response = await fetch(url, {
+        method: 'GET',
+        headers: headers
+    })
+
+    const data = await response.json()
+
+    if (data.status == 200) {
+        document.getElementById('verResult').innerHTML = `
+            <p><br>Verification Accepted</p>
+            <p>Email: ${data.DB.email}</p>
+            <p>Verified ${checkDate(data.DB.timestampVerified)}</p>
+        `;
+    } else {
+        document.getElementById('verResult').innerHTML = `
+            <p><br>Verification Failed</p>
+            <p><br>Try again later, or could have already completed.</p>
+        `;
+    }
 }
 
+function setupRemoveEmailRequest(removeVerID) {
+    document.getElementById('mainFeed').innerHTML = `
+        <div class="userInfo">
+            <p><b>Remove Email Request</b></p>
+            <p>Remove Email ID: ${removeVerID}</p>
+            <button class="userInfo buttonStyled" onclick="removeEmailRequest('${removeVerID}')">Accept</button>
+            <div id="verResult"></div>
+            <button class="userInfo buttonStyled" onclick="redirectHome()">Go Home</button>
+            <p> <br/>Press accept to add email to account, or go back home.</p> 
+        </div>
+    `;
+}
 
+async function removeEmailRequest(removeVerID) {
+    document.getElementById('verResult').innerHTML = "<p>loading...</p>";
 
+    const url = `${apiURL}/emails/requests/confirmRemove/${removeVerID}`
+    
+    const response = await fetch(url, {
+        method: 'GET',
+        headers: headers
+    })
+    const data = await response.json()
 
+    if (data.status == 200) {
+        document.getElementById('verResult').innerHTML = `
+            <p><br>Removed Email</p>
+            <p>Completed</p>
+        `;
+    } else {
+        document.getElementById('verResult').innerHTML = `
+            <p><br>Verification Failed</p>
+            <p>Try again later, or could have already completed.</p>
+        `;
+    }
+}
 
 function checkDate(time){
     var timeNum = 0
