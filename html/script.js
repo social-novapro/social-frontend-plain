@@ -1469,7 +1469,7 @@ async function changeEmailPage() {
                 <hr class="rounded">
                 <form id="userEdit_email" class="contentMessage" onsubmit="editEmailRequest()">
                     <label for="userEdit_email_text"><p>New Email</p></label>
-                    <input type="email" id="userEdit_email_text" autocomplete="false" class="userEditForm" placeholder="New Email">
+                    <input type="email" id="userEdit_email_text" autocomplete="false" autofill="false" class="userEditForm" placeholder="New Email">
                 </form>
                 <form id="userEdit_password" class="contentMessage" onsubmit="editEmailRequest()">
                     <label for="userEdit_email_pass"><p>Password</p></label>
@@ -1482,8 +1482,8 @@ async function changeEmailPage() {
                 <hr class="rounded">
                 <p><b>Remove Email</b></p>
                 <hr class="rounded">
-                <form id="userEdit_password" class="contentMessage" onsubmit="removeEmailRequest('${emailData.email}')">
-                    <label for="userEdit_email_pass"><p>Password</p></label>
+                <form id="userEdit_password_remove" class="contentMessage" onsubmit="removeEmailRequest('${emailData.email}')">
+                    <label for="userEdit_email_pass_remove"><p>Password</p></label>
                     <input type="password" id="userEdit_email_pass_remove" class="userEditForm" placeholder="Password">
                 </form>
                 <a onclick="removeEmailRequest('${emailData.email}')">Remove Email</a>
@@ -1496,6 +1496,7 @@ async function changeEmailPage() {
     
     document.getElementById("userEdit_email").addEventListener("submit", function (e) { e.preventDefault()})
     document.getElementById("userEdit_password").addEventListener("submit", function (e) { e.preventDefault()})
+    document.getElementById("userEdit_password_remove").addEventListener("submit", function (e) { e.preventDefault()})
 }
 
 async function removeEmailRequest(currentEmail) {

@@ -82,7 +82,7 @@ async function acceptVerRequest(verID) {
 
     const data = await response.json()
 
-    if (data.status == 200) {
+    if (response.status == 200) {
         document.getElementById('verResult').innerHTML = `
             <p><br>Verification Accepted</p>
             <p>Email: ${data.DB.email}</p>
@@ -118,9 +118,12 @@ async function removeEmailRequest(removeVerID) {
         method: 'GET',
         headers: headers
     })
+    //const data = await response.json()
+    console.log(response)
     const data = await response.json()
-
-    if (data.status == 200) {
+    console.log(data)
+    
+    if (response.status == 200) {
         document.getElementById('verResult').innerHTML = `
             <p><br>Removed Email</p>
             <p>Completed</p>
