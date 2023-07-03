@@ -22,6 +22,7 @@ async function startup() {
     checkURLParams();
 }
 
+// sets default UI with back button
 function setupUI() {
     document.getElementById('mainFeed').innerHTML = `
         <div class="userInfo">
@@ -58,6 +59,7 @@ async function checkURLParams() {
     return paramsInfo
 }
 
+// sets up the UI for the verification request
 function setupVerRequest(verID) {
     document.getElementById('mainFeed').innerHTML = `
         <div class="userInfo">
@@ -71,6 +73,7 @@ function setupVerRequest(verID) {
     `;
 }
 
+// API - accepts the verification request
 async function acceptVerRequest(verID) {
     document.getElementById('verResult').innerHTML = "<p>loading...</p>";
     const url = `${apiURL}/emails/requests/verification/${verID}`
@@ -96,6 +99,7 @@ async function acceptVerRequest(verID) {
     }
 }
 
+// sets up the UI for the remove email request
 function setupRemoveEmailRequest(removeVerID) {
     document.getElementById('mainFeed').innerHTML = `
         <div class="userInfo">
@@ -109,6 +113,7 @@ function setupRemoveEmailRequest(removeVerID) {
     `;
 }
 
+// API - accepts the remove email request
 async function removeEmailRequest(removeVerID) {
     document.getElementById('verResult').innerHTML = "<p>loading...</p>";
 
