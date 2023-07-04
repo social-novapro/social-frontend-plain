@@ -1475,7 +1475,8 @@ async function changeEmailPage() {
                     <label for="userEdit_email_pass"><p>Password</p></label>
                     <input type="password" id="userEdit_email_pass" class="userEditForm" placeholder="Password">
                 </form>
-                <a onclick="editEmailRequest()">Submit Email</a>
+                <button class="userInfo buttonStyled" onclick="editEmailRequest()">Submit Email</button>
+                <p id="resultAddRequest"></p>
             </div>
             ${emailData.verified ? `
             <div>
@@ -1486,7 +1487,8 @@ async function changeEmailPage() {
                     <label for="userEdit_email_pass_remove"><p>Password</p></label>
                     <input type="password" id="userEdit_email_pass_remove" class="userEditForm" placeholder="Password">
                 </form>
-                <a onclick="removeEmailRequest('${emailData.email}')">Remove Email</a>
+                <button class="userInfo buttonStyled" onclick="removeEmailRequest('${emailData.email}')">Remove Email</button>
+                <p id="resultRemoveRequest"></p>
             </div> 
             ` : ``}
         </div>
@@ -1514,6 +1516,11 @@ async function removeEmailRequest(currentEmail) {
 
     const res = await response.json();
     if (debug) console.log(res);
+    if (!response.ok) {
+        document.getElementById("resultRemoveRequest").innerHTML = `<p>Failed</p>`
+    } else {
+        document.getElementById("resultRemoveRequest").innerHTML = `<p>Success</p>`
+    }
     return res;
 }
 
@@ -1573,7 +1580,12 @@ async function addEmailAccount({ email, password }) {
     const res = await response.json();
     
     console.log(res)
-    if (!response.ok || res.error) return false
+    if (!response.ok || res.error) {
+        document.getElementById("resultAddRequest").innerHTML = `<p>Failed</p>`
+        return false
+    } else {
+        document.getElementById("resultAddRequest").innerHTML = `<p>Success</p>`
+    }
 
     return res;
 }
