@@ -270,6 +270,10 @@ function postElementCreate({ post, user, type, hideParent, hideReplies }) {
                 document.getElementById(`pollContainer_${post._id}`).innerHTML = ele; 
                 checkIfUserVoted(post.pollID)
                 .then(function(data) {
+                    if (data.error) {
+                        if (debug) console.log(data);
+                        return false;
+                    }
                     if (data.voted && data.foundVote && data.foundVote.pollOptionID && data.foundVote.pollID == post.pollID) {
                         colorizeOption(post.pollID, data.foundVote.pollOptionID);
                         changeVoteOption(post.pollID, data.foundVote.pollOptionID);
@@ -540,6 +544,7 @@ async function createPollElement(postID, pollID) {
     })
     .then(function (pollData) {
         if (debug) console.log(pollData);
+        if (!pollData || !pollData.pollOptions) return false;
         var totalVotes = 0;
 
         for (const option of pollData.pollOptions) {
