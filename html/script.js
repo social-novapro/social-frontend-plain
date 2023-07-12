@@ -1019,13 +1019,12 @@ async function userEdit(action) {
     for (const actionData of actions) {
         tempHeaders[`new${actionData.action.toLowerCase()}`] = actionData.value
     }
-    console.log(tempHeaders)
-    console.log(headers)
 
     const response = await fetch(`${apiURL}/put/userEdit`, {
         method: 'PUT',
         headers
-    })
+    });
+
     const newUser = await response.json()
     if (!response.ok) return console.log(newUser)
 
@@ -1329,7 +1328,7 @@ async function userHtml(userID) {
     if (profileData?.userData?.displayName) document.title = `${profileData?.userData?.displayName} | Interact`
     
     profileData.postData.reverse()
-    console.log(profileData)
+    if (debug) console.log(profileData)
 
     // profileData.included.post ? profileData.postData.reverse() : profileData.postData = []
     
@@ -1449,7 +1448,6 @@ async function fetchClientEmailData() {
         headers
     });
 
-    console.log(response)
     const res = await response.json();
     if (debug) console.log(res)
     return res
@@ -1457,8 +1455,7 @@ async function fetchClientEmailData() {
 
 async function changeEmailPage() {
     const emailData = await fetchClientEmailData();
-    console.log(emailData)
-    // fetch
+
     const ele = `
         <div class="userInfo">
             <div> 
@@ -1529,7 +1526,6 @@ async function changeEmailPage() {
 
 async function createEditEmailSettingsView(emailSettings) {
     const possibleOptions = await getPossibleEmailSettings();
-    console.log(emailSettings)
 
     var ele = `<form id="userEdit_emailSettings">`;
 
@@ -1640,7 +1636,6 @@ async function changePassword() {
 // change email
 async function editEmailRequest(hasCurrent) {
     const email = document.getElementById("userEdit_email_text")?.value
-    console.log(email)
     const password = document.getElementById("userEdit_email_pass")?.value
     if (!email) return showModal("Please enter an email");
     if (!password) return showModal("Please enter your password");
@@ -1650,9 +1645,6 @@ async function editEmailRequest(hasCurrent) {
 
     const updatedEmail = await addEmailAccount({email, password});
     if (!updatedEmail) return showModal("<div><p>There was an error updating your email</p></div>");
-    else {
-        console.log(updatedEmail)
-    }
 }
 
 async function validateEmail(email) {
@@ -1679,7 +1671,6 @@ async function addEmailAccount({ email, password }) {
 
     const res = await response.json();
     
-    console.log(res)
     if (!response.ok || res.error) {
         document.getElementById("resultAddRequest").innerHTML = `<p>Failed</p>`
         return false

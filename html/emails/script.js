@@ -9,7 +9,6 @@ var headers = {
 var verifiedConnection = false
 var params = new URLSearchParams(window.location.search)
 
-// console.log(config.dev.websocket_url)
 document.getElementById('mainFeed').innerHTML = 'eijj';
 var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
 
@@ -124,10 +123,8 @@ async function removeEmailRequest(removeVerID) {
         method: 'GET',
         headers: headers
     })
-    //const data = await response.json()
-    console.log(response)
+
     const data = await response.json()
-    console.log(data)
     
     if (response.status == 200) {
         document.getElementById('verResult').innerHTML = `
