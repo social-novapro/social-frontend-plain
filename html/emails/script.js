@@ -94,7 +94,8 @@ async function acceptVerRequest(verID) {
     } else {
         document.getElementById('verResult').innerHTML = `
             <p><br>Verification Failed</p>
-            <p><br>Try again later, or could have already completed.</p>
+            ${data.msg ? `<p>${data.msg}</p>` : '' }
+            <p>Try again later, or could have already completed.</p>
         `;
     }
 }
@@ -135,7 +136,8 @@ async function removeEmailRequest(removeVerID) {
         `;
     } else {
         document.getElementById('verResult').innerHTML = `
-            <p><br>Verification Failed</p>
+            <p><br>Removal Failed</p>
+            ${data.msg ? `<p>${data.msg}</p>` : '' }
             <p>Try again later, or could have already completed.</p>
         `;
     }

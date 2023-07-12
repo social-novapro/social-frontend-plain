@@ -118,6 +118,7 @@ async function checkURLParams() {
     const ifPostPage = params.has("posting");
     const ifUserEdit = params.has("userEdit");
     const ifSettings = params.has("settings");
+    const ifEmailSettings = params.has("emailSettings");
 
     if (ifUsername) {
         paramsFound = true
@@ -169,6 +170,13 @@ async function checkURLParams() {
         paramsInfo.paramsFound = true
 
         settingsPage()
+    } else if (ifEmailSettings) {
+        paramsFound = true
+        paramsInfo.paramsFound = true
+
+        settingsPage();
+        changeEmailPage();
+        document.getElementById("emailSettings").scrollIntoView();
     }
    
     return paramsInfo
@@ -1109,7 +1117,7 @@ function settingsPage() {
                         <button class="userInfo buttonStyled" id="showBookmarksButton" onclick="showBookmarks()">Show Bookmarks</button>
                         <div id="bookmarksdiv"></div>
                     </div>
-                    <div class="userInfo">
+                    <div id="emailSettings" class="userInfo">
                         <p><b>Email</b></p>
                         <button class="userInfo buttonStyled" onclick="changeEmailPage()">Email Settings</p>
                     </div>
@@ -1469,6 +1477,15 @@ async function changeEmailPage() {
                 ` : ``}
             </div>
             <div>
+            <hr class="rounded">
+            <p><b>Email Notifications</b></p>
+                ${emailData.verified ? `
+                    <div id="emailSettingOptions"></div>
+                ` : `
+                    <p>Email is not verified, can not change email settings</p>
+                `}
+            </div>
+            <div>
                 <hr class="rounded">
                 <p><b>Change Email</b></p>
                 <hr class="rounded">
@@ -1498,12 +1515,90 @@ async function changeEmailPage() {
             ` : ``}
         </div>
     `
-    //await showModal(ele)
+
+    if (emailData.verified) {
+        createEditEmailSettingsView(emailData.emailSettings);
+    }
+
     document.getElementById("emailPopup").innerHTML = ele;
     
     document.getElementById("userEdit_email").addEventListener("submit", function (e) { e.preventDefault()})
     document.getElementById("userEdit_password").addEventListener("submit", function (e) { e.preventDefault()})
     document.getElementById("userEdit_password_remove").addEventListener("submit", function (e) { e.preventDefault()})
+}
+
+async function createEditEmailSettingsView(emailSettings) {
+    const possibleOptions = await getPossibleEmailSettings();
+    console.log(emailSettings)
+
+    var ele = `<form id="userEdit_emailSettings">`;
+
+    for (const option of possibleOptions) {
+        ele+=`
+        <hr class="rounded">
+            <div>
+                <input type="checkbox" id="emailSetting_${option.option}" name="interest" value="${option.option}"${emailSettings[option.option] ? ` checked ` : ""}/>
+                <label for="${option.option}">${option.name}<br>${option.description}</label>
+            </div>
+        `
+    }
+
+    ele+=`</form><button class="userInfo buttonStyled" onclick="editEmailSettings()">Submit Email Settings</button>`;
+    
+    document.getElementById("emailSettingOptions").innerHTML = ele;
+    document.getElementById("userEdit_emailSettings").addEventListener("submit", function (e) { e.preventDefault()})
+}
+
+async function editEmailSettings() {
+    // Get the form element
+    const form = document.getElementById("userEdit_emailSettings");
+
+    // Get all the checkboxes within the form
+    const checkboxes = form.querySelectorAll("input[type='checkbox']");
+
+    // Create an array to store the changed values
+    const changedItems = [];
+
+    // Loop through each checkbox and check if its checked state has changed
+    checkboxes.forEach((checkbox) => {
+        if (checkbox.checked !== checkbox.defaultChecked) {
+            changedItems.push(checkbox.value);
+        }
+    });
+
+    const reqBody = [];
+    
+    var i=0;
+    for (item of changedItems) {
+        //[ { option: "notifications", value: true }]
+        reqBody.push({ option: item, value: document.getElementById(`emailSetting_${item}`).checked })
+    }
+
+
+    const response = await fetch(`${apiURL}/emails/settings`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(reqBody),
+    });
+
+    
+    const res = await response.json();
+
+    if (debug) console.log(res);
+    if (!response.ok || res.error) return showModal(res.msg);
+
+    createEditEmailSettingsView(res);
+}
+
+async function getPossibleEmailSettings() {
+    const response = await fetch(`${apiURL}/emails/settings`, {
+        method: 'GET',
+        headers,
+    })
+
+    const res = await response.json();
+    if (debug) console.log(res);
+    return res;
 }
 
 async function removeEmailRequest(currentEmail) {
