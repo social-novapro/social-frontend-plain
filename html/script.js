@@ -1414,6 +1414,16 @@ async function userHtml(userID) {
 }
 
 async function changePasswordPage() {
+    const eleError = `
+        <div class="userInfo">
+            <p><b>Change Password</b></p>
+            <hr class="rounded">
+            <p>Can not change password yet, please wait until future version of interact</p>
+        </div>
+    `;
+    document.getElementById("passwordPopup").innerHTML = eleError;
+    return ;
+
     const ele = `
         <div class="userInfo">
             <p><b>Change Password</b></p>
@@ -1581,7 +1591,7 @@ async function editEmailSettings() {
     const res = await response.json();
 
     if (debug) console.log(res);
-    if (!response.ok || res.error) return showModal(res.msg);
+    if (!response.ok || res.error) return showModal("<p>res.msg</p>");
 
     createEditEmailSettingsView(res);
 }
@@ -1637,8 +1647,8 @@ async function changePassword() {
 async function editEmailRequest(hasCurrent) {
     const email = document.getElementById("userEdit_email_text")?.value
     const password = document.getElementById("userEdit_email_pass")?.value
-    if (!email) return showModal("Please enter an email");
-    if (!password) return showModal("Please enter your password");
+    if (!email) return showModal("<p>Please enter an email</p>");
+    if (!password) return showModal("<p>Please enter your password</p>");
 
     const validated = await validateEmail(email)
     if (validated.valid != true) return showModal("<div><p>Please enter a valid email</p></div>");
