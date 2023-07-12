@@ -118,6 +118,7 @@ async function checkURLParams() {
     const ifPostPage = params.has("posting");
     const ifUserEdit = params.has("userEdit");
     const ifSettings = params.has("settings");
+    const ifEmailSettings = params.has("emailSettings");
 
     if (ifUsername) {
         paramsFound = true
@@ -169,6 +170,13 @@ async function checkURLParams() {
         paramsInfo.paramsFound = true
 
         settingsPage()
+    } else if (ifEmailSettings) {
+        paramsFound = true
+        paramsInfo.paramsFound = true
+
+        settingsPage();
+        changeEmailPage();
+        document.getElementById("emailSettings").scrollIntoView();
     }
    
     return paramsInfo
@@ -270,6 +278,10 @@ function postElementCreate({ post, user, type, hideParent, hideReplies }) {
                 document.getElementById(`pollContainer_${post._id}`).innerHTML = ele; 
                 checkIfUserVoted(post.pollID)
                 .then(function(data) {
+                    if (data.error) {
+                        if (debug) console.log(data);
+                        return false;
+                    }
                     if (data.voted && data.foundVote && data.foundVote.pollOptionID && data.foundVote.pollID == post.pollID) {
                         colorizeOption(post.pollID, data.foundVote.pollOptionID);
                         changeVoteOption(post.pollID, data.foundVote.pollOptionID);
@@ -540,6 +552,7 @@ async function createPollElement(postID, pollID) {
     })
     .then(function (pollData) {
         if (debug) console.log(pollData);
+        if (!pollData || !pollData.pollOptions) return false;
         var totalVotes = 0;
 
         for (const option of pollData.pollOptions) {
@@ -1006,13 +1019,12 @@ async function userEdit(action) {
     for (const actionData of actions) {
         tempHeaders[`new${actionData.action.toLowerCase()}`] = actionData.value
     }
-    console.log(tempHeaders)
-    console.log(headers)
 
     const response = await fetch(`${apiURL}/put/userEdit`, {
         method: 'PUT',
         headers
-    })
+    });
+
     const newUser = await response.json()
     if (!response.ok) return console.log(newUser)
 
@@ -1104,6 +1116,16 @@ function settingsPage() {
                         <button class="userInfo buttonStyled" id="showBookmarksButton" onclick="showBookmarks()">Show Bookmarks</button>
                         <div id="bookmarksdiv"></div>
                     </div>
+                    <div id="emailSettings" class="userInfo">
+                        <p><b>Email</b></p>
+                        <button class="userInfo buttonStyled" onclick="changeEmailPage()">Email Settings</p>
+                    </div>
+                    <div id="emailPopup"></div>
+                    <div class="userInfo">
+                        <p><b>Password</b></p>
+                        <button class="userInfo buttonStyled"  onclick="changePasswordPage()">Change Password</p>
+                    </div>
+                    <div id="passwordPopup"></div>
                     <div class="userInfo">
                         <p>Sign out of your account.</p>
                         <button class="userInfo buttonStyled" onclick="signOutPage()">Sign Out</button>
@@ -1306,7 +1328,10 @@ async function userHtml(userID) {
     if (profileData?.userData?.displayName) document.title = `${profileData?.userData?.displayName} | Interact`
     
     profileData.postData.reverse()
+    if (debug) console.log(profileData)
+
     // profileData.included.post ? profileData.postData.reverse() : profileData.postData = []
+    
     document.getElementById("mainFeed").innerHTML =  `
         ${clientUser ? `
             <div class="userInfo">
@@ -1338,6 +1363,7 @@ async function userHtml(userID) {
             <p>${profileData.userData.username}</p>
         </div>
         ${profileData.userData.statusTitle ? 
+
             `
                 <div class="userInfo">
                     <p><b>Status</b></p>
@@ -1383,8 +1409,286 @@ async function userHtml(userID) {
             }).join(" ")}
         ` : ``}
     `
-  
+
     return;
+}
+
+async function changePasswordPage() {
+    const eleError = `
+        <div class="userInfo">
+            <p><b>Change Password</b></p>
+            <hr class="rounded">
+            <p>Can not change password yet, please wait until future version of interact</p>
+        </div>
+    `;
+    document.getElementById("passwordPopup").innerHTML = eleError;
+    return ;
+
+    const ele = `
+        <div class="userInfo">
+            <p><b>Change Password</b></p>
+            <hr class="rounded">
+            <form id="userEdit_password" class="contentMessage")">
+                <label for="password_text"><p>New Password</p></label>
+                <input type="password" id="password_text" autocomplete="new-password" class="userEditForm" placeholder="New Password">
+            </form>
+            <form id="userEdit_password_confirm" class="contentMessage">
+                <label for="password_confirm"><p>Confirm Password</p></label>
+                <input type="password" id="password_confirm" autocomplete="new-password" class="userEditForm" placeholder="Confirm New Password">
+            </form>
+            <form id="userEdit_password_old" class="contentMessage">
+                <label for="userEdit_password_old_text"><p>Old Password</p></label>
+                <input type="text" id="userEdit_password_old_text" autocomplete="current-password" class="userEditForm" placeholder="Old Password">
+            </form>
+            <a onclick="changePassword()">Change Password</a>
+        </div>
+    `
+    //await showModal(ele)
+
+    document.getElementById("passwordPopup").innerHTML = ele;
+
+    document.getElementById("password_text").addEventListener("submit", function (e) { e.preventDefault()})
+    document.getElementById("userEdit_password_old_text").addEventListener("submit", function (e) { e.preventDefault()})
+    document.getElementById("password_confirm").addEventListener("submit", function (e) { e.preventDefault()})
+}
+
+async function fetchClientEmailData() {
+    const response = await fetch(`${apiURL}/emails/userData/`, {
+        method: 'GET',
+        headers
+    });
+
+    const res = await response.json();
+    if (debug) console.log(res)
+    return res
+}
+
+async function changeEmailPage() {
+    const emailData = await fetchClientEmailData();
+
+    const ele = `
+        <div class="userInfo">
+            <div> 
+                <p><b>Current Email Settings</b></p>
+                <hr class="rounded">
+                <p>Current Email: ${emailData.email}</p>
+                <p>Email Verified: ${emailData.verified}</p>
+                ${emailData.verified && emailData.timestampVerified ? `
+                    <p>Verified Since: ${checkDate(emailData.timestampVerified)}</p>
+                ` : ``}
+                ${emailData.emailSetting != emailData.email ? `
+                    <p>Attempting Verification for: ${emailData.emailSetting}</p>
+                ` : ``}
+                ${emailData.removeRequest ? `
+                    <p>Attempting Removal for: ${emailData.removeRequest}</p>
+                ` : ``}
+            </div>
+            <div>
+            <hr class="rounded">
+            <p><b>Email Notifications</b></p>
+                ${emailData.verified ? `
+                    <div id="emailSettingOptions"></div>
+                ` : `
+                    <p>Email is not verified, can not change email settings</p>
+                `}
+            </div>
+            <div>
+                <hr class="rounded">
+                <p><b>Change Email</b></p>
+                <hr class="rounded">
+                <form id="userEdit_email" class="contentMessage" onsubmit="editEmailRequest()">
+                    <label for="userEdit_email_text"><p>New Email</p></label>
+                    <input type="email" id="userEdit_email_text" autocomplete="false" autofill="false" class="userEditForm" placeholder="New Email">
+                </form>
+                <form id="userEdit_password" class="contentMessage" onsubmit="editEmailRequest()">
+                    <label for="userEdit_email_pass"><p>Password</p></label>
+                    <input type="password" id="userEdit_email_pass" class="userEditForm" placeholder="Password">
+                </form>
+                <button class="userInfo buttonStyled" onclick="editEmailRequest()">Submit Email</button>
+                <p id="resultAddRequest"></p>
+            </div>
+            ${emailData.verified ? `
+            <div>
+                <hr class="rounded">
+                <p><b>Remove Email</b></p>
+                <hr class="rounded">
+                <form id="userEdit_password_remove" class="contentMessage" onsubmit="removeEmailRequest('${emailData.email}')">
+                    <label for="userEdit_email_pass_remove"><p>Password</p></label>
+                    <input type="password" id="userEdit_email_pass_remove" class="userEditForm" placeholder="Password">
+                </form>
+                <button class="userInfo buttonStyled" onclick="removeEmailRequest('${emailData.email}')">Remove Email</button>
+                <p id="resultRemoveRequest"></p>
+            </div> 
+            ` : ``}
+        </div>
+    `
+
+    if (emailData.verified) {
+        createEditEmailSettingsView(emailData.emailSettings);
+    }
+
+    document.getElementById("emailPopup").innerHTML = ele;
+    
+    document.getElementById("userEdit_email").addEventListener("submit", function (e) { e.preventDefault()})
+    document.getElementById("userEdit_password").addEventListener("submit", function (e) { e.preventDefault()})
+    document.getElementById("userEdit_password_remove").addEventListener("submit", function (e) { e.preventDefault()})
+}
+
+async function createEditEmailSettingsView(emailSettings) {
+    const possibleOptions = await getPossibleEmailSettings();
+
+    var ele = `<form id="userEdit_emailSettings">`;
+
+    for (const option of possibleOptions) {
+        ele+=`
+        <hr class="rounded">
+            <div>
+                <input type="checkbox" id="emailSetting_${option.option}" name="interest" value="${option.option}"${emailSettings[option.option] ? ` checked ` : ""}/>
+                <label for="${option.option}">${option.name}<br>${option.description}</label>
+            </div>
+        `
+    }
+
+    ele+=`</form><button class="userInfo buttonStyled" onclick="editEmailSettings()">Submit Email Settings</button>`;
+    
+    document.getElementById("emailSettingOptions").innerHTML = ele;
+    document.getElementById("userEdit_emailSettings").addEventListener("submit", function (e) { e.preventDefault()})
+}
+
+async function editEmailSettings() {
+    // Get the form element
+    const form = document.getElementById("userEdit_emailSettings");
+
+    // Get all the checkboxes within the form
+    const checkboxes = form.querySelectorAll("input[type='checkbox']");
+
+    // Create an array to store the changed values
+    const changedItems = [];
+
+    // Loop through each checkbox and check if its checked state has changed
+    checkboxes.forEach((checkbox) => {
+        if (checkbox.checked !== checkbox.defaultChecked) {
+            changedItems.push(checkbox.value);
+        }
+    });
+
+    const reqBody = [];
+    
+    var i=0;
+    for (item of changedItems) {
+        //[ { option: "notifications", value: true }]
+        reqBody.push({ option: item, value: document.getElementById(`emailSetting_${item}`).checked })
+    }
+
+
+    const response = await fetch(`${apiURL}/emails/settings`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(reqBody),
+    });
+
+    
+    const res = await response.json();
+
+    if (debug) console.log(res);
+    if (!response.ok || res.error) return showModal("<p>res.msg</p>");
+
+    createEditEmailSettingsView(res);
+}
+
+async function getPossibleEmailSettings() {
+    const response = await fetch(`${apiURL}/emails/settings`, {
+        method: 'GET',
+        headers,
+    })
+
+    const res = await response.json();
+    if (debug) console.log(res);
+    return res;
+}
+
+async function removeEmailRequest(currentEmail) {
+    const password = document.getElementById("userEdit_email_pass_remove")?.value;
+    if (!password) return showModal("Please enter your password");
+
+    const response = await fetch(`${apiURL}/emails/remove`, {
+        method: 'DELETE',
+        headers,
+        body: JSON.stringify({
+            email: currentEmail,
+            password: password
+        })
+    });
+
+    const res = await response.json();
+    if (debug) console.log(res);
+    if (!response.ok) {
+        document.getElementById("resultRemoveRequest").innerHTML = `<p>Failed</p>`
+    } else {
+        document.getElementById("resultRemoveRequest").innerHTML = `<p>Success</p>`
+    }
+    return res;
+}
+
+async function updateEmail() {
+
+}
+
+// change password
+async function changePassword() {
+    // get old password
+    // get new password
+    // get new password confirm
+    // compare passwords
+    // submit api call
+}
+
+// change email
+async function editEmailRequest(hasCurrent) {
+    const email = document.getElementById("userEdit_email_text")?.value
+    const password = document.getElementById("userEdit_email_pass")?.value
+    if (!email) return showModal("<p>Please enter an email</p>");
+    if (!password) return showModal("<p>Please enter your password</p>");
+
+    const validated = await validateEmail(email)
+    if (validated.valid != true) return showModal("<div><p>Please enter a valid email</p></div>");
+
+    const updatedEmail = await addEmailAccount({email, password});
+    if (!updatedEmail) return showModal("<div><p>There was an error updating your email</p></div>");
+}
+
+async function validateEmail(email) {
+    const response = await fetch(`${apiURL}/emails/requests/validEmail/${email}`, {
+        method: 'GET',
+        headers
+    });
+
+    const res = await response.json();
+    if (debug) console.log(res)
+    return res
+}
+
+async function editEmailAccount() {
+    // change email
+}
+
+async function addEmailAccount({ email, password }) {
+    const response = await fetch(`${apiURL}/emails/set/`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({"email" : email, "password" : password})
+    });
+
+    const res = await response.json();
+    
+    if (!response.ok || res.error) {
+        document.getElementById("resultAddRequest").innerHTML = `<p>Failed</p>`
+        return false
+    } else {
+        document.getElementById("resultAddRequest").innerHTML = `<p>Success</p>`
+    }
+
+    return res;
 }
 
 async function subNotifi(subUser) {

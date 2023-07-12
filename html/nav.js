@@ -125,11 +125,18 @@ async function sendLoginRequest() {
 
 async function redirectPage() {
     if (pathArray[1]=="begin") return
+    if (pathArray[1]=="emails") return
+
     else if (pathArray[1]=="") window.location.href='/begin'
     else window.location.href=`/begin?redirect=${pathArray[1]}`
 }
 
 async function checkLogin() {
+    if (pathArray[1]=="emails") {
+        console.log("emails wow")
+        return false;
+    }
+
     const userStorageLogin = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
     if (!userStorageLogin) return redirectPage()
     else {
