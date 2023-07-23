@@ -1692,7 +1692,7 @@ async function addEmailAccount({ email, password }) {
 }
 
 async function subNotifi(subUser) {
-    const response = await fetch(`${apiURL}/post/subUser/${subUser}`, {
+    const response = await fetch(`${apiURL}/subscriptions/sub/${subUser}`, {
         method: 'POST',
         headers
     });
@@ -1704,7 +1704,7 @@ async function subNotifi(subUser) {
 }
 
 async function unsubUser(userID, username) {
-    const response = await fetch(`${apiURL}/delete/unsubUser/${userID}`, {
+    const response = await fetch(`${apiURL}/subscriptions/unsub/${userID}`, {
         method: 'DELETE',
         headers
     });
@@ -1775,7 +1775,7 @@ function hideSubscriptions() {
 async function showSubscriptions() {
     if (document.getElementById('subscriptionsAreShown')) return hideSubscriptions()
     document.getElementById('showSubscriptionsButton').innerHTML="Hide Subscriptions"
-    const response = await fetch(`${apiURL}/get/subscriptions/`, {
+    const response = await fetch(`${apiURL}/subscriptions/getAll`, {
         method: 'GET',
         headers
     });
