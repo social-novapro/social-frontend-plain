@@ -1132,6 +1132,11 @@ function settingsPage() {
                         <div id="signOutConfirm"></div>
                     </div>
                     <div class="userInfo">
+                        <p>Delete your account.</p>
+                        <button class="userInfo buttonStyled" onclick="deleteAccPage()">Delete Account</button>
+                        <div id="deleteAccConfirm"></div>
+                    </div>
+                    <div class="userInfo">
                         <p>Enable / Disable dev mode. This will allow you to see more information about the different elements of Interact.</p>
                         <button class="userInfo buttonStyled" onclick="devModePage()">Dev Mode Settings</button>
                         <div id="devModeConfirm"></div>
@@ -1164,6 +1169,11 @@ function removeSignOutConfirm() {
     return true;
 }
 
+function removeDeleteAccConfirm() {
+    document.getElementById("deleteAccConfirm").innerHTML = "";
+    return true;
+}
+
 function signOutPage() {
     const ele = `
         <div class="userInfo" id="signOutPage">
@@ -1178,6 +1188,40 @@ function signOutPage() {
 
     document.getElementById("signOutConfirm").innerHTML = ele;
     return true;
+}
+
+async function deleteAccPage() {
+    const ele = `
+        <div class="userInfo" id="deleteAccPage">
+            <p><b>Delete Account</b></p>
+            <p>Are you sure you want to delete your account?<br>This will send an email and you will need to confirm.</p>
+            <div class="signInDiv">
+                <p class="buttonStyled"onclick="requestDeleteAcc()">Delete</p>
+            </div>
+            <button class="userInfo buttonStyled" onclick="removeDeleteAccConfirm()">Cancel</button></div>
+            <p id="resultDeleteRequest"></p>
+        </div>
+    `;
+
+    document.getElementById("deleteAccConfirm").innerHTML = ele;
+}
+
+async function requestDeleteAcc() {
+    const response = await fetch(`${apiURL}/users/reqDelete/`, {
+        method: 'DELETE',
+        headers
+    });
+
+    const res = await response.json();
+    
+    if (!response.ok || res.error) {
+        document.getElementById("resultDeleteRequest").innerHTML = `<p>Failed${res.error ? res.error.msg : ""}</p>`
+        return false
+    } else {
+        document.getElementById("resultDeleteRequest").innerHTML = `<p>Success, check your email.</p>`
+    }
+
+    return res;
 }
 
 function devModePage() {
