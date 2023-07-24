@@ -1712,7 +1712,21 @@ async function unsubUser(userID, username) {
     if (debug) console.log(res)
     if (!response.ok || res.error) return document.getElementById(`subList_${userID}`).innerHTML=`error while unsubscribing`
 
-    document.getElementById(`subList_${userID}`).innerHTML=`Unsubscribed to <a onclick="userHtml('${userID}')">${username}</a>.`
+    document.getElementById(`subList_${userID}`).innerHTML=`Unsubscribed from <a onclick="userHtml('${userID}')">${username}</a>.`
+}
+async function unsubAll(userID) {
+    const response = await fetch(`${apiURL}/subscriptions/unsubAll/`, {
+        method: 'DELETE',
+        headers
+    });
+
+    try {
+        const res = await response.json();
+        if (!response.ok || res.error) return document.getElementById(`subscriptionsDiv`).innerHTML=`error while unsubscribing`
+        else return document.getElementById(`subscriptionsDiv`).innerHTML=`Unsubscribed from all users.`
+    } catch {
+        return document.getElementById(`subscriptionsDiv`).innerHTML=`error while unsubscribing`
+    }
 }
 
 function hideBookmarks() {
@@ -1812,6 +1826,7 @@ async function showSubscriptions() {
     
 
     var ele = `<hr class="rounded" id="subscriptionsAreShown"><p>${res.length} Subscriptions</p><hr class="rounded">`
+    ele = ele+`<div><a id="unsuballbutton" onclick="unsubAll()">unsub from all users.</a><hr class="rounded"></div>`;
 
     for (const sub of res.reverse()) {
         const userData = await getUserDataSimple(sub._id) 
