@@ -1196,26 +1196,36 @@ async function deleteAccPage() {
             <p><b>Delete Account</b></p>
             <p>Are you sure you want to delete your account?<br>This will send an email and you will need to confirm.</p>
             <div class="signInDiv">
+                <form id="userEdit_password_delete" class="contentMessage">
+                    <label for="userEdit_email_pass_delete"><p>Password</p></label>
+                    <input type="password" id="userEdit_email_pass_delete" class="userEditForm" placeholder="Password">
+                </form>
                 <p class="buttonStyled"onclick="requestDeleteAcc()">Delete</p>
             </div>
             <button class="userInfo buttonStyled" onclick="removeDeleteAccConfirm()">Cancel</button></div>
             <p id="resultDeleteRequest"></p>
         </div>
     `;
-
+    
     document.getElementById("deleteAccConfirm").innerHTML = ele;
+    document.getElementById("userEdit_password_delete").addEventListener("submit", function (e) { e.preventDefault()})
 }
 
 async function requestDeleteAcc() {
+    const password = document.getElementById("userEdit_email_pass_delete")?.value;
+
     const response = await fetch(`${apiURL}/users/reqDelete/`, {
         method: 'DELETE',
-        headers
+        headers,
+        body: JSON.stringify({
+            password: password
+        })
     });
 
     const res = await response.json();
-    
     if (!response.ok || res.error) {
-        document.getElementById("resultDeleteRequest").innerHTML = `<p>Failed${res.error ? res.error.msg : ""}</p>`
+        document.getElementById("resultDeleteRequest").innerHTML = `<p>Failed ${res.error ? res.msg : "unknown reason"}</p>`
+        showModal(`<p>Failed ${res.error ? res.msg : "unknown reason"}</p>`)
         return false
     } else {
         document.getElementById("resultDeleteRequest").innerHTML = `<p>Success, check your email.</p>`
