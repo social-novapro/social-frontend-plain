@@ -1746,7 +1746,7 @@ async function addEmailAccount({ email, password }) {
 }
 
 async function subNotifi(subUser) {
-    const response = await fetch(`${apiURL}/subscriptions/sub/${subUser}`, {
+    const response = await fetch(`${apiURL}/notifications/sub/${subUser}`, {
         method: 'POST',
         headers
     });
@@ -1758,7 +1758,7 @@ async function subNotifi(subUser) {
 }
 
 async function unsubUser(userID, username) {
-    const response = await fetch(`${apiURL}/subscriptions/unsub/${userID}`, {
+    const response = await fetch(`${apiURL}/notifications/unsub/${userID}`, {
         method: 'DELETE',
         headers
     });
@@ -1769,7 +1769,7 @@ async function unsubUser(userID, username) {
     document.getElementById(`subList_${userID}`).innerHTML=`Unsubscribed from <a onclick="userHtml('${userID}')">${username}</a>.`
 }
 async function unsubAll(userID) {
-    const response = await fetch(`${apiURL}/subscriptions/unsubAll/`, {
+    const response = await fetch(`${apiURL}/notifications/unsubAll/`, {
         method: 'DELETE',
         headers
     });
@@ -1843,7 +1843,8 @@ function hideSubscriptions() {
 async function showSubscriptions() {
     if (document.getElementById('subscriptionsAreShown')) return hideSubscriptions()
     document.getElementById('showSubscriptionsButton').innerHTML="Hide Subscriptions"
-    const response = await fetch(`${apiURL}/subscriptions/getAll`, {
+    
+    const response = await fetch(`${apiURL}/notifications/subscriptions/`, {
         method: 'GET',
         headers
     });
@@ -1909,7 +1910,7 @@ async function showNotifications() {
     if (document.getElementById('notificationsAreShown')) return hideNotifications()
     document.getElementById('showNotificationsButton').innerHTML="Hide Notifcations"
 
-    const response = await fetch(`${apiURL}/get/notifications/`, {
+    const response = await fetch(`${apiURL}/notifications/getList`, {
         method: 'GET',
         headers
     });
@@ -1944,7 +1945,7 @@ async function showNotifications() {
                 const userData = await getUserDataSimple(notifi.userID) 
                 ele+=`
                     <div class="buttonStyled" id="notification_${notifi._id}">
-                        <a onclick="showPost('${notifi.postID}')"><b>${userData.username}</b> has posted! (click to see)</a>
+                        <a onclick="showPost('${notifi.postID}')"><b>${userData?.username ? userData.username : "Unknown User" }</b> has posted! (click to see)</a>
                         <p onclick="dismissNotification('${notifi._id}')">Dismiss Notification.</p>
                     </div>
                 `
@@ -1953,7 +1954,7 @@ async function showNotifications() {
                 const userData2 = await getUserDataSimple(notifi.userID)
                 ele+=`
                     <div class="buttonStyled" id="notification_${notifi._id}">
-                        <a onclick="showPost('${notifi.postID}')"><b>${userData2.username}</b> quoted your post!(click to see)</a>
+                        <a onclick="showPost('${notifi.postID}')"><b>${userData2?.username ? userData2.username : "Unknown User" }</b> quoted your post!(click to see)</a>
                         <p onclick="dismissNotification('${notifi._id}')">Dismiss Notification.</p> 
                     </div>
                 `
@@ -1965,7 +1966,7 @@ async function showNotifications() {
     document.getElementById("notificationsDiv").innerHTML=ele
 }
 async function dismissNotification(notificationID) {
-    const response = await fetch(`${apiURL}/delete/dismissNotification/${notificationID}`, {
+    const response = await fetch(`${apiURL}/notifications/dismiss/${notificationID}`, {
         method: 'DELETE',
         headers
     });
@@ -2015,7 +2016,7 @@ async function getUserDataSimple(userID) {
     const res = await response.json();
     if (debug) console.log(res)
     if (!response.ok) return 
-    else  return res
+    else return res
 }
 
 async function hideDevOptions() {
