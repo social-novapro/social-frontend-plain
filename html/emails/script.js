@@ -180,7 +180,7 @@ async function deleteAccountRequest(delAccVerID) {
     
     if (response.status == 200) {
         document.getElementById('verResult').innerHTML = `
-            <p><br>Removed Email</p>
+            <p><br>Account Deleted</p>
             <p>Completed</p>
         `;
     } else {
