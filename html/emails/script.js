@@ -44,6 +44,7 @@ async function checkURLParams() {
 
     const ifReqVer = params.has('verification');
     const ifReqRemoveEmail = params.has("removeEmail");
+    const ifReqDelAcc = params.has("deleteAccount");
 
     if (ifReqVer) {
         paramsInfo.paramsFound = true
@@ -53,6 +54,10 @@ async function checkURLParams() {
         paramsInfo.paramsFound = true
         paramsInfo.removeEmail = params.get('removeEmail')
         setupRemoveEmailRequest(paramsInfo.removeEmail)
+    } else if (ifReqDelAcc) {
+        paramsInfo.paramsFound = true;
+        paramsInfo.deleteAccount = params.get('deleteAccount');
+        setupDelAccRequest(paramsInfo.deleteAccount);
     }
 
     return paramsInfo
@@ -121,6 +126,80 @@ async function removeEmailRequest(removeVerID) {
     
     const response = await fetch(url, {
         method: 'GET',
+        headers: headers
+    })
+
+    const data = await response.json()
+    
+    if (response.status == 200) {
+        document.getElementById('verResult').innerHTML = `
+            <p><br>Removed Email</p>
+            <p>Completed</p>
+        `;
+    } else {
+        document.getElementById('verResult').innerHTML = `
+            <p><br>Removal Failed</p>
+            ${data.msg ? `<p>${data.msg}</p>` : '' }
+            <p>Try again later, or could have already completed.</p>
+        `;
+    }
+}
+
+async function setupDelAccRequest(delAccVerID) {
+    document.getElementById('mainFeed').innerHTML = `
+        <div class="userInfo">
+            <p><b>Delete Account Request</b></p>
+            <p>Delete Account VerID: ${delAccVerID}</p>
+            <button class="userInfo buttonStyled" onclick="deleteAccountRequest('${delAccVerID}')">Accept Deletion</button>
+            <button class="userInfo buttonStyled" onclick="cancelAccountRequest('${delAccVerID}')">Cancel Request</button>
+
+            <div id="verResult"></div>
+            <button class="userInfo buttonStyled" onclick="redirectHome()">Go Home</button>
+            <p> <br/>Press accept to add email to account, or go back home.</p> 
+        </div>
+    `;
+}
+
+// API - accepts the delete account request
+async function deleteAccountRequest(delAccVerID) {
+    document.getElementById('verResult').innerHTML = "<p>loading...</p>";
+
+    const url = `${apiURL}/users/public/confirmDelete/${delAccVerID}`
+    
+    const response = await fetch(url, {
+        method: 'DELETE',
+        headers: headers
+    })
+
+    var data
+    try {
+        data = await response.json()
+    } catch {
+        console.log("failed")
+    }
+    
+    if (response.status == 200) {
+        document.getElementById('verResult').innerHTML = `
+            <p><br>Account Deleted</p>
+            <p>Completed</p>
+        `;
+    } else {
+        document.getElementById('verResult').innerHTML = `
+            <p><br>Removal Failed</p>
+            ${data?.msg ? `<p>${data.msg}</p>` : '' }
+            <p>Try again later, or could have already completed.</p>
+        `;
+    }
+}
+
+// API - cancels the delete account request
+async function cancelAccountRequest(delAccVerID) {
+    document.getElementById('verResult').innerHTML = "<p>loading...</p>";
+
+    const url = `${apiURL}/users/public/cancelDelete/${delAccVerID}`
+    
+    const response = await fetch(url, {
+        method: 'DELETE',
         headers: headers
     })
 

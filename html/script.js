@@ -638,7 +638,7 @@ async function removeVote(pollID, optionID) {
 
     const res = await response.json();
     if (debug) console.log(res)
-    if (res.error) return alert(`Error: ${res.error.msg}`);
+    if (res.error) return alert(`Error: ${res.msg}`);
     
     removeColorOption(pollID, optionID)
     
@@ -669,7 +669,7 @@ async function voteOption(pollID, optionID) {
 
     const res = await response.json();
     if (debug) console.log(res)
-    if (res.error) return alert(`Error: ${res.error.msg}`);
+    if (res.error) return alert(`Error: ${res.msg}`);
     
     if (res.oldVote) removeColorOption(res.oldVote.pollID, res.oldVote.pollOptionID)
     colorizeOption(pollID, optionID)
@@ -1132,6 +1132,11 @@ function settingsPage() {
                         <div id="signOutConfirm"></div>
                     </div>
                     <div class="userInfo">
+                        <p>Delete your account.</p>
+                        <button class="userInfo buttonStyled" onclick="deleteAccPage()">Delete Account</button>
+                        <div id="deleteAccConfirm"></div>
+                    </div>
+                    <div class="userInfo">
                         <p>Enable / Disable dev mode. This will allow you to see more information about the different elements of Interact.</p>
                         <button class="userInfo buttonStyled" onclick="devModePage()">Dev Mode Settings</button>
                         <div id="devModeConfirm"></div>
@@ -1164,6 +1169,11 @@ function removeSignOutConfirm() {
     return true;
 }
 
+function removeDeleteAccConfirm() {
+    document.getElementById("deleteAccConfirm").innerHTML = "";
+    return true;
+}
+
 function signOutPage() {
     const ele = `
         <div class="userInfo" id="signOutPage">
@@ -1178,6 +1188,50 @@ function signOutPage() {
 
     document.getElementById("signOutConfirm").innerHTML = ele;
     return true;
+}
+
+async function deleteAccPage() {
+    const ele = `
+        <div class="userInfo" id="deleteAccPage">
+            <p><b>Delete Account</b></p>
+            <p>Are you sure you want to delete your account?<br>This will send an email and you will need to confirm.</p>
+            <div class="signInDiv">
+                <form id="userEdit_password_delete" class="contentMessage">
+                    <label for="userEdit_email_pass_delete"><p>Password</p></label>
+                    <input type="password" id="userEdit_email_pass_delete" class="userEditForm" placeholder="Password">
+                </form>
+                <p class="buttonStyled"onclick="requestDeleteAcc()">Delete</p>
+            </div>
+            <button class="userInfo buttonStyled" onclick="removeDeleteAccConfirm()">Cancel</button></div>
+            <p id="resultDeleteRequest"></p>
+        </div>
+    `;
+    
+    document.getElementById("deleteAccConfirm").innerHTML = ele;
+    document.getElementById("userEdit_password_delete").addEventListener("submit", function (e) { e.preventDefault()})
+}
+
+async function requestDeleteAcc() {
+    const password = document.getElementById("userEdit_email_pass_delete")?.value;
+
+    const response = await fetch(`${apiURL}/users/reqDelete/`, {
+        method: 'DELETE',
+        headers,
+        body: JSON.stringify({
+            password: password
+        })
+    });
+
+    const res = await response.json();
+    if (!response.ok || res.error) {
+        document.getElementById("resultDeleteRequest").innerHTML = `<p>Failed ${res.error ? res.msg : "unknown reason"}</p>`
+        showModal(`<p>Failed ${res.error ? res.msg : "unknown reason"}</p>`)
+        return false
+    } else {
+        document.getElementById("resultDeleteRequest").innerHTML = `<p>Success, check your email.</p>`
+    }
+
+    return res;
 }
 
 function devModePage() {
@@ -1692,7 +1746,7 @@ async function addEmailAccount({ email, password }) {
 }
 
 async function subNotifi(subUser) {
-    const response = await fetch(`${apiURL}/post/subUser/${subUser}`, {
+    const response = await fetch(`${apiURL}/notifications/sub/${subUser}`, {
         method: 'POST',
         headers
     });
@@ -1704,7 +1758,7 @@ async function subNotifi(subUser) {
 }
 
 async function unsubUser(userID, username) {
-    const response = await fetch(`${apiURL}/delete/unsubUser/${userID}`, {
+    const response = await fetch(`${apiURL}/notifications/unsub/${userID}`, {
         method: 'DELETE',
         headers
     });
@@ -1712,7 +1766,22 @@ async function unsubUser(userID, username) {
     if (debug) console.log(res)
     if (!response.ok || res.error) return document.getElementById(`subList_${userID}`).innerHTML=`error while unsubscribing`
 
-    document.getElementById(`subList_${userID}`).innerHTML=`Unsubscribed to <a onclick="userHtml('${userID}')">${username}</a>.`
+    document.getElementById(`subList_${userID}`).innerHTML=`Unsubscribed from <a onclick="userHtml('${userID}')">${username}</a>.`
+}
+
+async function unsubAll(userID) {
+    const response = await fetch(`${apiURL}/notifications/unsubAll/`, {
+        method: 'DELETE',
+        headers
+    });
+
+    try {
+        const res = await response.json();
+        if (!response.ok || res.error) return document.getElementById(`subscriptionsDiv`).innerHTML=`error while unsubscribing`
+        else return document.getElementById(`subscriptionsDiv`).innerHTML=`Unsubscribed from all users.`
+    } catch {
+        return document.getElementById(`subscriptionsDiv`).innerHTML=`error while unsubscribing`
+    }
 }
 
 function hideBookmarks() {
@@ -1775,7 +1844,8 @@ function hideSubscriptions() {
 async function showSubscriptions() {
     if (document.getElementById('subscriptionsAreShown')) return hideSubscriptions()
     document.getElementById('showSubscriptionsButton').innerHTML="Hide Subscriptions"
-    const response = await fetch(`${apiURL}/get/subscriptions/`, {
+    
+    const response = await fetch(`${apiURL}/notifications/subscriptions/`, {
         method: 'GET',
         headers
     });
@@ -1812,6 +1882,7 @@ async function showSubscriptions() {
     
 
     var ele = `<hr class="rounded" id="subscriptionsAreShown"><p>${res.length} Subscriptions</p><hr class="rounded">`
+    ele = ele+`<div><a id="unsuballbutton" onclick="unsubAll()">unsub from all users.</a><hr class="rounded"></div>`;
 
     for (const sub of res.reverse()) {
         const userData = await getUserDataSimple(sub._id) 
@@ -1840,7 +1911,7 @@ async function showNotifications() {
     if (document.getElementById('notificationsAreShown')) return hideNotifications()
     document.getElementById('showNotificationsButton').innerHTML="Hide Notifcations"
 
-    const response = await fetch(`${apiURL}/get/notifications/`, {
+    const response = await fetch(`${apiURL}/notifications/getList`, {
         method: 'GET',
         headers
     });
@@ -1852,6 +1923,8 @@ async function showNotifications() {
     
 
     var ele = `<hr class="rounded" id="notificationsAreShown"><p id="amount_notifications">${res.amountFound} Notifications</p><hr class="rounded">`
+    ele = ele+`<div><a id="dismissAll" onclick="dismissAll()">dismiss all notifications.</a><hr class="rounded"></div>`;
+    
     /*
         type: String (one)
             1: someone followed
@@ -1869,22 +1942,28 @@ async function showNotifications() {
 
     // console.log(res)
 
+    var foundUsers = {};
+
     for (const notifi of res.notifications.reverse()) {
         switch (notifi.type) {
             case 5:
-                const userData = await getUserDataSimple(notifi.userID) 
+                if (!foundUsers[notifi.userID]) foundUsers[notifi.userID] = await getUserDataSimple(notifi.userID);
+                const userData = foundUsers[notifi.userID];
+
                 ele+=`
                     <div class="buttonStyled" id="notification_${notifi._id}">
-                        <a onclick="showPost('${notifi.postID}')"><b>${userData.username}</b> has posted! (click to see)</a>
+                        <a onclick="showPost('${notifi.postID}')"><b>${userData?.username ? userData.username : "Unknown User" }</b> has posted! (click to see)</a>
                         <p onclick="dismissNotification('${notifi._id}')">Dismiss Notification.</p>
                     </div>
                 `
                 break;
             case 7: 
-                const userData2 = await getUserDataSimple(notifi.userID)
+                if (!foundUsers[notifi.userID])  foundUsers[notifi.userID] = await getUserDataSimple(notifi.userID);
+                const userData2 = foundUsers[notifi.userID];
+
                 ele+=`
                     <div class="buttonStyled" id="notification_${notifi._id}">
-                        <a onclick="showPost('${notifi.postID}')"><b>${userData2.username}</b> quoted your post!(click to see)</a>
+                        <a onclick="showPost('${notifi.postID}')"><b>${userData2?.username ? userData2.username : "Unknown User" }</b> quoted your post!(click to see)</a>
                         <p onclick="dismissNotification('${notifi._id}')">Dismiss Notification.</p> 
                     </div>
                 `
@@ -1895,8 +1974,9 @@ async function showNotifications() {
    
     document.getElementById("notificationsDiv").innerHTML=ele
 }
+
 async function dismissNotification(notificationID) {
-    const response = await fetch(`${apiURL}/delete/dismissNotification/${notificationID}`, {
+    const response = await fetch(`${apiURL}/notifications/dismiss/${notificationID}`, {
         method: 'DELETE',
         headers
     });
@@ -1915,6 +1995,21 @@ async function dismissNotification(notificationID) {
     document.getElementById("amount_notifications").innerHTML=`${newInput} Notifications` 
 };
 
+async function dismissAll() {
+    const response = await fetch(`${apiURL}/notifications/dismissAll/`, {
+        method: 'DELETE',
+        headers
+    });
+
+    try {
+        const res = await response.json();
+        if (!response.ok || res.error) return document.getElementById(`notificationsDiv`).innerHTML=`error while dismissing`
+        else return document.getElementById(`notificationsDiv`).innerHTML=`Dismissed all notifications.`
+    } catch {
+        return document.getElementById(`notificationsDiv`).innerHTML=`error while dismissing`
+    }
+}
+
 async function showPost(postID) {
     const response = await fetch(`${apiURL}/get/post/${postID}`, {
         method: 'GET',
@@ -1923,7 +2018,7 @@ async function showPost(postID) {
 
     const res = await response.json();
     if (debug) console.log(res)
-    if (!response.ok) return 
+    if (!response.ok) return showModal("<p>Post was not found</p>")
 
     const user = await getUserDataSimple(res.userID)
     if (debug) console.log(user)
@@ -1946,7 +2041,7 @@ async function getUserDataSimple(userID) {
     const res = await response.json();
     if (debug) console.log(res)
     if (!response.ok) return 
-    else  return res
+    else return res
 }
 
 async function hideDevOptions() {
@@ -3048,7 +3143,7 @@ async function publishPoll() {
 
     if (!response.ok) {
         if (pollData.msg) showModal(`<h1>Something went wrong.</h1> <p>${pollData.code}\n${pollData.msg}</p>`)
-        else if (pollData.error.msg) showModal(`<h1>Something went wrong.</h1> <p>${pollData.error.code}\n${pollData.error.msg}</p>`)
+        else if (pollData.msg) showModal(`<h1>Something went wrong.</h1> <p>${pollData.error.code}\n${pollData.msg}</p>`)
         else showModal(`<h1>Something went wrong.</h1> <p>${JSON.stringify(pollData)}</p>`)
         return null;
     }
