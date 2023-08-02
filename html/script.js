@@ -638,7 +638,7 @@ async function removeVote(pollID, optionID) {
 
     const res = await response.json();
     if (debug) console.log(res)
-    if (res.error) return alert(`Error: ${res.error.msg}`);
+    if (res.error) return alert(`Error: ${res.msg}`);
     
     removeColorOption(pollID, optionID)
     
@@ -669,7 +669,7 @@ async function voteOption(pollID, optionID) {
 
     const res = await response.json();
     if (debug) console.log(res)
-    if (res.error) return alert(`Error: ${res.error.msg}`);
+    if (res.error) return alert(`Error: ${res.msg}`);
     
     if (res.oldVote) removeColorOption(res.oldVote.pollID, res.oldVote.pollOptionID)
     colorizeOption(pollID, optionID)
@@ -1768,6 +1768,7 @@ async function unsubUser(userID, username) {
 
     document.getElementById(`subList_${userID}`).innerHTML=`Unsubscribed from <a onclick="userHtml('${userID}')">${username}</a>.`
 }
+
 async function unsubAll(userID) {
     const response = await fetch(`${apiURL}/notifications/unsubAll/`, {
         method: 'DELETE',
@@ -1922,6 +1923,8 @@ async function showNotifications() {
     
 
     var ele = `<hr class="rounded" id="notificationsAreShown"><p id="amount_notifications">${res.amountFound} Notifications</p><hr class="rounded">`
+    ele = ele+`<div><a id="dismissAll" onclick="dismissAll()">dismiss all notifications.</a><hr class="rounded"></div>`;
+    
     /*
         type: String (one)
             1: someone followed
@@ -1939,10 +1942,14 @@ async function showNotifications() {
 
     // console.log(res)
 
+    var foundUsers = {};
+
     for (const notifi of res.notifications.reverse()) {
         switch (notifi.type) {
             case 5:
-                const userData = await getUserDataSimple(notifi.userID) 
+                if (!foundUsers[notifi.userID]) foundUsers[notifi.userID] = await getUserDataSimple(notifi.userID);
+                const userData = foundUsers[notifi.userID];
+
                 ele+=`
                     <div class="buttonStyled" id="notification_${notifi._id}">
                         <a onclick="showPost('${notifi.postID}')"><b>${userData?.username ? userData.username : "Unknown User" }</b> has posted! (click to see)</a>
@@ -1951,7 +1958,9 @@ async function showNotifications() {
                 `
                 break;
             case 7: 
-                const userData2 = await getUserDataSimple(notifi.userID)
+                if (!foundUsers[notifi.userID])  foundUsers[notifi.userID] = await getUserDataSimple(notifi.userID);
+                const userData2 = foundUsers[notifi.userID];
+
                 ele+=`
                     <div class="buttonStyled" id="notification_${notifi._id}">
                         <a onclick="showPost('${notifi.postID}')"><b>${userData2?.username ? userData2.username : "Unknown User" }</b> quoted your post!(click to see)</a>
@@ -1965,6 +1974,7 @@ async function showNotifications() {
    
     document.getElementById("notificationsDiv").innerHTML=ele
 }
+
 async function dismissNotification(notificationID) {
     const response = await fetch(`${apiURL}/notifications/dismiss/${notificationID}`, {
         method: 'DELETE',
@@ -1985,6 +1995,21 @@ async function dismissNotification(notificationID) {
     document.getElementById("amount_notifications").innerHTML=`${newInput} Notifications` 
 };
 
+async function dismissAll() {
+    const response = await fetch(`${apiURL}/notifications/dismissAll/`, {
+        method: 'DELETE',
+        headers
+    });
+
+    try {
+        const res = await response.json();
+        if (!response.ok || res.error) return document.getElementById(`notificationsDiv`).innerHTML=`error while dismissing`
+        else return document.getElementById(`notificationsDiv`).innerHTML=`Dismissed all notifications.`
+    } catch {
+        return document.getElementById(`notificationsDiv`).innerHTML=`error while dismissing`
+    }
+}
+
 async function showPost(postID) {
     const response = await fetch(`${apiURL}/get/post/${postID}`, {
         method: 'GET',
@@ -1993,7 +2018,7 @@ async function showPost(postID) {
 
     const res = await response.json();
     if (debug) console.log(res)
-    if (!response.ok) return 
+    if (!response.ok) return showModal("<p>Post was not found</p>")
 
     const user = await getUserDataSimple(res.userID)
     if (debug) console.log(user)
@@ -3118,7 +3143,7 @@ async function publishPoll() {
 
     if (!response.ok) {
         if (pollData.msg) showModal(`<h1>Something went wrong.</h1> <p>${pollData.code}\n${pollData.msg}</p>`)
-        else if (pollData.error.msg) showModal(`<h1>Something went wrong.</h1> <p>${pollData.error.code}\n${pollData.error.msg}</p>`)
+        else if (pollData.msg) showModal(`<h1>Something went wrong.</h1> <p>${pollData.error.code}\n${pollData.msg}</p>`)
         else showModal(`<h1>Something went wrong.</h1> <p>${JSON.stringify(pollData)}</p>`)
         return null;
     }
