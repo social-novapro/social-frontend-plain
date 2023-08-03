@@ -69,7 +69,7 @@ function newNavigation() {
             <li class="nav-item pointerCursor" id="navSection1">
                 <div id="page1Nav" class="nav-link" onclick="switchNav(1)">
                     <span class="material-symbols-outlined nav-button";>chat</span>
-                    <span class="link-text pointerCursor" id="page1">${pathArray[1] != "" ? `Feed` : `Live Chat`}</span>
+                    <span class="link-text pointerCursor" id="page1">${pathArray[1] != "" ? `Live Chat` : `Live Chat`}</span>
                 </div>
             </li>
             ${pathArray[1] != "" ? "" : `
