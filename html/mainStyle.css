@@ -91,12 +91,16 @@ body {
     border-bottom: 2px solid var(--main-border-color);
 }
 .possibleFeeds {
-    position: absolute;
+    position: relative;
     text-align: center;
     z-index: 20px;
-    padding: 15px;
+    /*padding: 20px;*/
+    padding-top: 1rem;
+    height: 3rem;
+    font-size: 1rem;
+    padding-bottom: 1rem;
     background-color: rgb(44, 44, 46, 0.95);
-    width: 100%;
+    /*width: 100%;*/
     border-bottom: 2px solid var(--main-border-color);
 }
 .possibleFeeds .buttonStyled {
@@ -105,8 +109,11 @@ body {
     display: block;
     text-align: center;
     padding: 14px 16px;
+    height: 1rem;
+    /*padding-top: 20px;*/
     text-decoration: none;  
 }
+
 .possibleFeeds .buttonStyled:hover {
    color: var(--hover-border-color);
 }
@@ -118,6 +125,9 @@ p {
     cursor: pointer;
     color: var(--main-p-color);
     user-select: none;
+}
+.activeFeed{
+    color: var(--hover-border-color);
 }
 .spacer_2px {
     padding: 2px;
@@ -267,11 +277,14 @@ p {
         margin-left: 0rem;
     }
     .main-header {
-        margin-left: 2rem;
+        margin-left: 0rem;
     }
     .possibleFeeds {
-        margin-left: 5rem;
+        margin-left: 0rem;
     }
+    /*.possibleFeeds .buttonStyled:first-child {
+        margin-left: 5rem;
+    }*/
     .main-content-expanded .main-header {
         margin-left: 0rem;
     }
@@ -323,11 +336,8 @@ p {
 .activeNav {
     color:red;
 }
-.mainArea {
-    padding-top: 20px;
-}
-.mainArea.activeFeeds {
-    padding-top: 90px;
+.top-page-padding {
+    padding-top: 30px;
 }
 .modalContainer {
     background-color: rgba(0,0,0,0.3);

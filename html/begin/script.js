@@ -69,8 +69,8 @@ async function loginSplashScreen() {
     document.getElementById("mainFeed").innerHTML = `hello`
     document.getElementById("mainFeed").innerHTML = `
         <div class="publicPost signInDiv">
-            <h1><a onclick="changeYour()" id="badYourGrammer">Your</a> not signed in!</h1>
-            <p>Please Sign into Interact to Proceed!</p>
+            <h1><a onclick="changeYour()" id="badYourGrammer">You're</a> not signed in</h1>
+            <p>Please sign into Interact to Proceed!</p>
             <button class="buttonStyled" onclick="loginPage()">Log into Your Account</button>
             <button class="buttonStyled" onclick="createUserPage()">Create an Account</button>
         </div>
@@ -80,8 +80,9 @@ async function loginSplashScreen() {
 
 async function changeYour() {
     var badYourGrammer = document.getElementById('badYourGrammer');
-    if (badYourGrammer.innerHTML == 'Your') badYourGrammer.innerHTML = 'You are';
-    else badYourGrammer.innerHTML = 'Your';
+    if (badYourGrammer.innerHTML == 'You\'re') badYourGrammer.innerHTML = 'Your';
+    else if (badYourGrammer.innerHTML == 'Your') badYourGrammer.innerHTML = 'You are';
+    else badYourGrammer.innerHTML = 'You\'re';
 }
 
 // USER LOGIN PAGE 

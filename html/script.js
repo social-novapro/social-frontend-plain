@@ -567,7 +567,6 @@ async function createPollElement(postID, pollID) {
 }
 
 function pollElement(postID, pollID, pollData, voteData) {
-    if (debug) console.log(pollData);
     if (!pollData || !pollData.pollOptions) return;
     var totalVotes = 0;
 
@@ -1127,6 +1126,11 @@ function settingsPage() {
                         <button class="userInfo buttonStyled" id="showBookmarksButton" onclick="showBookmarks()">Show Bookmarks</button>
                         <div id="bookmarksdiv"></div>
                     </div>
+                    <div id="feedSettings" class="userInfo">
+                        <p><b>Feed</b></p>
+                        <button class="userInfo buttonStyled" onclick="changeFeedSettings()">Feed Settings</p>
+                    </div>
+                    <div id="feedPopup"></div>
                     <div id="emailSettings" class="userInfo">
                         <p><b>Email</b></p>
                         <button class="userInfo buttonStyled" onclick="changeEmailPage()">Email Settings</p>
@@ -1528,6 +1532,66 @@ async function fetchClientEmailData() {
     return res
 }
 
+async function changeFeedSettings() {
+    const allowed = await getPossibleFeeds();
+    if (!allowed) return alert("Error getting feeds")
+    const getPref = await getPrefAPI()
+    const currentDefaultOption = allowed.find(allow => allow.name === getPref.preferredFeed);
+    const selectedDate = getTimeSince(getPref.timestamp)
+    
+    var ele = `
+        <div class="userInfo">
+            <p><b>Change your default feed</p></b>
+            <hr class="rounded">
+            <p>Current default feed is:<br><b>${currentDefaultOption.niceName}</b> selected ${selectedDate.sinceOrUntil == "current" ? "just changed" : `${selectedDate.sinceOrUntil == "since" ? selectedDate.value + " ago" : selectedDate.value}`}
+    `;
+    for (const feed of allowed) {
+        if (!feed.speical) ele += `
+        <div class="userInfo">
+            <p>${feed.description}</p>
+            <button class="userInfo buttonStyled ${getPref.preferredFeed==feed.name ? 'activeFeed' : ''}" onclick="changePref('${feed.name}')">${feed.niceName}</button>
+        </div>
+        `
+    }
+
+    ele +="</div>"
+    document.getElementById("feedPopup").innerHTML = ele;
+}
+
+async function changePref(feedName) {
+    const changed = changePrefAPI(feedName);
+    if (!changed || changed.error) alert(`An error occured while changing${changed.error? `: ${changed.msg}`: ""}`);
+    await changeFeedSettings();
+}
+
+async function getPrefAPI() {
+    try {
+        const response = await fetch(`${apiURL}/feeds/preference`, {
+            method: "GET",
+            headers
+        })
+        var data = await response.json();
+        if (debug) console.log(data)
+        return data; 
+    } catch {
+        return false;
+    }
+}
+async function changePrefAPI(feedName) {
+    var data;
+    try {
+        const response = await fetch(`${apiURL}/feeds/preference`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ setPref: feedName })
+        })
+        var data = await response.json();
+        if (debug) console.log(data)
+        return data; 
+    } catch {
+        return data;
+    }
+}
 async function changeEmailPage() {
     const emailData = await fetchClientEmailData();
 
@@ -2489,18 +2553,19 @@ async function getPossibleFeeds() {
     }
 }
 
-async function changeFeedHeader() {
+async function changeFeedHeader(current) {
     const possibleFeeds = await getPossibleFeeds();
     if (!possibleFeeds) return console.log("error getting possible feeds");
-    else console.log(possibleFeeds);
-    var ele = '<div class="possibleFeeds">';
+
+    var ele = '<div class="">';
     for (const feed of possibleFeeds) {
-        ele += `<button class="buttonStyled" onclick="getFeed('${feed.name}')">${feed.niceName}</button>`
+        ele += `<button class="buttonStyled ${current==feed.name ? 'activeFeed' : ''}" onclick="getFeed('${feed.name}')">${feed.niceName}</button>`
     }
     ele += '</div>'
 
     document.getElementById("possibleFeeds").innerHTML = ele;
-    document.getElementById("mainarea").classList.add("activeFeeds");
+    document.getElementById("possibleFeeds").classList.add("possibleFeeds")
+    document.getElementById("topPadding").classList.add("activeFeeds");
 }
 
 async function changeFeed(feedType) {
@@ -2528,7 +2593,7 @@ async function getFeed(feedType) {
 
     if (params.paramsFound == false) {
         buildView(data)
-        await changeFeedHeader();
+        await changeFeedHeader(feedToUse);
         return;
     }
     else return
@@ -2899,7 +2964,13 @@ async function searchResult(input) {
             `
         }).join(" ")}
         ${data.postsFound.reverse().map(function(postArray) {
-            return postElementCreate({post: postArray.postData, user: postArray.userData})
+            return postElementCreate({
+                post: postArray.postData,
+                user: postArray.userData, 
+                pollData: postArray.type?.poll=="included" ? postArray.pollData : null,
+                voteData: postArray.type?.vote=="included" ? postArray.voteData : null,
+            })
+            //return postElementCreate({post: postArray.postData, user: postArray.userData})
         }).join(" ")}
     `
 
