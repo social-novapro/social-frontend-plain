@@ -69,6 +69,7 @@ var currentPage
 
 var searching
 var currentFeed 
+var currentFeedType
 
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 // let loginUserToken = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
@@ -182,7 +183,8 @@ async function checkURLParams() {
     return paramsInfo
 }
 
-function postElementCreate({ post, user, type, hideParent, hideReplies }) {
+function postElementCreate({ post, user, type, hideParent, hideReplies, pollData, voteData }) {
+    if (!post) return;
     var timesince
     if (post.timePosted) timesince = checkDate(post.timePosted)
     const imageContent = checkForImage(post.content)
@@ -235,7 +237,13 @@ function postElementCreate({ post, user, type, hideParent, hideReplies }) {
                         ${imageContent.image ? `<div>${imageContent.attachments.map(function(attachment) {return `${attachment}`}).join(" ")}</div>`:''}
                     </div>
                 </div>
-                ${post.pollID ? `<div class="poll_option" id="pollContainer_${post._id}"></div>` : `` }
+                ${post.pollID ? `
+                    <div class="poll_option" id="pollContainer_${post._id}">
+                    ${pollData ? `
+                        ${pollElement(post._id, post.pollID, pollData, voteData)}
+                    `: ``}
+                    </div>
+                ` : `` }
                 <div class="debug">
                     <p>postID: ${post._id}</p>
                     <p>userID: ${post.userID}</p>
@@ -271,7 +279,7 @@ function postElementCreate({ post, user, type, hideParent, hideReplies }) {
         </div>
     `
 
-    if (post.pollID) {
+    if (post.pollID && !pollData) {
         createPollElement(post._id, post.pollID)
         .then(function(ele) { 
             if (ele) {
@@ -551,41 +559,44 @@ async function createPollElement(postID, pollID) {
         headers,
     })
     .then(function (pollData) {
-        if (debug) console.log(pollData);
-        if (!pollData || !pollData.pollOptions) return false;
-        var totalVotes = 0;
-
-        for (const option of pollData.pollOptions) {
-            if (option?.amountVoted) totalVotes+=option.amountVoted;
-        }
-
-        const timesinceData = getTimeSince(pollData.timestampEnding);
-
-        return `
-            <div id="pollElement_${postID}" class="pollElement">
-                <p id="pollQuestion_${postID}">${pollData.pollName}</p>
-                <div id="pollOptions_${postID}">
-                    ${pollData.pollOptions.map((option, index) => { 
-                        return `
-                            <div id="pollOption_${postID}_${option._id}" class="pollOption">
-                                <div id="poll_option_${pollData._id}_${option._id}" class="poll_option" onclick="voteOption('${pollID}', '${option._id}')">
-                                    <p>${option.optionTitle}</p>
-                                    <div class="debug">
-                                        <p>optionID: ${option._id}</p>
-                                        <p>indexID: ${option.currentIndexID || "unknown"}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-                <p>Total votes: ${totalVotes} | ${timesinceData.sinceOrUntil=="current" ? "ended just now" : `${timesinceData.sinceOrUntil=="since" ? ` ended ${timesinceData.value} ago` : `${timesinceData.value} time left`}`} </p>
-            </div>
-        `;
+        return pollElement(postID, pollID, pollData);
     })
     .catch(function (err) {
         console.log(err);
     });
+}
+
+function pollElement(postID, pollID, pollData, voteData) {
+    if (!pollData || !pollData.pollOptions) return;
+    var totalVotes = 0;
+
+    for (const option of pollData.pollOptions) {
+        if (option?.amountVoted) totalVotes+=option.amountVoted;
+    }
+
+    const timesinceData = getTimeSince(pollData.timestampEnding);
+
+    return `
+        <div id="pollElement_${postID}" class="pollElement">
+            <p id="pollQuestion_${postID}">${pollData.pollName}</p>
+            <div id="pollOptions_${postID}">
+                ${pollData.pollOptions.map((option, index) => { 
+                    return `
+                        <div id="pollOption_${postID}_${option._id}" class="pollOption">
+                            <div id="poll_option_${pollData._id}_${option._id}" class="poll_option ${voteData?.pollOptionID == option._id ? "voted" : ""}" onclick="voteOption('${pollID}', '${option._id}')">
+                                <p>${option.optionTitle}</p>
+                                <div class="debug">
+                                    <p>optionID: ${option._id}</p>
+                                    <p>indexID: ${option.currentIndexID || "unknown"}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+            <p>Total votes: ${totalVotes} | ${timesinceData.sinceOrUntil=="current" ? "ended just now" : `${timesinceData.sinceOrUntil=="since" ? ` ended ${timesinceData.value} ago` : `${timesinceData.value} time left`}`} </p>
+        </div>
+    `;
 }
 
 async function checkIfUserVoted(pollID) {
@@ -894,7 +905,6 @@ async function sendLoginRequest() {
    //  currentUserLogin = userData.accessToken
     if (response.ok) {
         if (userData.public._id) currentUserLogin.userid = userData.public._id
-
         saveLoginUser(userData)
         // save user token to cookie
         // setCookie(currentUser,cvalue,exdays) {}
@@ -1116,6 +1126,11 @@ function settingsPage() {
                         <button class="userInfo buttonStyled" id="showBookmarksButton" onclick="showBookmarks()">Show Bookmarks</button>
                         <div id="bookmarksdiv"></div>
                     </div>
+                    <div id="feedSettings" class="userInfo">
+                        <p><b>Feed</b></p>
+                        <button class="userInfo buttonStyled" onclick="changeFeedSettings()">Feed Settings</p>
+                    </div>
+                    <div id="feedPopup"></div>
                     <div id="emailSettings" class="userInfo">
                         <p><b>Email</b></p>
                         <button class="userInfo buttonStyled" onclick="changeEmailPage()">Email Settings</p>
@@ -1517,6 +1532,66 @@ async function fetchClientEmailData() {
     return res
 }
 
+async function changeFeedSettings() {
+    const allowed = await getPossibleFeeds();
+    if (!allowed) return alert("Error getting feeds")
+    const getPref = await getPrefAPI()
+    const currentDefaultOption = allowed.find(allow => allow.name === getPref.preferredFeed);
+    const selectedDate = getTimeSince(getPref.timestamp)
+    
+    var ele = `
+        <div class="userInfo">
+            <p><b>Change your default feed</p></b>
+            <hr class="rounded">
+            <p>Current default feed is:<br><b>${currentDefaultOption.niceName}</b> selected ${selectedDate.sinceOrUntil == "current" ? "just changed" : `${selectedDate.sinceOrUntil == "since" ? selectedDate.value + " ago" : selectedDate.value}`}
+    `;
+    for (const feed of allowed) {
+        if (!feed.speical) ele += `
+        <div class="userInfo">
+            <p>${feed.description}</p>
+            <button class="userInfo buttonStyled ${getPref.preferredFeed==feed.name ? 'activeFeed' : ''}" onclick="changePref('${feed.name}')">${feed.niceName}</button>
+        </div>
+        `
+    }
+
+    ele +="</div>"
+    document.getElementById("feedPopup").innerHTML = ele;
+}
+
+async function changePref(feedName) {
+    const changed = changePrefAPI(feedName);
+    if (!changed || changed.error) alert(`An error occured while changing${changed.error? `: ${changed.msg}`: ""}`);
+    await changeFeedSettings();
+}
+
+async function getPrefAPI() {
+    try {
+        const response = await fetch(`${apiURL}/feeds/preference`, {
+            method: "GET",
+            headers
+        })
+        var data = await response.json();
+        if (debug) console.log(data)
+        return data; 
+    } catch {
+        return false;
+    }
+}
+async function changePrefAPI(feedName) {
+    var data;
+    try {
+        const response = await fetch(`${apiURL}/feeds/preference`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ setPref: feedName })
+        })
+        var data = await response.json();
+        if (debug) console.log(data)
+        return data; 
+    } catch {
+        return data;
+    }
+}
 async function changeEmailPage() {
     const emailData = await fetchClientEmailData();
 
@@ -2466,25 +2541,61 @@ function getCookie(cname) {
     return "";
 }
 
+async function getPossibleFeeds() {
+    try {
+        const response = await fetch(`${apiURL}/feeds/possibleFeeds`, { method: 'GET', headers})
+        var data = await response.json();
+        if (debug) console.log(data);
+        return data
+    } catch (error) {
+        console.log(error)
+        return false;
+    }
+}
+
+async function changeFeedHeader(current) {
+    const possibleFeeds = await getPossibleFeeds();
+    if (!possibleFeeds) return console.log("error getting possible feeds");
+
+    var ele = '<div class="">';
+    for (const feed of possibleFeeds) {
+        ele += `<button class="buttonStyled ${current==feed.name ? 'activeFeed' : ''}" onclick="getFeed('${feed.name}')">${feed.niceName}</button>`
+    }
+    ele += '</div>'
+
+    document.getElementById("possibleFeeds").innerHTML = ele;
+    document.getElementById("possibleFeeds").classList.add("possibleFeeds")
+    document.getElementById("topPadding").classList.add("activeFeeds");
+}
+
+async function changeFeed(feedType) {
+    await getFeed(feedType);
+}
+
 // GET DATA FROM API FOR MAIN FEED
-async function getFeed() {
-    document.getElementById('mainFeed').innerHTML=``
+async function getFeed(feedType) {
+    const feedToUse = feedType || 'userFeed'
+
     searchBar()
     // postBar()
 
-    if (currentFeed) return buildView(currentFeed)
+    if (currentFeed && (feedToUse == currentFeedType)) return buildView(currentFeed)
     if (debug) console.log("loading feed")
 
     const params = await checkURLParams()
     if (params.paramsFound != false) return 
 
-    const response = await fetch(`${apiURL}/get/allPosts`, { method: 'GET', headers})
+    const response = await fetch(`${apiURL}/feeds/${feedToUse}`, { method: 'GET', headers})
     var data = await response.json()
 
+    currentFeedType = feedToUse;
     currentFeed = data.reverse()
 
-
-    if (params.paramsFound == false) return buildView(data)
+    if (params.paramsFound == false) {
+        buildView(data)
+        await changeFeedHeader(feedToUse);
+        return;
+    }
     else return
 }
 
@@ -2532,6 +2643,7 @@ function checkMonth(month) {
 
 // BUILDING MAIN FEED
 function buildView(posts) {
+    if (debug) console.log("buidlding view")
     if (searching) return
 
    // const userDiv = document.createElement("div") 
@@ -2540,11 +2652,16 @@ function buildView(posts) {
    // // document.getElementById("mainFeed").append(userDiv)
    // document.getElementById('test').innerText=`test`
 
-
+    document.getElementById('mainFeed').innerHTML=``
     document.getElementById("mainFeed").innerHTML = `
         <div id="addToTop"></div>
         ${posts.map(function(postArray) {
-            return postElementCreate({post: postArray.postData, user: postArray.userData})
+            return postElementCreate({
+                post: postArray.postData,
+                user: postArray.userData, 
+                pollData: postArray.type?.poll=="included" ? postArray.pollData : null,
+                voteData: postArray.type?.vote=="included" ? postArray.voteData : null,
+            })
             /* 
             return `
                 <div class="postArea">
@@ -2847,7 +2964,13 @@ async function searchResult(input) {
             `
         }).join(" ")}
         ${data.postsFound.reverse().map(function(postArray) {
-            return postElementCreate({post: postArray.postData, user: postArray.userData})
+            return postElementCreate({
+                post: postArray.postData,
+                user: postArray.userData, 
+                pollData: postArray.type?.poll=="included" ? postArray.pollData : null,
+                voteData: postArray.type?.vote=="included" ? postArray.voteData : null,
+            })
+            //return postElementCreate({post: postArray.postData, user: postArray.userData})
         }).join(" ")}
     `
 

@@ -55,6 +55,9 @@ a {
 h1 {
     color: var(--main-h1-color)
 }
+h2 {
+    color: var(--main-h1-color)
+}
 *, *::before, *::after {
     margin: 0px;
     padding: 0px;
@@ -75,9 +78,44 @@ body {
     padding-bottom: 20px;
 }
 .main-header {
-    text-align: center;    
-    padding-top: 20px;
-    padding-bottom: 10px;
+    margin-left: 0rem;
+    text-align: center;
+    align-items: center;
+    display: block;
+    z-index: 20px;
+    padding: 0px;
+    padding-top: 15px;
+    padding-bottom: 15px;
+    background-color: rgb(44, 44, 46, 0.95);
+    width: 100%;
+    border-bottom: 2px solid var(--main-border-color);
+}
+.possibleFeeds {
+    position: relative;
+    text-align: center;
+    z-index: 20px;
+    /*padding: 20px;*/
+    padding-top: 1rem;
+    height: 3rem;
+    font-size: 1rem;
+    padding-bottom: 1rem;
+    background-color: rgb(44, 44, 46, 0.95);
+    /*width: 100%;*/
+    border-bottom: 2px solid var(--main-border-color);
+}
+.possibleFeeds .buttonStyled {
+    border:none;
+    float: left;
+    display: block;
+    text-align: center;
+    padding: 14px 16px;
+    height: 1rem;
+    /*padding-top: 20px;*/
+    text-decoration: none;  
+}
+
+.possibleFeeds .buttonStyled:hover {
+   color: var(--hover-border-color);
 }
 p {
     color: var(--main-p-color)
@@ -87,6 +125,9 @@ p {
     cursor: pointer;
     color: var(--main-p-color);
     user-select: none;
+}
+.activeFeed{
+    color: var(--hover-border-color);
 }
 .spacer_2px {
     padding: 2px;
@@ -209,7 +250,7 @@ p {
         margin: 0;
     }
     .end-page-padding {
-        padding-bottom: 5.5rem;
+        padding-bottom: 7rem;
     }
     .logo p {
         text-align: center;
@@ -220,12 +261,35 @@ p {
         margin-left: 0rem;
         padding: 0rem;
     }
+    .main-header .navbar-expanded{
+        margin-left: 0rem;
+    }
+    .possibleFeeds .navbar-expanded{
+        margin-left: 0rem;
+    }
 }
 /* BIG SCREENS */
 @media only screen and (min-width: 601px) {
     .mainArea {
         margin-left: 5rem;
-        padding: 1rem;
+    }
+    .main-content-expanded .mainArea {
+        margin-left: 0rem;
+    }
+    .main-header {
+        margin-left: 0rem;
+    }
+    .possibleFeeds {
+        margin-left: 0rem;
+    }
+    /*.possibleFeeds .buttonStyled:first-child {
+        margin-left: 5rem;
+    }*/
+    .main-content-expanded .main-header {
+        margin-left: 0rem;
+    }
+    .main-content-expanded .possibleFeeds {
+        margin-left: 0rem;
     }
     .navbar {
         top: 0;
@@ -272,8 +336,8 @@ p {
 .activeNav {
     color:red;
 }
-.mainArea {
-    padding-top: 40px;
+.top-page-padding {
+    padding-top: 30px;
 }
 .modalContainer {
     background-color: rgba(0,0,0,0.3);
