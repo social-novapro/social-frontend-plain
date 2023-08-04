@@ -78,6 +78,9 @@ body {
     padding-bottom: 20px;
 }
 .main-header {
+    -webkit-user-select: none;
+    user-select: none;
+    cursor:default;
     margin-left: 0rem;
     text-align: center;
     align-items: center;
@@ -104,6 +107,9 @@ body {
     border-bottom: 2px solid var(--main-border-color);
 }
 .possibleFeeds .buttonStyled {
+    -webkit-user-select: none;
+    user-select: none;
+    cursor:pointer;
     border:none;
     float: left;
     display: block;
@@ -198,6 +204,12 @@ p {
 } 
 .nav-item {
     width: 100%;
+    -webkit-user-select: none;
+    user-select: none;
+}
+.material-symbols-outlined {
+    -webkit-user-select: none;
+    user-select: none;
 }
 .nav-item:last-child {
     margin-top: auto;
