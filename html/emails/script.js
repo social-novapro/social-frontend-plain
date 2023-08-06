@@ -4,7 +4,8 @@ var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 var baseURL
 var headers = {
     "devtoken" : "6292d8ae-8c33-4d46-a617-4ac048bd6f11",
-    "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421"
+    "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421",
+    'Content-Type': 'application/json',
 }
 var verifiedConnection = false
 var params = new URLSearchParams(window.location.search)
@@ -69,12 +70,33 @@ function setupVerRequest(verID) {
         <div class="userInfo">
             <p><b>Verification Request</b></p>
             <p>Verification ID: ${verID}</p>
+            </br>
+            <div id="passwordDiv"></div>
             <button class="userInfo buttonStyled" onclick="acceptVerRequest('${verID}')">Accept</button>
             <div id="verResult"></div>
             <button class="userInfo buttonStyled" onclick="redirectHome()">Go Home</button>
             <p> <br/>Press accept to add email to account, or go back home.</p> 
         </div>
     `;
+    displayPasswordReq();
+}
+
+function displayPasswordReq() {
+    const ele = `
+        <form id="userEdit_password" class="contentMessage">
+            <label for="passwordEmail"><p><b>Enter Password</b></p></label>
+            <input type="password" id="passwordEmail" class="userEditForm" placeholder="Password">
+        </form>
+    `
+
+    document.getElementById('passwordDiv').innerHTML = ele;
+    document.getElementById("userEdit_password").addEventListener("submit", function (e) { e.preventDefault()})
+}
+
+function getPassword() {
+    const password = document.getElementById("passwordEmail")?.value;
+    if (!password) return null;
+    else return password;
 }
 
 // API - accepts the verification request
@@ -82,10 +104,15 @@ async function acceptVerRequest(verID) {
     document.getElementById('verResult').innerHTML = "<p>loading...</p>";
     const url = `${apiURL}/emails/requests/verification/${verID}`
     
+    const password = getPassword();
+
     const response = await fetch(url, {
-        method: 'GET',
-        headers: headers
-    })
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({
+            password: password
+        })
+    });
 
     const data = await response.json()
 
@@ -110,12 +137,15 @@ function setupRemoveEmailRequest(removeVerID) {
         <div class="userInfo">
             <p><b>Remove Email Request</b></p>
             <p>Remove Email ID: ${removeVerID}</p>
+            </br>
+            <div id="passwordDiv"></div>
             <button class="userInfo buttonStyled" onclick="removeEmailRequest('${removeVerID}')">Accept</button>
             <div id="verResult"></div>
             <button class="userInfo buttonStyled" onclick="redirectHome()">Go Home</button>
             <p> <br/>Press accept to add email to account, or go back home.</p> 
         </div>
     `;
+    displayPasswordReq();
 }
 
 // API - accepts the remove email request
@@ -123,10 +153,16 @@ async function removeEmailRequest(removeVerID) {
     document.getElementById('verResult').innerHTML = "<p>loading...</p>";
 
     const url = `${apiURL}/emails/requests/confirmRemove/${removeVerID}`
-    
+
+    const password = getPassword();
+    console.log(password)
+
     const response = await fetch(url, {
-        method: 'GET',
-        headers: headers
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({
+            password: password
+        })
     })
 
     const data = await response.json()
@@ -150,25 +186,33 @@ async function setupDelAccRequest(delAccVerID) {
         <div class="userInfo">
             <p><b>Delete Account Request</b></p>
             <p>Delete Account VerID: ${delAccVerID}</p>
+            </br>
+            <div id="passwordDiv"></div>
             <button class="userInfo buttonStyled" onclick="deleteAccountRequest('${delAccVerID}')">Accept Deletion</button>
             <button class="userInfo buttonStyled" onclick="cancelAccountRequest('${delAccVerID}')">Cancel Request</button>
-
             <div id="verResult"></div>
             <button class="userInfo buttonStyled" onclick="redirectHome()">Go Home</button>
             <p> <br/>Press accept to add email to account, or go back home.</p> 
         </div>
     `;
+    
+    displayPasswordReq();
 }
 
 // API - accepts the delete account request
 async function deleteAccountRequest(delAccVerID) {
     document.getElementById('verResult').innerHTML = "<p>loading...</p>";
 
-    const url = `${apiURL}/users/public/confirmDelete/${delAccVerID}`
-    
+    const url = `${apiURL}/users/public/confirmDelete/${delAccVerID}`;
+
+    const password = getPassword();
+
     const response = await fetch(url, {
         method: 'DELETE',
-        headers: headers
+        headers: headers,
+        body: JSON.stringify({
+            password: password
+        })
     })
 
     var data
