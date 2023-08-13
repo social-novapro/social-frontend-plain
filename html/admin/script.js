@@ -44,8 +44,53 @@ function setupUI() {
         <div id="listAdmins">
             <a onclick="listAdmins()" class="buttonStyled">Check Admin List</a>
         </div>
+        <div id="listErrors">
+            <a onclick="listErrors()" class="buttonStyled">Check Errors List</a>
+        </div>
+        <div id="errorListing"></div>
     `;
 };
+async function listErrors(listID) {
+    var response;
+
+    if (!listID) {
+        response = await fetch(`${apiURL}/admin/errors/list/`, {
+            method: "GET",
+            headers
+        })
+    
+    } else {
+        response = await fetch(`${apiURL}/admin/errors/list/${listID}`, {
+            method: "GET",
+            headers
+        })
+    }
+
+    if (!response.ok) return console.log(response)
+    
+    const res = await response.json();
+
+    var ele = `
+        <div class="userInfo">
+            <p>${res.amount} found errors</p>
+            ${res.prevIndexID ? `<p class="userInfo buttonStyled" onclick="listErrors('${res.prevIndexID}')">Load previous set</p>` : ''}
+            ${res.nextIndexID ? `<p class="userInfo buttonStyled" onclick="listErrors('${res.nextIndexID}')">Load next set</p>` : '' }
+        </div>
+    `;
+
+    for (const issueError of res.foundIssues) {
+        ele+=`
+            <div class="userInfo">
+                <p>Code: ${issueError.errorCode}</p>
+                <p>Msg: ${issueError.errorMsg}</p>
+                <p>In review: ${issueError.resolved}</p>
+                <p>Resolved: ${issueError.inReview}</p>
+            </div>
+        `
+    }
+    document.getElementById('errorListing').innerHTML = ele;
+
+}
 async function listVerifications() {
     const response = await fetch(`${apiURL}/admin/get/verificationList`, {
         method: 'GET',
