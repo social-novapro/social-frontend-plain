@@ -52,7 +52,7 @@ async function checkLogin() {
 function setupUI() {
     document.getElementById('mainFeed').innerHTML = `
         <div class="userInfo">
-            <p>Verifications</p>
+            <p><b>Verifications</b></p>
             <div id="verifyRequests">
                 <button class="userInfo buttonStyled" onclick="verifyRequests()" class="buttonStyled">Check Verification Requests</button>
             </div>
@@ -61,7 +61,7 @@ function setupUI() {
             </div>
         </div>
         <div class="userInfo">
-            <p>Admins</p>
+            <p><b>Admins</b></p>
             <div id="adminRequests">
                 <button class="userInfo buttonStyled" onclick="adminRequests()" class="buttonStyled">Check Admin Requests</button>
             </div>
@@ -70,9 +70,10 @@ function setupUI() {
             </div>
         </div>
         <div class="userInfo">
-        <p>Errors</p>
+            <p><b>Errors</b></p>
             <div id="listErrors">
                 <button class="userInfo buttonStyled" onclick="listErrors()">Check Errors List</button>
+                <div id="errorListingInfo"></div>
             </div>
         </div>
         <div id="errorListing"></div>
@@ -101,24 +102,45 @@ async function listErrors(listID) {
     
     const res = await response.json();
 
-    var ele = `
+    var ele = ``;
+    document.getElementById("errorListingInfo").innerHTML = `
         <div class="userInfo">
             <p>${res.amount} found errors</p>
             ${res.prevIndexID ? `<button class="userInfo buttonStyled" onclick="listErrors('${res.prevIndexID}')">Load previous set</button>` : ''}
             ${res.nextIndexID ? `<button class="userInfo buttonStyled" onclick="listErrors('${res.nextIndexID}')">Load next set</button>` : '' }
         </div>
-    `;
+    `
 
-    for (const issueError of res.foundIssues) {
-        
+    var i=0;
+    for (const issueError of res.foundIssues.reverse()) {
+        i++;
         ele+=`
             <div class="userInfo" id="errorEle_${issueError._id}">
+            <p>Error Listing #${i}</p>
+
             ${createErrorElement(issueError)}
             </div>
         `
     }
-    document.getElementById('errorListing').innerHTML = ele;
 
+    document.getElementById('errorListing').innerHTML = ele;
+}
+
+async function previewUser(userID) {
+    const userRes = await fetch(`${apiURL}/get/userByID/${userID}`, {
+        method: 'GET',
+        headers
+        // body: JSON.stringify(body)
+    });
+   
+    const userData = await userRes.json();
+    if (userData.error) showModal(`<p>Error Occured</p>`);
+
+    showModal(`
+        <h2>User Information</h2>
+        <p>${userData.displayName} @${userData.username}</p>
+        ${userData.description ? `<p>Bio: ${userData.description }</p>`: ''}
+    `);
 }
 
 function createErrorElement(issueError) {
@@ -131,43 +153,45 @@ function createErrorElement(issueError) {
     if (issueError.timestamp) timestamp = checkDateV2(issueError.timestamp);
 
     
-    // <div class="userInfo" id="errorEle_${issueError._id}">
     return `
-            <p class="userInfo buttonStyled">Error Code: ${issueError.errorCode}</p>
-            <p class="userInfo buttonStyled">Error Message: ${issueError.errorMsg}</p>
-            <p class="userInfo buttonStyled">Error Generated: ${timestamp}</p>
-            ${
-                issueError.inReview ? `
-                    ${
-                        issueError.reviewedBy != headers.userid ? `
-                            <button class="userInfo buttonStyled" onclick="overrideReview('${issueError._id}')">Take over review</button>
-
-                        ` : `
-                            <button class="userInfo buttonStyled" onclick="markResolved('${issueError._id}')">Mark as resolved</button>
-                        `
-                    }
+        <div class="userInfo">
+            <p><b>${issueError.errorCode}:</b> ${issueError.errorMsg}</p>
+            <p>${timestamp}</p>
+        </div>
+        ${issueError.version == 2 ? `
+            <button class="userInfo buttonStyled" onclick="previewUser('${issueError.userID}')">View User</button>
+        `: ``}
+        ${issueError.reviewedBy ? `
+            <button class="userInfo buttonStyled" onclick="previewUser('${issueError.reviewedBy}')">Reviewer</button>
+        `: ``}
+        ${ issueError.inReview ? `
+            ${ issueError.reviewedBy != headers.userid || issueError.resolved ? `
+                <button class="userInfo buttonStyled" onclick="overrideReview('${issueError._id}')">Take over review</button>
+            ` : `
+                <button class="userInfo buttonStyled" onclick="markResolved('${issueError._id}')">Mark as resolved</button>
+            ` }
+        ` : issueError.resolved ? `
+            <button class="userInfo buttonStyled" onclick="overrideReview('${issueError._id}')">Mark as unresolved+in review</button>
+        `:`
+            <button class="userInfo buttonStyled" onclick="markInReview('${issueError._id}')">Mark in review</button>
+        ` }
+        <div class="userInfo">
+            ${issueError.inReview ? `
+                <p>In review: ${issueError.inReview}</p>
+                <p>${timestampReview}</p>
+            ` : `
+                <p>Not Under Review</p>
+            `}
+        </div>
+        <div class="userInfo">
+            ${issueError.resolved ? `
+                <p>Resolved: ${issueError.resolved}</p>
+                <p>${timesinceResolved}</p>
                 ` : `
-                    <button class="userInfo buttonStyled" onclick="markInReview('${issueError._id}')">Mark in review</button>
-                `
-            }
-            <div class="userInfo">
-                ${issueError.inReview ? `
-                    <p>In review: ${issueError.inReview}</p>
-                    <p>${timestampReview}</p>
-                ` : `
-                    <p>Not Under Review</p>
-                `}
-            </div>
-            <div class="userInfo">
-                ${issueError.resolved ? `
-                    <p>Resolved: ${issueError.resolved}</p>
-                    <p>${timesinceResolved}</p>
-                    ` : `
-                    <p>Unresolved</p>
-                `}
-            </div>
-        `;
-       //     </div>
+                <p>Unresolved</p>
+            `}
+        </div>
+    `;
 }
 
 async function markInReview(errorID) {
