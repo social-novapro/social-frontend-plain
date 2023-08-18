@@ -1152,6 +1152,13 @@ function settingsPage() {
                         <div id="deleteAccConfirm"></div>
                     </div>
                     <div class="userInfo">
+                        <p><b>Other Pages</b></p>
+                        <p>These are other pages that are related to interact.</p>
+                        <button class="userInfo buttonStyled" onclick="generateRelatedPages()">Show Pages</button>
+                        <div id="generateRelatedPages"></div>
+                    </div>
+                    <div class="userInfo">
+                        <p><b>DevMode</b></p>
                         <p>Enable / Disable dev mode. This will allow you to see more information about the different elements of Interact.</p>
                         <button class="userInfo buttonStyled" onclick="devModePage()">Dev Mode Settings</button>
                         <div id="devModeConfirm"></div>
@@ -1172,6 +1179,31 @@ function settingsPage() {
     devMode();
 
     return true;
+}
+
+function generateRelatedPages() {
+    const related = [
+        { name: "Analytics", url: "https://interact-analytics.novapro.net" },
+        { name: "Interact Info", url: "https://novapro.net/interact/" },
+        { name: "Admin Page", url: "/admin/" },
+        { name: "GitHub", url: "https://github.com/social-novapro/" },
+        { name: "Nova Productions", url: "https://novapro.net/" },
+        { name: "dkravec site", url: "https://dkravec.net/" },
+    ];
+
+    var ele = '';
+
+    for (const rel of related) {
+        ele+=`
+            <button class="userInfo buttonStyled" onclick="relatedPagesSwitch('${rel.url}')">${rel.name}</button>
+        `
+    }
+
+    document.getElementById("generateRelatedPages").innerHTML=ele;
+}
+
+function relatedPagesSwitch(page) {
+    window.location.href=page;
 }
 
 function removeDevModeConfirm() {

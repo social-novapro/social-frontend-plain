@@ -6,7 +6,25 @@ var headers = {
     "devtoken" : "6292d8ae-8c33-4d46-a617-4ac048bd6f11",
     "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421"
 }
+
 var verifiedConnection = false
+var params = new URLSearchParams(window.location.search)
+
+function checkURLParams() {
+    var paramsInfo = {
+        paramsFound: false
+    }
+
+    const ifErrors = params.has('errors')
+
+    if (ifErrors) {
+        paramsFound = true
+        paramsInfo.paramsFound = true
+        listErrors()
+    }
+   
+    return paramsInfo
+}
 
 // console.log(config.dev.websocket_url)
 document.getElementById('mainFeed').innerHTML = 'eijj';
@@ -30,22 +48,205 @@ async function checkLogin() {
 }
 
 
+
 function setupUI() {
     document.getElementById('mainFeed').innerHTML = `
-        <div id="verifyRequests">
-            <a onclick="verifyRequests()" class="buttonStyled">Check Verification Requests</a>
+        <div class="userInfo">
+            <p><b>Verifications</b></p>
+            <div id="verifyRequests">
+                <button class="userInfo buttonStyled" onclick="verifyRequests()" class="buttonStyled">Check Verification Requests</button>
+            </div>
+            <div id="listVerifications">
+                <button class="userInfo buttonStyled" onclick="listVerifications()" class="buttonStyled">Check Verification List</button>
+            </div>
         </div>
-        <div id="listVerifications">
-            <a onclick="listVerifications()" class="buttonStyled">Check Verification List</a>
+        <div class="userInfo">
+            <p><b>Admins</b></p>
+            <div id="adminRequests">
+                <button class="userInfo buttonStyled" onclick="adminRequests()" class="buttonStyled">Check Admin Requests</button>
+            </div>
+            <div id="listAdmins">
+                <button class="userInfo buttonStyled" onclick="listAdmins()" class="buttonStyled">Check Admin List</button>
+            </div>
         </div>
-        <div id="adminRequests">
-            <a onclick="adminRequests()" class="buttonStyled">Check Admin Requests</a>
+        <div class="userInfo">
+            <p><b>Errors</b></p>
+            <div id="listErrors">
+                <button class="userInfo buttonStyled" onclick="listErrors()">Check Errors List</button>
+                <div id="errorIndex1"></div>
+            </div>
         </div>
-        <div id="listAdmins">
-            <a onclick="listAdmins()" class="buttonStyled">Check Admin List</a>
+        <div id="errorListing"></div>
+        <div id="errorIndex2"></div>
+
+    `;
+    
+    checkURLParams();
+};
+
+async function listErrors(listID) {
+    var response;
+
+    if (!listID) {
+        response = await fetch(`${apiURL}/admin/errors/list/`, {
+            method: "GET",
+            headers
+        })
+    
+    } else {
+        response = await fetch(`${apiURL}/admin/errors/list/${listID}`, {
+            method: "GET",
+            headers
+        })
+    }
+
+    if (!response.ok) return console.log(response)
+    
+    const res = await response.json();
+
+    var ele = ``;
+    const indexEle = `
+        <div class="userInfo">
+            <p>${res.amount} found errors</p>
+            ${res.prevIndexID ? `<button class="userInfo buttonStyled" onclick="listErrors('${res.prevIndexID}')">Load previous set</button>` : ''}
+            ${res.nextIndexID ? `<button class="userInfo buttonStyled" onclick="listErrors('${res.nextIndexID}')">Load next set</button>` : '' }
+        </div>
+    `
+
+    document.getElementById("errorIndex1").innerHTML = indexEle;
+    document.getElementById("errorIndex2").innerHTML = indexEle;
+
+    var i=0;
+    for (const issueError of res.foundIssues.reverse()) {
+        i++;
+        ele+=`
+            <div class="userInfo" id="errorEle_${issueError._id}">
+            <p>Error Listing #${i}</p>
+
+            ${createErrorElement(issueError)}
+            </div>
+        `
+    }
+
+    document.getElementById('errorListing').innerHTML = ele;
+}
+
+async function previewUser(userID) {
+    const userRes = await fetch(`${apiURL}/get/userByID/${userID}`, {
+        method: 'GET',
+        headers
+        // body: JSON.stringify(body)
+    });
+   
+    const userData = await userRes.json();
+    if (userData.error) showModal(`<p>Error Occured</p>`);
+
+    showModal(`
+        <h2>User Information</h2>
+        <p>${userData.displayName} @${userData.username}</p>
+        ${userData.description ? `<p>Bio: ${userData.description }</p>`: ''}
+    `);
+}
+
+function createErrorElement(issueError) {
+    var timesinceResolved = null;
+    var timestampReview = null;
+    var timestamp = null;
+    
+    if (issueError.reviewTimestamp) timestampReview = checkDateV2(issueError.reviewTimestamp);
+    if (issueError.resolvedTimestamp) timesinceResolved = checkDateV2(issueError.resolvedTimestamp);
+    if (issueError.timestamp) timestamp = checkDateV2(issueError.timestamp);
+
+    
+    return `
+        <div class="userInfo">
+            <p><b>${issueError.errorCode}:</b> ${issueError.errorMsg}</p>
+            <p>${timestamp}</p>
+        </div>
+        ${issueError.errorVersion == 2 ? `
+            <button class="userInfo buttonStyled" onclick="previewUser('${issueError.userID}')">View User</button>
+        `: ``}
+        ${issueError.reviewedBy ? `
+            <button class="userInfo buttonStyled" onclick="previewUser('${issueError.reviewedBy}')">Reviewer</button>
+        `: ``}
+        ${ issueError.inReview ? `
+            ${ issueError.reviewedBy != headers.userid || issueError.resolved ? `
+                <button class="userInfo buttonStyled" onclick="overrideReview('${issueError._id}')">Take over review</button>
+            ` : `
+                <button class="userInfo buttonStyled" onclick="markResolved('${issueError._id}')">Mark as resolved</button>
+            ` }
+        ` : issueError.resolved ? `
+            <button class="userInfo buttonStyled" onclick="overrideReview('${issueError._id}')">Mark as unresolved+in review</button>
+        `:`
+            <button class="userInfo buttonStyled" onclick="markInReview('${issueError._id}')">Mark in review</button>
+        ` }
+        <div class="userInfo">
+            ${issueError.inReview ? `
+                <p>In review: ${issueError.inReview}</p>
+                <p>${timestampReview}</p>
+            ` : `
+                <p>Not Under Review</p>
+            `}
+        </div>
+        <div class="userInfo">
+            ${issueError.resolved ? `
+                <p>Resolved: ${issueError.resolved}</p>
+                <p>${timesinceResolved}</p>
+                ` : `
+                <p>Unresolved</p>
+            `}
+        </div>
+        <div class="userInfo">
+            <p>UserID: ${issueError.userID}</p>
+            <p>Reviewer: ${issueError.reviewedBy}</p>
+            <p>Issue Version: ${issueError.errorVersion}</p>
         </div>
     `;
-};
+}
+
+async function markInReview(errorID) {
+    if (!errorID) return alert("no provided error id");
+
+    const response = await fetch(`${apiURL}/admin/errors/review/${errorID}`, {
+        method: 'POST',
+        headers: headers
+    })
+
+    if (!response.ok) return console.log(response);
+
+    const result = await response.json(); 
+
+    document.getElementById(`errorEle_${result._id}`).innerHTML=createErrorElement(result);
+}
+
+async function markResolved(errorID) {
+    if (!errorID) return alert("no provided error id");
+
+    const response = await fetch(`${apiURL}/admin/errors/resolve/${errorID}`, {
+        method: 'POST',
+        headers: headers
+    })
+
+    if (!response.ok) return console.log(response);
+
+    const result = await response.json(); 
+    document.getElementById(`errorEle_${result._id}`).innerHTML=createErrorElement(result);
+}
+
+async function overrideReview(errorID) {
+    if (!errorID) return alert("no provided error id");
+
+    const response = await fetch(`${apiURL}/admin/errors/overrideReview/${errorID}`, {
+        method: 'POST',
+        headers: headers
+    })
+
+    if (!response.ok) return console.log(response);
+
+    const result = await response.json(); 
+    document.getElementById(`errorEle_${result._id}`).innerHTML=createErrorElement(result);
+}
+
 async function listVerifications() {
     const response = await fetch(`${apiURL}/admin/get/verificationList`, {
         method: 'GET',
@@ -114,6 +315,7 @@ async function verifyRequests() {
         </div>
     `;
 }
+
 function verificationRequestEle(request, userData) {
     return `
         <div id="userver_${userData._id}" class="userInfo">
@@ -214,6 +416,37 @@ async function closeAdminTab() {
     document.getElementById('adminRequests').innerHTML = `
         <a onclick="adminRequests()" class="buttonStyled">Check Admin Requests</a>
     `;
+}
+
+function checkDateV2(time){
+    var timeNum = 0
+    if (!isNaN(time)) timeNum = parseFloat(time)
+    else timeNum = time
+    
+    var currentTime = getTime()
+
+    const diff = (currentTime - timeNum)
+    const date = dateFromEpochv2(timeNum)
+    const timesince = timeSinceEpoch(diff)
+    return date
+    // return `${date}, ${timesince}`
+}
+function getTime() {
+    const d = new Date();
+    const currentTime = d.getTime()
+    return currentTime
+}
+function dateFromEpochv2(time) {
+    const date = new Date(time)
+    const year = date.getFullYear()
+    const day = date.getDate()
+    const month = date.getMonth()
+    const monthReadable = checkMonth(month)
+    const hoursRaw = date.getHours()
+    const hours = `${hoursRaw > 12 ? hoursRaw - 12 : hoursRaw}`;
+    const minutes = date.getMinutes();
+
+    return `${monthReadable} ${day}, ${year} at ${hours}:${minutes} ${hoursRaw > 12 ? 'PM' : 'AM'}`
 }
 
 function checkDate(time){
