@@ -158,7 +158,7 @@ function createErrorElement(issueError) {
             <p><b>${issueError.errorCode}:</b> ${issueError.errorMsg}</p>
             <p>${timestamp}</p>
         </div>
-        ${issueError.version == 2 ? `
+        ${issueError.errorVersion == 2 ? `
             <button class="userInfo buttonStyled" onclick="previewUser('${issueError.userID}')">View User</button>
         `: ``}
         ${issueError.reviewedBy ? `
@@ -190,6 +190,11 @@ function createErrorElement(issueError) {
                 ` : `
                 <p>Unresolved</p>
             `}
+        </div>
+        <div class="userInfo">
+            <p>UserID: ${issueError.userID}</p>
+            <p>Reviewer: ${issueError.reviewedBy}</p>
+            <p>Issue Version: ${issueError.errorVersion}</p>
         </div>
     `;
 }
