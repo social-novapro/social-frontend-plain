@@ -73,10 +73,12 @@ function setupUI() {
             <p><b>Errors</b></p>
             <div id="listErrors">
                 <button class="userInfo buttonStyled" onclick="listErrors()">Check Errors List</button>
-                <div id="errorListingInfo"></div>
+                <div id="errorIndex1"></div>
             </div>
         </div>
         <div id="errorListing"></div>
+        <div id="errorIndex2"></div>
+
     `;
     
     checkURLParams();
@@ -103,13 +105,16 @@ async function listErrors(listID) {
     const res = await response.json();
 
     var ele = ``;
-    document.getElementById("errorListingInfo").innerHTML = `
+    const indexEle = `
         <div class="userInfo">
             <p>${res.amount} found errors</p>
             ${res.prevIndexID ? `<button class="userInfo buttonStyled" onclick="listErrors('${res.prevIndexID}')">Load previous set</button>` : ''}
             ${res.nextIndexID ? `<button class="userInfo buttonStyled" onclick="listErrors('${res.nextIndexID}')">Load next set</button>` : '' }
         </div>
     `
+
+    document.getElementById("errorIndex1").innerHTML = indexEle;
+    document.getElementById("errorIndex2").innerHTML = indexEle;
 
     var i=0;
     for (const issueError of res.foundIssues.reverse()) {

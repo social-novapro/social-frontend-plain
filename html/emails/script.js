@@ -229,7 +229,7 @@ async function deleteAccountRequest(delAccVerID) {
         `;
     } else {
         document.getElementById('verResult').innerHTML = `
-            <p><br>Removal Failed</p>
+            <p><br>Deletion Failed</p>
             ${data?.msg ? `<p>${data.msg}</p>` : '' }
             <p>Try again later, or could have already completed.</p>
         `;
@@ -251,12 +251,12 @@ async function cancelAccountRequest(delAccVerID) {
     
     if (response.status == 200) {
         document.getElementById('verResult').innerHTML = `
-            <p><br>Removed Email</p>
+            <p><br>Canceled Delete Request</p>
             <p>Completed</p>
         `;
     } else {
         document.getElementById('verResult').innerHTML = `
-            <p><br>Removal Failed</p>
+            <p><br>Cancelation Failed</p>
             ${data.msg ? `<p>${data.msg}</p>` : '' }
             <p>Try again later, or could have already completed.</p>
         `;
