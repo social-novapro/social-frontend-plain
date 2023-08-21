@@ -1523,34 +1523,38 @@ async function changePasswordPage() {
         </div>
     `;
     document.getElementById("passwordPopup").innerHTML = eleError;
-    return ;
+    //return ;
 
     const ele = `
         <div class="userInfo">
             <p><b>Change Password</b></p>
+            <p>Request change password, then check email and update with URL sent.</p>
             <hr class="rounded">
-            <form id="userEdit_password" class="contentMessage")">
-                <label for="password_text"><p>New Password</p></label>
-                <input type="password" id="password_text" autocomplete="new-password" class="userEditForm" placeholder="New Password">
-            </form>
-            <form id="userEdit_password_confirm" class="contentMessage">
-                <label for="password_confirm"><p>Confirm Password</p></label>
-                <input type="password" id="password_confirm" autocomplete="new-password" class="userEditForm" placeholder="Confirm New Password">
-            </form>
-            <form id="userEdit_password_old" class="contentMessage">
+            <form id="userEdit_password" class="contentMessage">
                 <label for="userEdit_password_old_text"><p>Old Password</p></label>
-                <input type="text" id="userEdit_password_old_text" autocomplete="current-password" class="userEditForm" placeholder="Old Password">
+                <input type="password" id="userEdit_password_old_text" autocomplete="current-password" class="userEditForm" placeholder="Old Password">
             </form>
-            <a onclick="changePassword()">Change Password</a>
+            <button class="userInfo buttonStyled" onclick="requestChangePassword()">Change Password</button>
         </div>
     `
     //await showModal(ele)
 
     document.getElementById("passwordPopup").innerHTML = ele;
 
-    document.getElementById("password_text").addEventListener("submit", function (e) { e.preventDefault()})
-    document.getElementById("userEdit_password_old_text").addEventListener("submit", function (e) { e.preventDefault()})
-    document.getElementById("password_confirm").addEventListener("submit", function (e) { e.preventDefault()})
+    document.getElementById("userEdit_password").addEventListener("submit", function (e) { e.preventDefault()})
+}
+async function requestChangePassword() {
+    const password = document.getElementById("userEdit_email_pass")?.value
+
+    const response = await fetch(`${apiURL}/auth/password/change/`, {
+        method: 'GET',
+        headers,
+        body: JSON.stringify({ "password": password })
+    });
+
+    const res = await response.json();
+    if (debug) console.log(res)
+    return res
 }
 
 async function fetchClientEmailData() {

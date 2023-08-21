@@ -64,6 +64,33 @@ async function checkURLParams() {
     return paramsInfo
 }
 
+function setupChangePasswordRequest(verID) {
+    const ele = `
+        <div class="userInfo">
+            <p><b>Change Password</b></p>
+            <hr class="rounded">
+            <form id="userEdit_password" class="contentMessage">
+                <label for="password_text"><p>New Password</p></label>
+                <input type="password" id="password_text" autocomplete="new-password" class="userEditForm" placeholder="New Password">
+
+                <label for="password_confirm"><p>Confirm Password</p></label>
+                <input type="password" id="password_confirm" autocomplete="new-password" class="userEditForm" placeholder="Confirm New Password">
+
+                <label for="userEdit_password_old_text"><p>Old Password</p></label>
+                <input type="password" id="userEdit_password_old_text" autocomplete="current-password" class="userEditForm" placeholder="Old Password">
+            </form>
+            <button class="userInfo buttonStyled" onclick="changePasswordAPI('${verID}')">Change Password</button>
+        </div>
+    `;
+
+    document.getElementById('mainFeed').innerHTML = ele;
+    document.getElementById("userEdit_password").addEventListener("submit", function (e) { e.preventDefault()})
+}
+
+async function changePasswordAPI(verID) {
+
+}
+
 // sets up the UI for the verification request
 function setupVerRequest(verID) {
     document.getElementById('mainFeed').innerHTML = `
