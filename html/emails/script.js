@@ -46,6 +46,7 @@ async function checkURLParams() {
     const ifReqVer = params.has('verification');
     const ifReqRemoveEmail = params.has("removeEmail");
     const ifReqDelAcc = params.has("deleteAccount");
+    const ifChangePass = params.has("replacePassword");
 
     if (ifReqVer) {
         paramsInfo.paramsFound = true
@@ -59,6 +60,10 @@ async function checkURLParams() {
         paramsInfo.paramsFound = true;
         paramsInfo.deleteAccount = params.get('deleteAccount');
         setupDelAccRequest(paramsInfo.deleteAccount);
+    } else if (ifChangePass) {
+        paramsInfo.paramsFound = true;
+        paramsInfo.changePass = params.get('replacePassword');
+        setupChangePasswordRequest(paramsInfo.changePass);
     }
 
     return paramsInfo
@@ -68,7 +73,8 @@ function setupChangePasswordRequest(verID) {
     const ele = `
         <div class="userInfo">
             <p><b>Change Password</b></p>
-            <hr class="rounded">
+            <p>Change Password ID: ${verID}</p>
+            </br>
             <form id="userEdit_password" class="contentMessage">
                 <label for="password_text"><p>New Password</p></label>
                 <input type="password" id="password_text" autocomplete="new-password" class="userEditForm" placeholder="New Password">
@@ -77,9 +83,13 @@ function setupChangePasswordRequest(verID) {
                 <input type="password" id="password_confirm" autocomplete="new-password" class="userEditForm" placeholder="Confirm New Password">
 
                 <label for="userEdit_password_old_text"><p>Old Password</p></label>
-                <input type="password" id="userEdit_password_old_text" autocomplete="current-password" class="userEditForm" placeholder="Old Password">
+                <input type="password" id="userEdit_password_old_text" autocomplete="current-password" class="userEditForm" placeholder="Current Password">
             </form>
             <button class="userInfo buttonStyled" onclick="changePasswordAPI('${verID}')">Change Password</button>
+            <button class="userInfo buttonStyled" onclick="redirectHome()">Go Home</button>
+            <p> <br/>Press change password to update your account password, or go back home.</p> 
+            <div id="verResult"></div>
+
         </div>
     `;
 
@@ -88,7 +98,36 @@ function setupChangePasswordRequest(verID) {
 }
 
 async function changePasswordAPI(verID) {
+    const url = `${apiURL}/auth/password/requests/confirmChange/${verID}`;
 
+    const newPassword = document.getElementById("password_text")?.value;
+    const confirmPassword = document.getElementById("password_confirm")?.value;
+    const curPassword = document.getElementById("userEdit_password_old_text")?.value;
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({
+            newPassword,
+            confirmPassword,
+            curPassword,
+        })
+    })
+
+
+    const data = await response.json()
+console.log(data)
+    if (response.status == 200) {
+        document.getElementById('verResult').innerHTML = `
+            <p><br>New Password Accepted</p>
+        `;
+    } else {
+        document.getElementById('verResult').innerHTML = `
+            <p><br>Password Update Failed</p>
+            ${data.msg ? `<p>${data.msg}</p>` : '' }
+            <p>Try again later, or could have already completed.</p>
+        `;
+    }
 }
 
 // sets up the UI for the verification request
@@ -105,6 +144,7 @@ function setupVerRequest(verID) {
             <p> <br/>Press accept to add email to account, or go back home.</p> 
         </div>
     `;
+
     displayPasswordReq();
 }
 

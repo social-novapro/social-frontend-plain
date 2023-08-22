@@ -1531,8 +1531,8 @@ async function changePasswordPage() {
             <p>Request change password, then check email and update with URL sent.</p>
             <hr class="rounded">
             <form id="userEdit_password" class="contentMessage">
-                <label for="userEdit_password_old_text"><p>Old Password</p></label>
-                <input type="password" id="userEdit_password_old_text" autocomplete="current-password" class="userEditForm" placeholder="Old Password">
+                <label for="userEdit_password_old_text"><p>Password</p></label>
+                <input type="password" id="userEdit_password_old_text" autocomplete="current-password" class="userEditForm" placeholder="Password">
             </form>
             <button class="userInfo buttonStyled" onclick="requestChangePassword()">Change Password</button>
         </div>
@@ -1543,17 +1543,20 @@ async function changePasswordPage() {
 
     document.getElementById("userEdit_password").addEventListener("submit", function (e) { e.preventDefault()})
 }
+
 async function requestChangePassword() {
-    const password = document.getElementById("userEdit_email_pass")?.value
+    const password = document.getElementById("userEdit_password_old_text")?.value
+    if (!password) return showModal("<p>Please enter your current password</p>");
 
     const response = await fetch(`${apiURL}/auth/password/change/`, {
-        method: 'GET',
+        method: 'POST',
         headers,
         body: JSON.stringify({ "password": password })
     });
 
     const res = await response.json();
     if (debug) console.log(res)
+    if (res.error) return showModal(`<p>Failed ${res.error ? res.msg : "unknown reason"}</p>`)
     return res
 }
 
@@ -1756,7 +1759,7 @@ async function editEmailSettings() {
     const res = await response.json();
 
     if (debug) console.log(res);
-    if (!response.ok || res.error) return showModal("<p>res.msg</p>");
+    if (!response.ok || res.error) return showModal(`<p>${res.msg}</p>`);
 
     createEditEmailSettingsView(res);
 }
