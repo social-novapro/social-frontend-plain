@@ -9,6 +9,46 @@ var headers = {
     "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421"
 }
 
+var params = new URLSearchParams(window.location.search);
+var foundparams = false;
+
+async function checkURLParams() {
+    var paramsInfo = {
+        paramsFound: false
+    }
+
+    const ifRedirect = params.has('redirect')
+    const ifLoginRequest = params.has("login")
+    const ifNewAccountLogin = params.has("newAccount")
+    const ifForgotPassowrd = params.has("forgotPass");
+
+    if (ifRedirect) {
+        const redirectSearch = params.get('redirect')
+        if (redirectSearch) redirectURL += redirectSearch
+        //else if (redirectSearch == 'live-chat') redirectURL += redirectSearch
+        else console.log('redirect not found')
+    }
+    if (ifLoginRequest) {
+        paramsFound = true
+        paramsInfo.paramsFound = true
+
+        loginPage();
+    }
+    else if (ifNewAccountLogin) {
+        paramsFound = true
+        paramsInfo.paramsFound = true
+
+        createUserPage();
+    }
+    else if (ifForgotPassowrd) {
+        paramsFound = true
+        paramsInfo.paramsFound = true
+        // forgotPasswordPage();
+    }
+
+    if (paramsInfo.paramsFound == false) return checkLogin()
+}
+
 var currentUserLogin = { }
 
 if (location.protocol !== 'https:' && !((/localhost|(127|192\.168|10)\.(\d{1,3}\.?){2,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.(\d{1,3}\.?){2}/).test(location.hostname))) {
@@ -18,21 +58,8 @@ else {
     checkURLParams()
 }
 
-async function checkURLParams() {
-    const params = new URLSearchParams(window.location.search)
-    const ifRedirect = params.has('redirect')
-
-    if (ifRedirect) {
-        const redirectSearch = params.get('redirect')
-        if (redirectSearch == 'live-chat') redirectURL += redirectSearch
-        else console.log('redirect not found')
-    }
-    
-    return checkLogin()
-}
-
 function redirection() {
-    window.location.href = '/'
+    window.location.href = redirectURL;
 }
 
 /*
@@ -60,6 +87,7 @@ async function sendLoginRequest() {
 }
 
 async function checkLogin() {
+    if (foundparams == true) return;
     return loginSplashScreen()
 }
 
@@ -100,9 +128,12 @@ async function loginPage() {
                     <p><input class="contentMessage userEditForm" id="userPasswordLogin" placeholder="Password" type="password" name="password"></p>
                 </div>
                 <div class="signInDiv">
-                    <button class="buttonStyled" type="submit">Login</div>
+                    <button class="buttonStyled" type="submit">Login</button>
                 </div>
             </form>
+            <div class="signInDiv">
+                <button class="buttonStyled" onclick="forgetPassPage()">Forgot Password</button>
+            </div>
        </div>
     `
     document.getElementById("signInForm").addEventListener("submit", function (e) { e.preventDefault()})
@@ -130,6 +161,46 @@ async function sendLoginRequest() {
     else return showModal(`<p>Error: ${userData.code}\n${userData.msg}</p>`)
 
     if (userData.login === true) return redirection()
+}
+
+async function forgetPassPage() {
+    document.getElementById("mainFeed").innerHTML = `
+        <div class="userInfo">
+            <h1>Enter Details!</h1>
+            <p>Enter your username or email to reset your password!</p>
+            <p>Once you have entered your username or email, you will recieve an email with a link to reset your password!</p>
+            <p>If you do not recieve an email, please check your spam folder.</p>
+            <p>This will only work if you have an email set to your Interact account.</p>
+            <p>Please contact us at <a href="mailto:daniel@novapro.net">daniel@novapro.net</a> for any problems with resetting your password</p>
+            <form onsubmit="sendForgetRequest()" id="signInForm">
+                <div class="userInfo">
+                    <p>Enter Username or Email:</p>
+                    <p><input class="contentMessage userEditForm" id="usernameForgetPass" placeholder="Username/Email" type="username" name="username"></p>
+                </div>
+                <div class="signInDiv">
+                    <button class="buttonStyled" type="submit">Submit Request</button>
+                </div>
+            </form>
+        </div>
+    `
+    document.getElementById("signInForm").addEventListener("submit", function (e) { e.preventDefault()})
+}
+
+async function sendForgetRequest() {
+    var usernameLogin = document.getElementById('usernameForgetPass').value;
+
+    // const response = await fetch(`${baseURL}Priv/get/userLogin/`, {
+    const response = await fetch(`${apiURL}/auth/password/forgot/`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ username: usernameLogin })
+    })
+
+    // if (response.status != 200) 
+    const userData = await response.json()
+
+    if (!response.ok) return showModal(`<p>Error: ${userData.code}\n${userData.msg}</p>`)
+
 }
 
 function saveLoginUser(userID, userToken, accessToken) {

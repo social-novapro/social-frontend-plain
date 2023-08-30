@@ -47,7 +47,7 @@ async function checkURLParams() {
     const ifReqRemoveEmail = params.has("removeEmail");
     const ifReqDelAcc = params.has("deleteAccount");
     const ifChangePass = params.has("replacePassword");
-    const ifForgetPass = params.has("forgetPassword");
+    const ifForgetPass = params.has("forgotPassword");
 
     if (ifReqVer) {
         paramsInfo.paramsFound = true
@@ -67,8 +67,8 @@ async function checkURLParams() {
         setupChangePasswordRequest(paramsInfo.changePass);
     } else if (ifForgetPass) {
         paramsInfo.paramsFound = true;
-        paramsInfo.changePass = params.get('forgetPassword');
-        setupForgotPasswordRequest
+        paramsInfo.forgotPass = params.get('forgotPassword');
+        setupForgotPasswordRequest(paramsInfo.forgotPass);
     }
 
     return paramsInfo
@@ -79,23 +79,12 @@ function setupForgotPasswordRequest(verID) {
     const ele = `
         <div class="userInfo">
             <p><b>Forgot Password</b></p>
-            <p>Change Password ID: ${verID}</p>
+            <p>Forgot Password ID: ${verID}</p>
             </br>
-            <form id="userEdit_password" class="contentMessage">
-                <label for="password_text"><p>New Password</p></label>
-                <input type="password" id="password_text" autocomplete="new-password" class="userEditForm" placeholder="New Password">
-
-                <label for="password_confirm"><p>Confirm Password</p></label>
-                <input type="password" id="password_confirm" autocomplete="new-password" class="userEditForm" placeholder="Confirm New Password">
-
-                <label for="userEdit_password_old_text"><p>Old Password</p></label>
-                <input type="password" id="userEdit_password_old_text" autocomplete="current-password" class="userEditForm" placeholder="Current Password">
-            </form>
-            <button class="userInfo buttonStyled" onclick="changePasswordAPI('${verID}')">Change Password</button>
+            <button class="userInfo buttonStyled" onclick="forgotPasswordAPI('${verID}')">Confirm Reset</button>
             <button class="userInfo buttonStyled" onclick="redirectHome()">Go Home</button>
-            <p> <br/>Press change password to update your account password, or go back home.</p> 
+            <p> <br/>Press confirm reset to update your account password, or go back home.</p> 
             <div id="verResult"></div>
-
         </div>
     `;
 
@@ -108,26 +97,16 @@ function setupForgotPasswordRequest(verID) {
 async function forgotPasswordAPI(verID) {
     const url = `${apiURL}/auth/password/requests/confirmForgot/${verID}`;
 
-    const newPassword = document.getElementById("password_text")?.value;
-    const confirmPassword = document.getElementById("password_confirm")?.value;
-    const curPassword = document.getElementById("userEdit_password_old_text")?.value;
-
     const response = await fetch(url, {
         method: 'POST',
-        headers: headers,
-        body: JSON.stringify({
-            newPassword,
-            confirmPassword,
-            curPassword,
-        })
+        headers: headers
     })
-
 
     const data = await response.json()
 
     if (response.status == 200) {
         document.getElementById('verResult').innerHTML = `
-            <p><br>New Password Accepted</p>
+            <p><br>Password updated: check email for your new password. Make sure to change password after updating.</p>
         `;
     } else {
         document.getElementById('verResult').innerHTML = `
