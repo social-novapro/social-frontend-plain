@@ -132,11 +132,12 @@ function setupChangePasswordRequest(verID) {
                 <label for="userEdit_password_old_text"><p>Old Password</p></label>
                 <input type="password" id="userEdit_password_old_text" autocomplete="current-password" class="userEditForm" placeholder="Current Password">
             </form>
-            <button class="userInfo buttonStyled" onclick="changePasswordAPI('${verID}')">Change Password</button>
-            <button class="userInfo buttonStyled" onclick="redirectHome()">Go Home</button>
+            <div>
+                <button class="userInfo buttonStyled" onclick="changePasswordAPI('${verID}')">Change Password</button>
+                <button class="userInfo buttonStyled" onclick="redirectHome()">Go Home</button>
+            </div>
             <p> <br/>Press change password to update your account password, or go back home.</p> 
             <div id="verResult"></div>
-
         </div>
     `;
 
@@ -164,7 +165,7 @@ async function changePasswordAPI(verID) {
 
     const data = await response.json()
 
-    if (response.status == 200) {
+    if (response.status == 200 && !data.error) {
         document.getElementById('verResult').innerHTML = `
             <p><br>New Password Accepted</p>
         `;

@@ -181,6 +181,7 @@ async function forgetPassPage() {
                     <button class="buttonStyled" type="submit">Submit Request</button>
                 </div>
             </form>
+            <div id="forgotPassResponse"></div>
         </div>
     `
     document.getElementById("signInForm").addEventListener("submit", function (e) { e.preventDefault()})
@@ -199,8 +200,13 @@ async function sendForgetRequest() {
     // if (response.status != 200) 
     const userData = await response.json()
 
-    if (!response.ok) return showModal(`<p>Error: ${userData.code}\n${userData.msg}</p>`)
-
+    if (!response.ok) {
+        document.getElementById("forgotPassResponse").innerHTML = `<p>Error: ${userData.code}\n${userData.msg}</p>`;
+        return showModal(`<p>Error: ${userData.code}\n${userData.msg}</p>`);
+    } else {
+        document.getElementById("forgotPassResponse").innerHTML = `<p>Completed, check your email for a reset link.</p>`;
+        return showModal(`<p>Success, check email.</p>`);
+    }
 }
 
 function saveLoginUser(userID, userToken, accessToken) {
@@ -231,6 +237,10 @@ function createUserPage() {
             <h1>Please Create an Account!</h1>
             <form onsubmit="createNewUserRequest()" id="createUserForm">
                 <div class="userInfo">
+                    <p>Enter Your Email:</p>
+                    <input type="text" class="contentMessage userEditForm" id="emailCreate" placeholder="Email" type="text" name="email">
+                </div>
+                <div class="userInfo">
                     <p>Enter Your New Username:</p>
                     <input type="text" class="contentMessage userEditForm" id="usernameCreate" placeholder="Username" type="text" name="username">
                 </div>
@@ -260,6 +270,7 @@ function createUserPage() {
 }
 
 async function createNewUserRequest() {
+    var emailCreate = document.getElementById('emailCreate').value;
     var usernameCreate = document.getElementById('usernameCreate').value;
     var displaynameCreate = document.getElementById('displaynameCreate').value;
     var passwordCreate = document.getElementById('passwordCreate').value;
@@ -267,6 +278,7 @@ async function createNewUserRequest() {
     var pronounsCreate = document.getElementById('pronounsCreate').value;
 
     var data = {}
+    if (emailCreate) data.email = emailCreate;
     if (usernameCreate) data.username = usernameCreate
     if (displaynameCreate) data.displayName = displaynameCreate
     if (passwordCreate) data.password = passwordCreate

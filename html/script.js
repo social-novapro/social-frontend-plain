@@ -1515,33 +1515,24 @@ async function userHtml(userID) {
 }
 
 async function changePasswordPage() {
-    const eleError = `
-        <div class="userInfo">
-            <p><b>Change Password</b></p>
-            <hr class="rounded">
-            <p>Can not change password yet, please wait until future version of interact</p>
-        </div>
-    `;
-    document.getElementById("passwordPopup").innerHTML = eleError;
-    //return ;
-
     const ele = `
         <div class="userInfo">
             <p><b>Change Password</b></p>
             <p>Request change password, then check email and update with URL sent.</p>
             <hr class="rounded">
-            <form id="userEdit_password" class="contentMessage">
+            <form id="userEdit_change_password" class="contentMessage">
                 <label for="userEdit_password_old_text"><p>Password</p></label>
                 <input type="password" id="userEdit_password_old_text" autocomplete="current-password" class="userEditForm" placeholder="Password">
             </form>
             <button class="userInfo buttonStyled" onclick="requestChangePassword()">Change Password</button>
+            <div id="completed_change_pass"></div>
         </div>
     `
     //await showModal(ele)
 
     document.getElementById("passwordPopup").innerHTML = ele;
 
-    document.getElementById("userEdit_password").addEventListener("submit", function (e) { e.preventDefault()})
+    document.getElementById("userEdit_change_password").addEventListener("submit", function (e) { e.preventDefault()})
 }
 
 async function requestChangePassword() {
@@ -1557,7 +1548,10 @@ async function requestChangePassword() {
     const res = await response.json();
     if (debug) console.log(res)
     if (res.error) return showModal(`<p>Failed ${res.error ? res.msg : "unknown reason"}</p>`)
-    return res
+     
+    document.getElementById("completed_change_pass").innerHTML = `<p>Success, check your email.</p>`
+    return showModal(`<p>Success, check your email.</p>`)
+
 }
 
 async function fetchClientEmailData() {
