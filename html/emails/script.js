@@ -108,6 +108,8 @@ async function forgotPasswordAPI(verID) {
         document.getElementById('verResult').innerHTML = `
             <p><br>Password updated: check email for your new password. Make sure to change password after updating.</p>
         `;
+        showModal("<p>Password Updated, Check your email for the new password. Make sure to change your password after logging in.</p>");
+
     } else {
         document.getElementById('verResult').innerHTML = `
             <p><br>Password Update Failed</p>
@@ -169,6 +171,7 @@ async function changePasswordAPI(verID) {
         document.getElementById('verResult').innerHTML = `
             <p><br>New Password Accepted</p>
         `;
+        showModal("<p>Password Accepted, your password has been updated.</p>");
     } else {
         document.getElementById('verResult').innerHTML = `
             <p><br>Password Update Failed</p>

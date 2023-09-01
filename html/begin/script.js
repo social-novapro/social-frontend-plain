@@ -1,7 +1,8 @@
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 
 var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
-var redirectURL = `${config ? `${config.current == "prod" ? config.prod.hosted_url : config.dev.hosted_url}` : 'https://interact-api.novapro.net/v1' }`
+//var redirectURL = `${config ? `${config.current == "prod" ? config.prod.hosted_url : config.dev.hosted_url}` : 'https://interact-api.novapro.net/v1' }`
+var redirectURL = `/`;
 
 var headers = {
     'Content-Type': 'application/json',
