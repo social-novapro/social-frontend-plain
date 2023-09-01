@@ -62,7 +62,7 @@ async function checkLogin() {
     }
     // console.log'running 4')
 
-    if (!loginUserToken) return window.location.href = "/begin/?live-chat";
+    if (!loginUserToken) return window.location.href = "/begin/?redirect=live-chat";
     else return checkWebSocket()
 }
 

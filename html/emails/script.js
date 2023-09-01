@@ -46,6 +46,8 @@ async function checkURLParams() {
     const ifReqVer = params.has('verification');
     const ifReqRemoveEmail = params.has("removeEmail");
     const ifReqDelAcc = params.has("deleteAccount");
+    const ifChangePass = params.has("replacePassword");
+    const ifForgetPass = params.has("forgotPassword");
 
     if (ifReqVer) {
         paramsInfo.paramsFound = true
@@ -59,9 +61,124 @@ async function checkURLParams() {
         paramsInfo.paramsFound = true;
         paramsInfo.deleteAccount = params.get('deleteAccount');
         setupDelAccRequest(paramsInfo.deleteAccount);
+    } else if (ifChangePass) {
+        paramsInfo.paramsFound = true;
+        paramsInfo.changePass = params.get('replacePassword');
+        setupChangePasswordRequest(paramsInfo.changePass);
+    } else if (ifForgetPass) {
+        paramsInfo.paramsFound = true;
+        paramsInfo.forgotPass = params.get('forgotPassword');
+        setupForgotPasswordRequest(paramsInfo.forgotPass);
     }
 
     return paramsInfo
+}
+
+// TODO UPDATE
+function setupForgotPasswordRequest(verID) {
+    const ele = `
+        <div class="userInfo">
+            <p><b>Forgot Password</b></p>
+            <p>Forgot Password ID: ${verID}</p>
+            </br>
+            <button class="userInfo buttonStyled" onclick="forgotPasswordAPI('${verID}')">Confirm Reset</button>
+            <button class="userInfo buttonStyled" onclick="redirectHome()">Go Home</button>
+            <p> <br/>Press confirm reset to update your account password, or go back home.</p> 
+            <div id="verResult"></div>
+        </div>
+    `;
+
+    document.getElementById('mainFeed').innerHTML = ele;
+    document.getElementById("userEdit_password").addEventListener("submit", function (e) { e.preventDefault()})
+}
+
+
+// UPDATE
+async function forgotPasswordAPI(verID) {
+    const url = `${apiURL}/auth/password/requests/confirmForgot/${verID}`;
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: headers
+    })
+
+    const data = await response.json()
+
+    if (response.status == 200) {
+        document.getElementById('verResult').innerHTML = `
+            <p><br>Password updated: check email for your new password. Make sure to change password after updating.</p>
+        `;
+        showModal("<p>Password Updated, Check your email for the new password. Make sure to change your password after logging in.</p>");
+
+    } else {
+        document.getElementById('verResult').innerHTML = `
+            <p><br>Password Update Failed</p>
+            ${data.msg ? `<p>${data.msg}</p>` : '' }
+            <p>Try again later, or could have already completed.</p>
+        `;
+    }
+}
+function setupChangePasswordRequest(verID) {
+    const ele = `
+        <div class="userInfo">
+            <p><b>Change Password</b></p>
+            <p>Change Password ID: ${verID}</p>
+            </br>
+            <form id="userEdit_password" class="contentMessage">
+                <label for="password_text"><p>New Password</p></label>
+                <input type="password" id="password_text" autocomplete="new-password" class="userEditForm" placeholder="New Password">
+
+                <label for="password_confirm"><p>Confirm Password</p></label>
+                <input type="password" id="password_confirm" autocomplete="new-password" class="userEditForm" placeholder="Confirm New Password">
+
+                <label for="userEdit_password_old_text"><p>Old Password</p></label>
+                <input type="password" id="userEdit_password_old_text" autocomplete="current-password" class="userEditForm" placeholder="Current Password">
+            </form>
+            <div>
+                <button class="userInfo buttonStyled" onclick="changePasswordAPI('${verID}')">Change Password</button>
+                <button class="userInfo buttonStyled" onclick="redirectHome()">Go Home</button>
+            </div>
+            <p> <br/>Press change password to update your account password, or go back home.</p> 
+            <div id="verResult"></div>
+        </div>
+    `;
+
+    document.getElementById('mainFeed').innerHTML = ele;
+    document.getElementById("userEdit_password").addEventListener("submit", function (e) { e.preventDefault()})
+}
+
+async function changePasswordAPI(verID) {
+    const url = `${apiURL}/auth/password/requests/confirmChange/${verID}`;
+
+    const newPassword = document.getElementById("password_text")?.value;
+    const confirmPassword = document.getElementById("password_confirm")?.value;
+    const curPassword = document.getElementById("userEdit_password_old_text")?.value;
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({
+            newPassword,
+            confirmPassword,
+            curPassword,
+        })
+    })
+
+
+    const data = await response.json()
+
+    if (response.status == 200 && !data.error) {
+        document.getElementById('verResult').innerHTML = `
+            <p><br>New Password Accepted</p>
+        `;
+        showModal("<p>Password Accepted, your password has been updated.</p>");
+    } else {
+        document.getElementById('verResult').innerHTML = `
+            <p><br>Password Update Failed</p>
+            ${data.msg ? `<p>${data.msg}</p>` : '' }
+            <p>Try again later, or could have already completed.</p>
+        `;
+    }
 }
 
 // sets up the UI for the verification request
@@ -78,6 +195,7 @@ function setupVerRequest(verID) {
             <p> <br/>Press accept to add email to account, or go back home.</p> 
         </div>
     `;
+
     displayPasswordReq();
 }
 
