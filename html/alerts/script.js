@@ -102,7 +102,7 @@ async function getLatestAlert() {
     console.log(alertFetch);
     if (!response.ok) return console.log(response);
 
-    document.getElementById('latestAlert').innerHTML = alertEle(alertFetch.alert);
+    document.getElementById('latestAlert').innerHTML = alertEle(alertFetch.alert, "latest");
 }
 
 async function listAlerts() {
@@ -116,11 +116,16 @@ async function listAlerts() {
     // if (debug) console.log(alertFetch);
     if (!response.ok) return console.log(response);
 
+    indexFetch.alerts.sort((a, b) => {
+        return new Date(b.publish_timestamp) - new Date(a.publish_timestamp);
+    });
+    
     var ele = ``;
     for (let i = 0; i < indexFetch.alerts.length; i++) {
         const alertID = indexFetch.alerts[i];
-        const alertData = await fetchAlert(alertID._id);
-        ele += alertEle(alertData.alert);
+        //const alertData = await fetchAlert(alertID._id);
+        const alertData = indexFetch.alerts[i];
+        ele += alertEle(alertData);
     }
     document.getElementById('alertList').innerHTML = ele;
 }
@@ -152,13 +157,13 @@ async function sendCreateAlert() {
         document.getElementById('newAlert').innerHTML = `
             <div class="publicPost">
                 <h1>Alert Created!</h1>
-                ${alertEle(alertData.alert)}
+                ${alertEle(alertData.alert.alert, 'created')}
             </div>
         `
     }
     else return showModal(`<p>Error: ${alertData.code}\n${alertData.msg}</p>`)
 
-    if (userData.login === true) return redirection()
+    //if (userData.login === true) return redirection()
 }
 
 function setupCreate() {
@@ -175,11 +180,11 @@ function setupCreate() {
                 </div>
                 <div class="userInfo">
                     <p>Enter Content:*</p>
-                    <p><input class="contentMessage userEditForm" id="alertContentCreate" placeholder="Password" type="text"></p>
+                    <p><input class="contentMessage userEditForm" id="alertContentCreate" placeholder="Content" type="text"></p>
                 </div>
                 <div class="userInfo">
                     <p>Enter Linked Post:</p>
-                    <p><input class="contentMessage userEditForm" id="alertLinkedCreate" placeholder="Password" type="text"></p>
+                    <p><input class="contentMessage userEditForm" id="alertLinkedCreate" placeholder="Post" type="text"></p>
                 </div>
                 <div class="signInDiv">
                     <button class="buttonStyled" type="submit">Create</div>
@@ -199,13 +204,20 @@ async function archiveAlert(alertID) {
     })
 
     const alertData = await response.json()
-    console.log(alertData)
+    updateAlertEle(alertData.after)
 }
 
-function alertEle(alert) {
+function updateAlertEle(alert) {
+    const newEle = alertEle(alert);
+    document.getElementById(`alert_${alert._id}`).outerHTML = newEle;
+    // get  also subname, check if it exists, and update that too
+    return true;
+}
+
+function alertEle(alert, subname) {
     const { _id: alertID, title, content, isArchived } = alert;
     return `
-        <div class="publicPost" id="alertID">
+        <div class="publicPost" id="alert_${alertID}${subname ? `_${subname}` : ""}">
             ${title ? 
                 `
                     <h1>${title}</h1>
@@ -215,16 +227,16 @@ function alertEle(alert) {
             ${isArchived == true ?
                 `
                     <p>Archived</p>
-                ` : ``
-            }
-            ${adminUser == true && isArchived != true ? 
-                `
-                    <p onclick="archiveAlert('${alertID}')">Archive</p>
                 ` : `
+                ${adminUser == true && alert.isArchived !== true ? 
+                    `
+                    <p onclick="archiveAlert('${alertID}')">Archive</p>
+                    ` : `
                     not an admin or is already archived
-                `
+                    `
+                }`
             }
-            ${devMode ? 
+                ${devMode ? 
                 `
                     <p>${alertID}</p>
                 ` : ` `
