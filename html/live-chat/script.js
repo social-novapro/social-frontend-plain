@@ -62,7 +62,7 @@ async function checkLogin() {
     }
     // console.log'running 4')
 
-    if (!loginUserToken) return window.location.href = "/begin/?live-chat";
+    if (!loginUserToken) return window.location.href = "/begin/?redirect=live-chat";
     else return checkWebSocket()
 }
 
@@ -459,8 +459,11 @@ function dateFromEpoch(time) {
     const day = date.getDate()
     const month = date.getMonth()
     const monthReadable = checkMonth(month)
+    const hoursRaw = date.getHours()
+    const hours = `${hoursRaw > 12 ? hoursRaw - 12 : hoursRaw}`;
+    const minutes = date.getMinutes();
 
-    return `${monthReadable} ${day}, ${year}`
+    return `${monthReadable} ${day}, ${year} at ${hours}:${minutes} ${hoursRaw > 12 ? 'PM' : 'AM'}`
 }
 
 function checkMonth(month) {

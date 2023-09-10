@@ -12,7 +12,7 @@
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
         <script src="/nav.js" defer></script>
         <!-- Navigation section-->
-        <script src="/script.js" defer></script>
+        <script src="./script.js" defer></script>
         <link rel="icon" type="image/png" href="/favicon.ico">
         <meta property="og:image" content="https://interact.novapro.net/apple-touch-icon.png">
         <meta property="og:title" content="Interact">
@@ -32,12 +32,11 @@
     </head>
 	<body>
         <div id="expandingNavBar" class="navbar"></div>
-        <div id="expandingMainContent" class="mainArea">
+        <div class="mainArea" id="expandingMainContent">
             <div class="main-header">
-                <h2 onclick="test()">Interact</h2>
+                <h1 style="display:inline;">Welcome to <h1 style="display:inline;" onclick="test()">Interact!</h1></h1>
                 <p>Created by <i><a class="buttonStyled"  target="_blank" href="https://novapro.net/">Nova Productions</a></i></p>
             </div>
-            <div id="possibleFeeds"></div>
             <div id="topPadding" class="top-page-padding"></div>
             <div id="mainSelections"></div>
             <div id="postBar"></div>
@@ -45,7 +44,6 @@
             <div class="modalContainer" id="modalContainer"><div class="modal" id="modal"></div></div>
             <div id="mainFeed" class="main-feed"><p class="publicPost">Loading...</div>
             <div class="end-page-padding"></div>
-            </div>
         </div>
 	</body>
 </html\>

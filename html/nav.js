@@ -65,42 +65,31 @@ function addNavigation() {
 function newNavigation() {
     document.getElementById('expandingNavBar').innerHTML = `
         <ul class="navbar-nav">
+            <li class="nav-item pointerCursor" id="navSection0">
+                <div id="page2Nav" class="nav-link" onclick="switchNav(5)">
+                    <span class="material-symbols-outlined nav-button";>home</span>
+                    <span class="link-text pointerCursor" id="page0">Home</span>
+                </div>
+            </li>
             <li class="nav-item pointerCursor" id="navSection1">
-                <div id="page1Nav" class="nav-link" onclick="${pathArray[1] != "" ? `switchNav(5)` : `switchNav(1)`}">
-                    ${pathArray[1] != "" ? `
-                        <span class="material-symbols-outlined nav-button";>home</span>
-                    ` : `
-                        <span class="material-symbols-outlined nav-button";>chat</span>
-                    `}
-
-                    <span class="link-text pointerCursor" id="page1">${pathArray[1] != "" ? `Feed` : `Live Chat`}</span>
+                <div id="page1Nav" class="nav-link" onclick="switchNav(1)">
+                    <span class="material-symbols-outlined nav-button";>chat</span>
+                    <span class="link-text pointerCursor" id="page1">${pathArray[1] != "" ? `Live Chat` : `Live Chat`}</span>
                 </div>
             </li>
-            ${pathArray[1] != "" ? `` : `
-            <li class="nav-item pointerCursor" id="navSection2">
-            <div id="page2Nav" class="nav-link" onclick="switchNav(2)">
-                <span class="material-symbols-outlined nav-button";>person</span>
-                <span class="link-text pointerCursor" id="page2">Profile</span>
-            </div>
-            </li>
-            <li class="nav-item pointerCursor" id="navSection3">
-                <div id="page3Nav" class="nav-link" onclick="switchNav(3)">
-                    <span class="material-symbols-outlined nav-button";>dvr</span>
-                    <span class="link-text pointerCursor" id="page3">DevMode</span>
-                </div>
-            </li>
+            ${pathArray[1] != "" ? "" : `
             <li class="nav-item pointerCursor" id="navSection4">
                 <div id="page4Nav" class="nav-link" onclick="createPostModal()">
                     <span class="material-symbols-outlined nav-button";>post_add</span>
                     <span class="link-text pointerCursor" id="page4">Create Post</span>
                 </div>
-            </li> `}
-            <li class="nav-item pointerCursor" id="navSection4">
-                <div id="page5Nav" class="nav-link" onclick="signOut()">
-                    <span class="material-symbols-outlined nav-button";>logout</span>
-                    <span class="link-text pointerCursor" id="page5">Sign Out</span>
+            </li> 
+            <li class="nav-item pointerCursor" id="navSection3">
+                <div id="page3Nav" class="nav-link" onclick="switchNav(7)">
+                    <span class="material-symbols-outlined nav-button";>Settings</span>
+                    <span class="link-text pointerCursor" id="page7">Settings</span>
                 </div>
-            </li>
+            </li>`}
             ${pathArray[1] != "" ? `` : `
             <li class="nav-item pointerCursor" id="navSection5">
                 <div id="searchBar" class="nav-link" onclick="activeSearchBar()">
@@ -124,7 +113,6 @@ function addTitle() {
 }
 
 async function signOut() {
-    console.log(pathArray)
     localStorage.removeItem(LOCAL_STORAGE_LOGIN_USER_TOKEN);
     
     if (pathArray[1] == "" || "begin") window.location.href = `/begin`
@@ -142,11 +130,18 @@ async function sendLoginRequest() {
 
 async function redirectPage() {
     if (pathArray[1]=="begin") return
+    if (pathArray[1]=="emails") return
+
     else if (pathArray[1]=="") window.location.href='/begin'
     else window.location.href=`/begin?redirect=${pathArray[1]}`
 }
 
 async function checkLogin() {
+    if (pathArray[1]=="emails") {
+        console.log("emails wow")
+        return false;
+    }
+
     const userStorageLogin = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
     if (!userStorageLogin) return redirectPage()
     else {
@@ -203,31 +198,35 @@ async function switchNav(pageVal) {
                 <button class="buttonStyled" onclick="createPost()">Upload Post</button>
             `, true)
             break;
-            
         case 5:
-                window.location.href='/'
+            window.location.href='/'
+            break;
+        case 7: 
+            window.location.href='/?settings'
             break;
         default:
             break;
     }
 }
 
-async function showModal(html, showClose) {
+function showModal(html, showClose) {
     document.getElementById('modalContainer').classList.add("showModal");
-    document.getElementById('modal').innerHTML = html
+    document.getElementById('modal').innerHTML = html;
 
-    if (showClose == "hide") return
-    else return showModalClose()
+    if (showClose == "hide") return true;
+    else return showModalClose();
 }
 
-async function showModalClose() {
+function showModalClose() {
     document.getElementById('modal').innerHTML+=`
         <button class="buttonStyled" onclick="closeModal()">Close</button>
-    `
+    `;
 }
 
-async function closeModal() {
-    document.getElementById('modalContainer').classList.remove("showModal")    
+function closeModal() {
+    document.getElementById('modalContainer')?.classList.remove("showModal");
+    document.getElementById('modal').innerHTML = "";
+    return true;
 }
 
 
