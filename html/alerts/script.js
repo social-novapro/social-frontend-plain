@@ -117,8 +117,8 @@ async function listAlerts() {
     if (!response.ok) return console.log(response);
 
     var ele = ``;
-    for (let i = 0; i < indexFetch.index.alerts.length; i++) {
-        const alertID = indexFetch.index.alerts[i];
+    for (let i = 0; i < indexFetch.alerts.length; i++) {
+        const alertID = indexFetch.alerts[i];
         const alertData = await fetchAlert(alertID._id);
         ele += alertEle(alertData.alert);
     }
