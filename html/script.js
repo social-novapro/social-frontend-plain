@@ -1317,6 +1317,10 @@ async function userEditHtml(userID) {
     if (userID != currentUserLogin.userID) return showModal("<div><p>Sorry, you can't edit this user!</p></div>");
     changeHeader("?userEdit")
 
+    //const stringifiedTheme = `${profileData?.userData.colourTheme ? JSON.stringify(profileData.userData.colourTheme) : null}`
+    //console.log( JSON.stringify(profileData.userData?.colourTheme))
+    //const stringifiedTheme =  JSON.stringify(profileData.userData?.colourTheme)
+    //console.log(stringifiedTheme)
 
     var timesince
     if (profileData.userData.creationTimestamp) timesince = checkDate(profileData.userData.creationTimestamp)
@@ -1374,6 +1378,9 @@ async function userEditHtml(userID) {
                     <input type="text" id="userEdit_pronouns_text" class="userEditForm" placeholder="Pronouns">
                 </form>
             </div> 
+            <div class="userEditArea"><p><b>User Theme</b></p>
+                <p id="userThemeEditing" onclick='editThemePanel("${profileData.userData._id}")'>Open theme Editor</p>
+            </div> 
             ${profileData.userData.creationTimestamp ? 
                 `  
                     <div class="userEditArea">
@@ -1414,6 +1421,120 @@ async function userEditHtml(userID) {
         document.getElementById("userEdit_profileImage").addEventListener("submit", function (e) { e.preventDefault()})
     }
     return true; 
+}
+
+function escapeHtml(text) {
+    return text.replace(/"/g, '&quot;');
+}
+
+function unescapeHtml(text) {
+    return text.replace(/&quot;/g, '"');
+}
+
+async function editThemePanel(userID) {
+    //console.log("!!")
+    //const themeSettingsSTRING = unescapeHtml(escapedHTML);
+    //console.log(escapedHTML)
+    //console.log(themeSettingsSTRING)
+    //console.log(themeSettingsSTRING)
+    ////return;
+
+    const possibleThemeEdits = await getPossibleThemeEdits()
+    //var themeSettings = null
+    //console.log(themeSettingsSTRING)
+    //if (themeSettingsSTRING) themeSettings = JSON.parse(themeSettingsSTRING)
+    ////console.log(userData)
+
+    //console.log(themeSettings)
+    const themeSettings = await loadTheme(userID)
+
+    var ele = `
+        <div id="userThemeEditing">
+            <form id="userEdit_themeSettings">
+    `
+
+    // TEST FOR NULL DATAS
+    for (const option of possibleThemeEdits) {
+        const currentData = themeSettings ? themeSettings[option.option]? themeSettings[option.option] : '' : ''
+        ele+=`
+            <hr class="rounded">
+            <div>
+                <input type="color" id="themeSetting_${option.option}" value="${currentData}"/>
+                <label for="${option.option}">${option.name}<br>${option.description}</label>
+                <!--<div style="width: 5px; height: 5px; background-color: ${currentData};"></div>-->
+            </div>
+        `
+    }
+    ele += `</form><button class="userInfo buttonStyled" onclick="submitThemeSettings()">Submit Theme Edits</button></div>`
+    
+    document.getElementById("userThemeEditing").outerHTML = ele
+    document.getElementById("userEdit_themeSettings").addEventListener("submit", function (e) { e.preventDefault()})
+
+    return true
+}
+
+async function getPossibleThemeEdits() {
+    const response = await fetch(`${apiURL}/users/profile/theme/possible`, {
+        method: 'GET',
+        headers,
+    });
+
+    const res = await response.json();
+    if (debug) console.log(res)
+
+    return res
+}
+
+async function loadTheme(userID) {
+    const response = await fetch(`${apiURL}/users/profile/theme/${userID}`, {
+        method: 'GET',
+        headers,
+    });
+
+    const res = await response.json();
+    if (debug) console.log(res)
+
+    return res;
+}
+
+async function submitThemeSettings() {
+    const reqBody = []
+    const possibleThemeEdits = await getPossibleThemeEdits();
+
+    for (const option of possibleThemeEdits) {
+        const themeVal =  document.getElementById(`themeSetting_${option.option}`).value;
+        //console.log(isHexColor(themeVal)) false for some reason
+        //themeSettings[option.option] = isHexColor(themeVal) ? themeVal : convertRGBToHex(themeVal);
+        //themeSettings[option.option] = themeVal;
+        reqBody.push({ option: option.option, value: themeVal})
+    }
+
+    const response = await fetch(`${apiURL}/users/profile/theme/submit`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(reqBody)
+    });
+
+    const res = await response.json();
+    if (debug) console.log(res)
+    return true;
+}
+
+function isHexColor (hex) {
+    return typeof hex === 'string'
+        && hex.length === 6
+        && !isNaN(Number('0x' + hex))
+}
+
+function convertRGBToHex(rgb) {
+    // Convert RGB to HEX
+    const rgbSplit = rgb.split(',');
+    const r = parseInt(rgbSplit[0].substring(4));
+    const g = parseInt(rgbSplit[1]);
+    const b = parseInt(rgbSplit[2].substring(0, rgbSplit[2].length - 1));
+    const hex = "#" + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1).toUpperCase();
+
+    return hex;
 }
 
 async function userHtml(userID) {
