@@ -205,7 +205,7 @@ function postElementCreate({ post, user, type, hideParent, hideReplies, pollData
     if (type=="basic"){
         return `
             <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'} | ${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
-            <div class="postContent" id="postContentArea_${post._id}">
+            <div class="posts-style" class="postContent" id="postContentArea_${post._id}">
                 <div class="textAreaPost">
                     <p id="postContent_${post._id}">${imageContent.content}</p>
                     ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
@@ -219,7 +219,7 @@ function postElementCreate({ post, user, type, hideParent, hideReplies, pollData
             ${!hideParent==true && post.isReply ? `
                 <div id="parent_${post._id}"></div>` 
             : `` } 
-            <div class="publicPost areaPost" id="postdiv_${post._id}">
+            <div class="publicPost posts-style areaPost" id="postdiv_${post._id}">
                 ${!hideParent==true && post.isReply ? `
                     ${ post.replyData ? `
                         <p onclick="viewParentPost('${post._id}', '${post.replyData.postID}')" id="parentViewing_${post._id}">This was a reply, click here to see.</p>
@@ -849,7 +849,8 @@ async function checkLogin() {
 
         loginUserToken = true
     }
-    
+
+
     if (!loginUserToken) return loginSplashScreen()
     else await getFeed()
 }
@@ -1131,6 +1132,10 @@ function settingsPage() {
                         <button class="userInfo buttonStyled" onclick="changeFeedSettings()">Feed Settings</p>
                     </div>
                     <div id="feedPopup"></div>
+                    <div class="userEditArea"><p><b>User Theme</b></p>
+                        <button class="userInfo buttonStyled" onclick='editThemePanel("${headers.userid}")'>Open theme Editor</button>
+                    </div> 
+                    <div id="userThemeEditor"></div>
                     <div id="emailSettings" class="userInfo">
                         <p><b>Email</b></p>
                         <button class="userInfo buttonStyled" onclick="changeEmailPage()">Email Settings</p>
@@ -1377,10 +1382,7 @@ async function userEditHtml(userID) {
                 <form id="userEdit_pronouns" class="contentMessage" onsubmit="userEdit('pronouns')">
                     <input type="text" id="userEdit_pronouns_text" class="userEditForm" placeholder="Pronouns">
                 </form>
-            </div> 
-            <div class="userEditArea"><p><b>User Theme</b></p>
-                <p id="userThemeEditing" onclick='editThemePanel("${profileData.userData._id}")'>Open theme Editor</p>
-            </div> 
+            </div>
             ${profileData.userData.creationTimestamp ? 
                 `  
                     <div class="userEditArea">
@@ -1449,7 +1451,9 @@ async function editThemePanel(userID) {
     const themeSettings = await loadTheme(userID)
 
     var ele = `
-        <div id="userThemeEditing">
+        <div class="userInfo">
+        <p><b>Theme Editor</b></p>
+        <p>Change the theme of your profile and experince.</p>
             <form id="userEdit_themeSettings">
     `
 
@@ -1467,7 +1471,7 @@ async function editThemePanel(userID) {
     }
     ele += `</form><button class="userInfo buttonStyled" onclick="submitThemeSettings()">Submit Theme Edits</button></div>`
     
-    document.getElementById("userThemeEditing").outerHTML = ele
+    document.getElementById("userThemeEditor").innerHTML = ele
     document.getElementById("userEdit_themeSettings").addEventListener("submit", function (e) { e.preventDefault()})
 
     return true
@@ -1517,9 +1521,50 @@ async function submitThemeSettings() {
 
     const res = await response.json();
     if (debug) console.log(res)
+    console.log(res)
+    if (!response.ok) return showModal(`<p>Error: ${res.code}, ${res.msg}</p>`)
+    applyTheme(res.colourTheme)
+    return showModal(`<p>Success!</p>`)
+}
+
+async function getTheme() {
+    console.log(headers)
+    const response = await fetch(`${apiURL}/users/profile/theme/${headers.userid}`, {
+        method: 'GET',
+        headers,
+    });
+
+    const res = await response.json();
+    if (debug) console.log(res)
+
+    console.log(res)
+    applyTheme(res);
+
     return true;
 }
 
+function applyTheme(themeSettings) {
+    console.log(themeSettings)
+    for (const option in themeSettings) {
+        if (option =="_id") continue;
+        console.log(option)
+        setTheme(option, themeSettings[option])
+    }
+    return true;
+}
+
+function setTheme(name, value) {
+    const style = document.createElement('style');
+    
+    style.innerHTML = `
+        .${name}-style {
+            background-color: ${value};
+        }
+    `;
+
+    document.head.appendChild(style);
+    return true;
+}
 function isHexColor (hex) {
     return typeof hex === 'string'
         && hex.length === 6
@@ -2729,6 +2774,8 @@ async function changeFeed(feedType) {
 // GET DATA FROM API FOR MAIN FEED
 async function getFeed(feedType) {
     const feedToUse = feedType || 'userFeed'
+
+    await getTheme();
 
     searchBar()
     // postBar()
