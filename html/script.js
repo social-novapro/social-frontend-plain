@@ -120,6 +120,7 @@ async function checkURLParams() {
     const ifUserEdit = params.has("userEdit");
     const ifSettings = params.has("settings");
     const ifEmailSettings = params.has("emailSettings");
+    const ifThemeSettings = params.has("themeEditor");
 
     if (ifUsername) {
         paramsFound = true
@@ -178,6 +179,13 @@ async function checkURLParams() {
         settingsPage();
         changeEmailPage();
         document.getElementById("emailSettings").scrollIntoView();
+    } else if (ifThemeSettings) {
+        paramsFound = true
+        paramsInfo.paramsFound = true
+
+        settingsPage();
+        editThemePanel(headers.userid);
+        document.getElementById("themeEditor").scrollIntoView();
     }
    
     return paramsInfo
@@ -1132,7 +1140,7 @@ function settingsPage() {
                         <button class="userInfo buttonStyled" onclick="changeFeedSettings()">Feed Settings</p>
                     </div>
                     <div id="feedPopup"></div>
-                    <div class="userEditArea"><p><b>User Theme</b></p>
+                    <div id="themeEditor" class="userEditArea"><p><b>User Theme</b></p>
                         <button class="userInfo buttonStyled" onclick='editThemePanel("${headers.userid}")'>Open theme Editor</button>
                     </div> 
                     <div id="userThemeEditor"></div>
@@ -1448,8 +1456,39 @@ async function editThemePanel(userID) {
     ////console.log(userData)
 
     //console.log(themeSettings)
-    const themeSettings = await loadTheme(userID)
+   
+    const themeSettings = await getTheme()
 
+    if (!themeSettings || themeSettings.error) {
+        var ele = `
+            <div class="userInfo">
+            <p><b>Theme Editor</b></p>
+            <p>Change the theme of your profile and experince.</p>
+        `
+        
+        ele+=`
+            <p>There was no theme set</p>
+            <p>Would you like to create one?</p>
+            <div class="signInDiv">
+                <form id="userEdit_themeSettings_create" class="contentMessage">
+                    <label for="userEdit_themeSettings_create_name"><p>Theme Name</p></label>
+                    <input type="text" id="userEdit_themeSettings_create_name" class="userEditForm" placeholder="Theme Name">
+                    <label for="userEdit_themeSettings_create_privacy">Privacy:</label>
+                    <select id="userEdit_themeSettings_create_privacy" name="privacy">
+                        <option value="1">Public</option>
+                        <option value="3">Private</option>
+                    </select>
+                    <label for="userEdit_themeSettings_create_fork"><p>Fork existing theme</p></label>
+                    <input type="text" id="userEdit_themeSettings_create_fork" class="userEditForm" placeholder="Theme ID">
+                </form>
+            <button class="userInfo buttonStyled" onclick="createThemeSettings()">Create Theme Settings</button>
+            </div>
+        `
+
+        document.getElementById("userThemeEditor").innerHTML = ele
+
+        return true;
+    }
     var ele = `
         <div class="userInfo">
         <p><b>Theme Editor</b></p>
@@ -1459,24 +1498,58 @@ async function editThemePanel(userID) {
 
     // TEST FOR NULL DATAS
     for (const option of possibleThemeEdits) {
-        const currentData = themeSettings ? themeSettings[option.option]? themeSettings[option.option] : '' : ''
+        const currentData = themeSettings.colourTheme ? themeSettings.colourTheme[option.option]? themeSettings.colourTheme[option.option] : '' : ''
         ele+=`
             <hr class="rounded">
             <div>
-                <input type="color" id="themeSetting_${option.option}" value="${currentData}"/>
+                <input type="color" id="themeSetting_${option.option}_color" value="${currentData}"/>
+                <input type="text" id="themeSetting_${option.option}" value="${currentData}"/>
                 <label for="${option.option}">${option.name}<br>${option.description}</label>
                 <!--<div style="width: 5px; height: 5px; background-color: ${currentData};"></div>-->
             </div>
         `
     }
-    ele += `</form><button class="userInfo buttonStyled" onclick="submitThemeSettings()">Submit Theme Edits</button></div>`
+    ele += `</form><button class="userInfo buttonStyled" onclick="submitThemeSettings('${themeSettings._id}')">Submit Theme Edits</button></div>`
     
     document.getElementById("userThemeEditor").innerHTML = ele
     document.getElementById("userEdit_themeSettings").addEventListener("submit", function (e) { e.preventDefault()})
-
-    return true
+    
+    listenChange(possibleThemeEdits);
 }
 
+function listenChange(possibleThemeEdits) {
+    for (const option of possibleThemeEdits) {
+        const colorInput = document.getElementById(`themeSetting_${option.option}_color`);
+        const textInput = document.getElementById(`themeSetting_${option.option}`);
+        
+        colorInput.addEventListener('input', function() {
+            textInput.value = colorInput.value;
+        });
+        textInput.addEventListener('input', function() {
+            colorInput.value = textInput.value;
+        });
+    }
+}
+async function createThemeSettings() {
+    const themeName =  document.getElementById("userEdit_themeSettings_create_name").value;
+    const privacy =  document.getElementById("userEdit_themeSettings_create_privacy").value;
+    const fork =  document.getElementById("userEdit_themeSettings_create_fork").value;
+
+    const response = await fetch(`${apiURL}/users/profile/theme/submit/create`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+            name: themeName,
+            privacy: privacy,
+            fork: fork ? fork : null
+        })
+    });
+
+    const res = await response.json();
+    if (debug) console.log(res)
+
+    return res
+}
 async function getPossibleThemeEdits() {
     const response = await fetch(`${apiURL}/users/profile/theme/possible`, {
         method: 'GET',
@@ -1489,8 +1562,8 @@ async function getPossibleThemeEdits() {
     return res
 }
 
-async function loadTheme(userID) {
-    const response = await fetch(`${apiURL}/users/profile/theme/${userID}`, {
+async function getTheme() {
+    const response = await fetch(`${apiURL}/users/profile/theme/user/`, {
         method: 'GET',
         headers,
     });
@@ -1501,7 +1574,7 @@ async function loadTheme(userID) {
     return res;
 }
 
-async function submitThemeSettings() {
+async function submitThemeSettings(themeID) {
     const reqBody = []
     const possibleThemeEdits = await getPossibleThemeEdits();
 
@@ -1513,7 +1586,7 @@ async function submitThemeSettings() {
         reqBody.push({ option: option.option, value: themeVal})
     }
 
-    const response = await fetch(`${apiURL}/users/profile/theme/submit`, {
+    const response = await fetch(`${apiURL}/users/profile/theme/submit/${themeID}`, {
         method: 'PUT',
         headers,
         body: JSON.stringify(reqBody)
@@ -1527,18 +1600,10 @@ async function submitThemeSettings() {
     return showModal(`<p>Success!</p>`)
 }
 
-async function getTheme() {
-    console.log(headers)
-    const response = await fetch(`${apiURL}/users/profile/theme/${headers.userid}`, {
-        method: 'GET',
-        headers,
-    });
+async function loadTheme() {
+    const currentTheme = await getTheme();
 
-    const res = await response.json();
-    if (debug) console.log(res)
-
-    console.log(res)
-    applyTheme(res);
+    applyTheme(currentTheme.colourTheme);
 
     return true;
 }
@@ -2775,7 +2840,7 @@ async function changeFeed(feedType) {
 async function getFeed(feedType) {
     const feedToUse = feedType || 'userFeed'
 
-    await getTheme();
+    await loadTheme();
 
     searchBar()
     // postBar()
