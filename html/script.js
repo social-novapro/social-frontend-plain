@@ -1492,6 +1492,11 @@ async function editTheme(themeSettings) {
         <p>Change the theme of your profile and experince.</p>
         <p>Theme Name: ${themeSettings.theme_name}</p>
             <form id="userEdit_themeSettings">
+            <hr class="rounded">
+            <div>
+                <b><label for="themeSetting_name">Name<br></label></b>
+                <input type="text" id="themeSetting_name" value="${themeSettings.theme_name}"/>
+            </div>
     `
     // TEST FOR NULL DATAS
     for (const option of possibleThemeEdits) {
@@ -1499,9 +1504,9 @@ async function editTheme(themeSettings) {
         ele+=`
             <hr class="rounded">
             <div>
+                <b><label for="themeSetting_${option.option}">${option.name}<br>${option.description}<br></label></b>
                 <input type="color" id="themeSetting_${option.option}_color" value="${currentData}"/>
                 <input type="text" id="themeSetting_${option.option}" value="${currentData}"/>
-                <label for="${option.option}">${option.name}<br>${option.description}</label>
                 <!--<div style="width: 5px; height: 5px; background-color: ${currentData};"></div>-->
             </div>
         `;
@@ -1518,7 +1523,6 @@ async function editTheme(themeSettings) {
 
 async function viewThemes(userID) {
     const themes = await getThemes(userID);
-    console.log(themes)
     if (!themes || themes.error) return showModal(`<p>Error: ${themes.code}, ${themes.msg}</p>`)
 
     var ele = `
@@ -1537,7 +1541,7 @@ async function viewThemes(userID) {
 
     ele += `
                 </select>
-                <button onclick="selectTheme()">Select Theme</button>
+                <button onclick="selectTheme(true)">Select Theme</button>
             </div>
         </div>
     `;
@@ -1546,13 +1550,13 @@ async function viewThemes(userID) {
     return true;
 }
 
-async function selectTheme() {
+async function selectTheme(toEdit) {
     const themeID = document.getElementById("viewThemeSelect").value;
     console.log("ghr", themeID)
     const theme = await setThemeAPI(themeID);
     if (!theme || theme.error) return showModal(`<p>Error: ${theme.code}, ${theme.msg}</p>`)
 
-    await editTheme(theme);
+    if (toEdit) await editTheme(theme);
     await applyTheme(theme.colourTheme);
 
     return true;
@@ -1606,7 +1610,6 @@ async function getPossibleThemeEdits() {
 }
 
 async function setThemeAPI(themeID) {
-    console.log("set", themeID)
     const response = await fetch(`${apiURL}/users/profile/theme/set/${themeID}`, {
         method: 'POST',
         headers,
@@ -1662,27 +1665,14 @@ async function submitThemeSettings(themeID) {
 
     const res = await response.json();
     if (debug) console.log(res)
-    console.log(res)
+
     if (!response.ok) return showModal(`<p>Error: ${res.code}, ${res.msg}</p>`)
     await applyTheme(res.colourTheme)
     return showModal(`<p>Success!</p>`)
 }
 
-async function loadTheme() {
-    const currentTheme = await getTheme();
-
-    await applyTheme(currentTheme.colourTheme);
-
-    return true;
-}
-
-
 async function applyTheme(themeSettings) {
     const findSettings = await getPossibleThemeEdits();
-
-    console.log(themeSettings)
-    console.log(findSettings)
-    console.log(themeSettings)
 
     // removes current theme
     unsetTheme()
@@ -1692,10 +1682,8 @@ async function applyTheme(themeSettings) {
     //style.innerHTML = `\``;
         
     for (const option of findSettings) {
-        console.log(option)
         const optionName = option.option;
         if (optionName == "_id") continue;
-        if (debug) console.log(optionName)
         if (themeSettings && themeSettings[optionName]) style.innerHTML += setTheme(optionName, themeSettings[optionName])
         else style.innerHTML += setTheme(optionName, null)
     }
@@ -1708,28 +1696,16 @@ async function applyTheme(themeSettings) {
 
 function unsetTheme() {
     const rmStyle = document.getElementById('themeStyle');
-    if (rmStyle) {
-        document.head.removeChild(rmStyle);
-    }
+    if (rmStyle) document.head.removeChild(rmStyle);
+    return true;
 }
 
 function setTheme(name, value) {
-    console.log(name, value)
-    //const style = document.createElement('style');
     return `
         .${name}-style {
             background-color: ${value};
         }
     `;
-
-    style.innerHTML = `
-        .${name}-style {
-            background-color: ${value};
-        }
-    `;
-
-    //document.head.appendChild(style);
-    return true;
 }
 
 function isHexColor (hex) {
@@ -2919,6 +2895,104 @@ async function getPossibleFeeds() {
     }
 }
 
+/*
+function loadingHTML(text) {
+    const ele = `
+        <div class="loading userInfo" onview="createSpin()">
+            <h1>${text ? text : "Loading..."}</h1>
+            <canvas id="loadingBar" width="200" height="20"></canvas>
+        </div>
+    `
+
+    return ele;
+}
+*/
+
+/*
+
+    usage: 
+    run listenForLoading() when element is rendered
+*/
+function loadingHTML(text) {
+    const ele = `
+        <div id="loadingSection" class="loading userInfo">
+            <h1>${text ? text : "Loading..."}</h1>
+            <canvas id="loadingBar"></canvas>
+        </div>
+    `;
+
+    // usage: 
+    // run listenForLoading() when element is rendered
+    return ele;
+}
+
+//function listenForLoading() {
+//    const canvas = document.getElementById('loadingBar');
+//    const ctx = canvas.getContext('2d');
+//    const centerX = canvas.width / 2;
+//    const centerY = canvas.height / 2;
+//    const radius = 50;
+//    let angle = 0;
+  
+//    function drawLoadingCircle() {
+//      console.log('drawing');
+//      const checkEle = document.getElementById('loadingSection');
+//      if (!checkEle) return true;
+  
+//      ctx.clearRect(0, 0, canvas.width, canvas.height);
+//      ctx.beginPath();
+//      ctx.arc(centerX, centerY, radius, 0, angle);
+//      ctx.strokeStyle = 'green';
+//      ctx.lineWidth = 10;
+//      ctx.stroke();
+//      angle += Math.PI / 15;
+//      if (angle >= 2 * Math.PI) {
+//        angle = 0;
+//      }
+//      requestAnimationFrame(drawLoadingCircle);
+//    }
+  
+//    if (document.readyState === 'complete') {
+//      drawLoadingCircle();
+//    } else {
+//      window.onload = function() {
+//        drawLoadingCircle();
+//      };
+//    }
+//  }
+
+function listenForLoading() {
+    console.log('listneing')
+    //window.onload = function() {
+    const canvas = document.getElementById('loadingBar');
+    const ctx = canvas.getContext('2d');
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = 50;
+    let angle = 0;
+
+    function drawLoadingCircle() {
+        console.log("drawing")
+        const checkEle = document.getElementById("loadingSection");
+        if (!checkEle) return true;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, angle);
+        ctx.strokeStyle = 'green';
+        ctx.lineWidth = 10;
+        ctx.stroke();
+        angle += Math.PI / 15;
+        if (angle >= 2 * Math.PI) {
+            angle = 0;
+        }
+        requestAnimationFrame(drawLoadingCircle);
+    }
+
+    drawLoadingCircle();
+    //};
+}
+
 async function changeFeedHeader(current) {
     const possibleFeeds = await getPossibleFeeds();
     if (!possibleFeeds) return console.log("error getting possible feeds");
@@ -2942,7 +3016,6 @@ async function changeFeed(feedType) {
 async function getFeed(feedType) {
     const feedToUse = feedType || 'userFeed'
 
-    await loadTheme();
 
     searchBar()
     // postBar()
@@ -2953,10 +3026,14 @@ async function getFeed(feedType) {
     const params = await checkURLParams()
     if (params.paramsFound != false) return 
 
+    document.getElementById('mainFeed').innerHTML=loadingHTML("Loading feed...");
+    listenForLoading();
+
     const response = await fetch(`${apiURL}/feeds/${feedToUse}`, { method: 'GET', headers})
     var data = await response.json()
 
     currentFeedType = feedToUse;
+    if (!data || !data[0]) return showModal("<p>There was no data in the feed selected, please load a different feed</p>")
     currentFeed = data.reverse()
 
     if (params.paramsFound == false) {

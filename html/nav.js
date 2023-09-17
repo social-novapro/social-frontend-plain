@@ -33,6 +33,61 @@ async function startup(){
     checkNavCookie()
     addTitle() 
     checkLogin()
+    loadTheme();
+}
+
+async function loadTheme() {
+    const currentTheme = await getTheme();
+    if (!currentTheme || !currentTheme.colourTheme) return false;
+    await applyTheme(currentTheme.colourTheme);
+
+    return true;
+}
+
+async function applyTheme(themeSettings) {
+    const style = document.createElement('style');
+    style.id="themeStyle"
+        
+    for (const option in themeSettings) {
+        //const optionName = option.option;
+        if (option == "_id") continue;
+        style.innerHTML += setTheme(option, themeSettings[option] ? themeSettings[option] : null);
+    }
+
+    // applies new theme
+    document.head.appendChild(style);
+
+    return true;
+}
+
+function setTheme(name, value) {
+    return `
+        .${name}-style {
+            background-color: ${value};
+        }
+    `;
+}
+
+async function getTheme(themeID) {
+    const response = await fetch(`${themeID ? `${apiURL}/users/profile/theme/${themeID}` : `${apiURL}/users/profile/theme/user/`}`, {
+        method: 'GET',
+        headers,
+    });
+
+    const res = await response.json();
+
+    return res;
+}
+
+async function getPossibleThemeEdits() {
+    const response = await fetch(`${apiURL}/users/profile/theme/possible`, {
+        method: 'GET',
+        headers,
+    });
+
+    const res = await response.json();
+
+    return res
 }
 
 // console.log(hostedURL)

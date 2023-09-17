@@ -264,7 +264,7 @@ function addToList(data, content, user, timeStamp, message) {
 
     // console.log(data.message)
     document.getElementById("messages").innerHTML+=`
-        <div class="message" id="${data._id}">
+        <div class="message posts-style" id="${data._id}">
             ${data.message?.replyTo ? `
                 <p style="font-size: 8;" class="edited contentMessage replyToMessage replyTo_${data.message.replyTo}" onclick="highlightMessage('${data.message.replyTo}')" id="replyContent_${data._id}"><i>${getContent(data.message.replyTo)}</i></p>
             `: ""}
