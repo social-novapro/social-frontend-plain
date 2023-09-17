@@ -1676,34 +1676,62 @@ async function loadTheme() {
     return true;
 }
 
+
 async function applyTheme(themeSettings) {
     const findSettings = await getPossibleThemeEdits();
 
     console.log(themeSettings)
+    console.log(findSettings)
+    console.log(themeSettings)
+
+    // removes current theme
+    unsetTheme()
+   
+    const style = document.createElement('style');
+    style.id="themeStyle"
+    //style.innerHTML = `\``;
+        
     for (const option of findSettings) {
         console.log(option)
-        if (option == "_id") continue;
-        if (debug) console.log(option)
-        if (themeSettings && themeSettings[option.name]) setTheme(option.name, themeSettings[option.name])
-        else setTheme(option, null)
+        const optionName = option.option;
+        if (optionName == "_id") continue;
+        if (debug) console.log(optionName)
+        if (themeSettings && themeSettings[optionName]) style.innerHTML += setTheme(optionName, themeSettings[optionName])
+        else style.innerHTML += setTheme(optionName, null)
     }
+
+    // applies new theme
+    document.head.appendChild(style);
 
     return true;
 }
 
+function unsetTheme() {
+    const rmStyle = document.getElementById('themeStyle');
+    if (rmStyle) {
+        document.head.removeChild(rmStyle);
+    }
+}
+
 function setTheme(name, value) {
     console.log(name, value)
-    const style = document.createElement('style');
-    
+    //const style = document.createElement('style');
+    return `
+        .${name}-style {
+            background-color: ${value};
+        }
+    `;
+
     style.innerHTML = `
         .${name}-style {
             background-color: ${value};
         }
     `;
 
-    document.head.appendChild(style);
+    //document.head.appendChild(style);
     return true;
 }
+
 function isHexColor (hex) {
     return typeof hex === 'string'
         && hex.length === 6
