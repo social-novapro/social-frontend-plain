@@ -1497,7 +1497,15 @@ async function editTheme(themeSettings) {
                 <b><label for="themeSetting_name">Name<br></label></b>
                 <input type="text" id="themeSetting_name" value="${themeSettings.theme_name}"/>
             </div>
-    `
+            <div>
+                <label for="themeSetting_privacy">Privacy:</label>
+                <select id="themeSetting_privacy" name="privacy">
+                    <option value="1" ${themeSettings.privacy ==1 ? 'selected' : ''}>Public</option>
+                    <option value="3" ${themeSettings.privacy ==3 ? 'selected' : ''}>Private</option>
+                </select>
+            </div>
+    `;
+
     // TEST FOR NULL DATAS
     for (const option of possibleThemeEdits) {
         const currentData = themeSettings.colourTheme ? themeSettings.colourTheme[option.option]? themeSettings.colourTheme[option.option] : '' : ''
@@ -1512,7 +1520,15 @@ async function editTheme(themeSettings) {
         `;
     };
 
-    ele += `</form><button class="userInfo buttonStyled" onclick="submitThemeSettings('${themeSettings._id}')">Submit Theme Edits</button></div>`
+    ele += `</form><button class="userInfo buttonStyled" onclick="`;
+
+    if (themeSettings.userID == headers.userid) ele += `submitThemeSettings('${themeSettings._id}')">Submit Theme Edits`;
+    else ele += `forkThemeSettings('${themeSettings._id}')">Fork Theme`;
+
+    ele += `</button></div>`;
+
+
+    //ele += `</form><button class="userInfo buttonStyled" onclick="submitThemeSettings('${themeSettings._id}')">Submit Theme Edits</button></div>`
 
     document.getElementById("userThemeEditor").innerHTML = ele;
     document.getElementById("userEdit_themeSettings").addEventListener("submit", function (e) { e.preventDefault()})
@@ -1594,6 +1610,7 @@ async function createThemeSettings() {
     const res = await response.json();
     if (debug) console.log(res)
 
+    editTheme(res); // rerender
     return res
 }
 
@@ -1628,7 +1645,7 @@ async function getTheme(themeID) {
     });
 
     const res = await response.json();
-    if (debug) console.log(res)
+    if (debug) console.log(res);
 
     return res;
 }
@@ -1640,35 +1657,73 @@ async function getThemes(userID) {
     });
 
     const res = await response.json();
-    if (debug) console.log(res)
+    if (debug) console.log(res);
 
     return res;
 }
 
-async function submitThemeSettings(themeID) {
-    const reqBody = []
-    const possibleThemeEdits = await getPossibleThemeEdits();
+function getThemeChanges(themeID, possibleThemeEdits) {
+    const reqBody = [];
+
+    const changeName = document.getElementById(`themeSetting_name`).value;
+    if (changeName) reqBody.push({ option: "name", value: changeName});
+
+    const changePrivacy = document.getElementById(`themeSetting_privacy`).value;
+    if (changePrivacy) reqBody.push({ option: "privacy", value: changePrivacy});
 
     for (const option of possibleThemeEdits) {
         const themeVal =  document.getElementById(`themeSetting_${option.option}`).value;
-        //console.log(isHexColor(themeVal)) false for some reason
-        //themeSettings[option.option] = isHexColor(themeVal) ? themeVal : convertRGBToHex(themeVal);
-        //themeSettings[option.option] = themeVal;
-        reqBody.push({ option: option.option, value: themeVal})
+        reqBody.push({ option: option.option, value: themeVal});
     }
 
-    const response = await fetch(`${apiURL}/users/profile/theme/submit/${themeID}`, {
-        method: 'PUT',
+    return reqBody;
+}
+
+async function forkThemeSettings(themeID) {
+    const possibleThemeEdits = await getPossibleThemeEdits();
+    const reqBody = getThemeChanges(themeID, possibleThemeEdits); // get changes
+    // forked
+    const response = await fetch(`${apiURL}/users/profile/theme/fork/${themeID}`, {
+        method: 'POST',
         headers,
-        body: JSON.stringify(reqBody)
     });
 
     const res = await response.json();
-    if (debug) console.log(res)
+    if (debug) console.log(res);
+    if (!response.ok || res.error) return showModal(`<p>Error: ${res.code}, ${res.msg}</p>`);
 
-    if (!response.ok) return showModal(`<p>Error: ${res.code}, ${res.msg}</p>`)
-    await applyTheme(res.colourTheme)
-    return showModal(`<p>Success!</p>`)
+    const submittedChange = await submitThemeChanges(res._id, reqBody);
+    if (!submittedChange || submittedChange.error) return false; // handling done in function
+
+    return showModal(`<p>Success!</p>`);
+}
+
+async function submitThemeSettings(themeID) {
+    const possibleThemeEdits = await getPossibleThemeEdits();
+    const reqBody = getThemeChanges(themeID, possibleThemeEdits);
+
+    const submittedChange = await submitThemeChanges(themeID, reqBody);
+    if (!submittedChange || submittedChange.error) return false; // handling done in function
+
+    return showModal(`<p>Success!</p>`);
+}   
+
+async function submitThemeChanges(themeID, submitBody) {
+    const response = await fetch(`${apiURL}/users/profile/theme/submit/${themeID}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(submitBody)
+    });
+
+    const res = await response.json();
+    if (debug) console.log(res);
+
+    if (!response.ok) return showModal(`<p>Error: ${res.code}, ${res.msg}</p>`);
+
+    await applyTheme(res.colourTheme);
+    editTheme(res); // rerender edit
+
+    return res;
 }
 
 async function applyTheme(themeSettings) {
@@ -1808,6 +1863,11 @@ async function userHtml(userID) {
                 </div>
             `: ``
         }
+        <div class="userInfo">
+            <p><b>Theme</b></p>
+            <button class="userInfo buttonStyled" onclick='viewThemes("${profileData.userData._id}")'>View Themes</button>
+        </div>
+        <div id="userThemeEditor"></div>
         ${profileData.included.posts ? `
             <div class="userInfo">
                 <p><b>Posts</b></p>
@@ -2896,19 +2956,6 @@ async function getPossibleFeeds() {
 }
 
 /*
-function loadingHTML(text) {
-    const ele = `
-        <div class="loading userInfo" onview="createSpin()">
-            <h1>${text ? text : "Loading..."}</h1>
-            <canvas id="loadingBar" width="200" height="20"></canvas>
-        </div>
-    `
-
-    return ele;
-}
-*/
-
-/*
 
     usage: 
     run listenForLoading() when element is rendered
@@ -2921,49 +2968,11 @@ function loadingHTML(text) {
         </div>
     `;
 
-    // usage: 
-    // run listenForLoading() when element is rendered
     return ele;
 }
 
-//function listenForLoading() {
-//    const canvas = document.getElementById('loadingBar');
-//    const ctx = canvas.getContext('2d');
-//    const centerX = canvas.width / 2;
-//    const centerY = canvas.height / 2;
-//    const radius = 50;
-//    let angle = 0;
-  
-//    function drawLoadingCircle() {
-//      console.log('drawing');
-//      const checkEle = document.getElementById('loadingSection');
-//      if (!checkEle) return true;
-  
-//      ctx.clearRect(0, 0, canvas.width, canvas.height);
-//      ctx.beginPath();
-//      ctx.arc(centerX, centerY, radius, 0, angle);
-//      ctx.strokeStyle = 'green';
-//      ctx.lineWidth = 10;
-//      ctx.stroke();
-//      angle += Math.PI / 15;
-//      if (angle >= 2 * Math.PI) {
-//        angle = 0;
-//      }
-//      requestAnimationFrame(drawLoadingCircle);
-//    }
-  
-//    if (document.readyState === 'complete') {
-//      drawLoadingCircle();
-//    } else {
-//      window.onload = function() {
-//        drawLoadingCircle();
-//      };
-//    }
-//  }
 
 function listenForLoading() {
-    console.log('listneing')
-    //window.onload = function() {
     const canvas = document.getElementById('loadingBar');
     const ctx = canvas.getContext('2d');
     const centerX = canvas.width / 2;
@@ -2972,7 +2981,7 @@ function listenForLoading() {
     let angle = 0;
 
     function drawLoadingCircle() {
-        console.log("drawing")
+        if (debug) console.log("drawing loading circle")
         const checkEle = document.getElementById("loadingSection");
         if (!checkEle) return true;
 
@@ -2990,7 +2999,6 @@ function listenForLoading() {
     }
 
     drawLoadingCircle();
-    //};
 }
 
 async function changeFeedHeader(current) {
@@ -3097,7 +3105,7 @@ function buildView(posts) {
    // // document.getElementById("mainFeed").append(userDiv)
    // document.getElementById('test').innerText=`test`
 
-    document.getElementById('mainFeed').innerHTML=``
+    //document.getElementById('mainFeed').innerHTML=``
     document.getElementById("mainFeed").innerHTML = `
         <div id="addToTop"></div>
         ${posts.map(function(postArray) {
@@ -3139,13 +3147,17 @@ function buildView(posts) {
     `
     devMode()
 }
+
 async function deletePost(postID) {
     if (debug) console.log(`deleting post ${postID}`)
     const response = await fetch(`${apiURL}/delete/removePost/${postID}`, { method: 'DELETE', headers})
 
     if (response.status == 200)  {
         if (debug) console.log("post deleted")
-        document.getElementById(`popupOpen_${postID}`).remove()
+
+        var elementPopup = document.getElementById(`popupOpen_${postID}`);
+        if (elementPopup) return elementPopup.remove();
+
         return document.getElementById(`postdiv_${postID}`).remove()
     }
     else return showModal("Error", "Something went wrong, please try again later")
