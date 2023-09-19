@@ -6,6 +6,7 @@ var baseUrl = getUrl .protocol + "//" + getUrl.host + "/" + getUrl.pathname.spli
 var pathArray = window.location.pathname.split( '/' );
 
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
+var LOCAL_STORAGE_THEME_SETTINGS = 'social.themeSettings'
 
 // console.log(config)
 var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
@@ -37,14 +38,39 @@ async function startup(){
 }
 
 async function loadTheme() {
+    const prevSettings = getThemeSettings();
+    
     const currentTheme = await getTheme();
     if (!currentTheme || !currentTheme.colourTheme) return false;
-    await applyTheme(currentTheme.colourTheme);
+    if (
+        prevSettings &&
+        prevSettings._id == currentTheme._id && 
+        prevSettings.edited == currentTheme.edited
+    ) return true;
+    else setThemeSettings(currentTheme);
+
+    await applyThemeNav(currentTheme.colourTheme);
 
     return true;
 }
 
-async function applyTheme(themeSettings) {
+function getThemeSettings() {
+    const themeSettings = localStorage.getItem(LOCAL_STORAGE_THEME_SETTINGS)
+    if (!themeSettings) return false;
+    else {
+        currentThemeSettings = JSON.parse(themeSettings);
+        if (!currentThemeSettings || !currentThemeSettings.colourTheme) return false;
+        applyThemeNav(currentThemeSettings.colourTheme);
+
+        return currentThemeSettings;
+    }
+}
+
+function setThemeSettings(newData) {
+    localStorage.setItem(LOCAL_STORAGE_THEME_SETTINGS, JSON.stringify(newData))
+}
+
+async function applyThemeNav(themeSettings) {
     const style = document.createElement('style');
     style.id="themeStyle"
         

@@ -72,6 +72,8 @@ var currentFeed
 var currentFeedType
 
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
+var LOCAL_STORAGE_THEME_SETTINGS = 'social.themeSettings'
+
 // let loginUserToken = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
 
 var debug = false
@@ -213,7 +215,7 @@ function postElementCreate({ post, user, type, hideParent, hideReplies, pollData
     if (type=="basic"){
         return `
             <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'} | ${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
-            <div class="posts-style" class="postContent" id="postContentArea_${post._id}">
+            <div class="postContent posts-style" id="postContentArea_${post._id}">
                 <div class="textAreaPost">
                     <p id="postContent_${post._id}">${imageContent.content}</p>
                     ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
@@ -246,7 +248,7 @@ function postElementCreate({ post, user, type, hideParent, hideReplies, pollData
                     </div>
                 </div>
                 ${post.pollID ? `
-                    <div class="poll_option" id="pollContainer_${post._id}">
+                    <div class="poll_option posts-style" id="pollContainer_${post._id}">
                     ${pollData ? `
                         ${pollElement(post._id, post.pollID, pollData, voteData)}
                     `: ``}
@@ -380,8 +382,9 @@ async function viewParentPost(postID, parentPostID) {
     if (debug) console.log(postData);
 
     if (postData.deleted == true || !postData.userID) {
+        //document.getElementById()
         document.getElementById(`parent_${postID}`).innerHTML = `
-            <div class="publicPost areaPost" id="openedParent_${postID}">
+            <div class="posts-style publicPost areaPost" id="openedParent_${postID}">
                 <div class="publicPost areaPost">
                     <p>Parent post has been deleted.</p>
                 </div>
@@ -590,7 +593,7 @@ function pollElement(postID, pollID, pollData, voteData) {
             <div id="pollOptions_${postID}">
                 ${pollData.pollOptions.map((option, index) => { 
                     return `
-                        <div id="pollOption_${postID}_${option._id}" class="pollOption">
+                        <div id="pollOption_${postID}_${option._id}" class="pollOption posts-style">
                             <div id="poll_option_${pollData._id}_${option._id}" class="poll_option ${voteData?.pollOptionID == option._id ? "voted" : ""}" onclick="voteOption('${pollID}', '${option._id}')">
                                 <p>${option.optionTitle}</p>
                                 <div class="debug">
@@ -1140,7 +1143,7 @@ function settingsPage() {
                         <button class="userInfo buttonStyled" onclick="changeFeedSettings()">Feed Settings</p>
                     </div>
                     <div id="feedPopup"></div>
-                    <div id="themeEditor" class="userEditArea"><p><b>User Theme</b></p>
+                    <div id="themeEditor" class="userEditArea"><p><b>Client Theme</b></p>
                         <button class="userInfo buttonStyled" onclick='editThemePanel("${headers.userid}")'>Open Editor</button>
                         <button class="userInfo buttonStyled" onclick='createTheme()'>Create Theme</button>
                         <button class="userInfo buttonStyled" onclick='viewThemes("${headers.userid}")'>Existing Theme</button>
@@ -1443,7 +1446,7 @@ function unescapeHtml(text) {
     return text.replace(/&quot;/g, '"');
 }
 
-async function editThemePanel(userID) {
+async function editThemePanel() {
     const themeSettings = await getTheme()
 
     if (!themeSettings || themeSettings.error) return await createTheme();
@@ -1491,14 +1494,18 @@ async function editTheme(themeSettings) {
         <p><b>Theme Editor</b></p>
         <p>Change the theme of your profile and experince.</p>
         <p>Theme Name: ${themeSettings.theme_name}</p>
-            <form id="userEdit_themeSettings">
-            <hr class="rounded">
+        <hr class="rounded">
+        <p>Created: ${checkDate(themeSettings.timestamp)}</p>
+        ${themeSettings.timestamp_edited ? `<p>Last Edited: ${checkDate(themeSettings.timestamp_edited)}</p>` : ``}
+        <hr class="rounded">
+        <form id="userEdit_themeSettings">
             <div>
-                <b><label for="themeSetting_name">Name<br></label></b>
+                <b><label for="themeSetting_name">Name:<br></label></b>
                 <input type="text" id="themeSetting_name" value="${themeSettings.theme_name}"/>
             </div>
+            <hr class="rounded">
             <div>
-                <label for="themeSetting_privacy">Privacy:</label>
+                <b><label for="themeSetting_privacy">Privacy:<br></label></b>
                 <select id="themeSetting_privacy" name="privacy">
                     <option value="1" ${themeSettings.privacy ==1 ? 'selected' : ''}>Public</option>
                     <option value="3" ${themeSettings.privacy ==3 ? 'selected' : ''}>Private</option>
@@ -1573,7 +1580,7 @@ async function selectTheme(toEdit) {
     if (!theme || theme.error) return showModal(`<p>Error: ${theme.code}, ${theme.msg}</p>`)
 
     if (toEdit) await editTheme(theme);
-    await applyTheme(theme.colourTheme);
+    await applyTheme(theme);
 
     return true;
 }
@@ -1720,15 +1727,18 @@ async function submitThemeChanges(themeID, submitBody) {
 
     if (!response.ok) return showModal(`<p>Error: ${res.code}, ${res.msg}</p>`);
 
-    await applyTheme(res.colourTheme);
+    await applyTheme(res);
     editTheme(res); // rerender edit
 
     return res;
 }
 
-async function applyTheme(themeSettings) {
-    const findSettings = await getPossibleThemeEdits();
+async function applyTheme(theme) {
+    const themeSettings = theme.colourTheme;
 
+    setThemeSettings(theme);
+
+    const findSettings = await getPossibleThemeEdits();
     // removes current theme
     unsetTheme()
    
@@ -1747,6 +1757,10 @@ async function applyTheme(themeSettings) {
     document.head.appendChild(style);
 
     return true;
+}
+
+function setThemeSettings(newData) {
+    localStorage.setItem(LOCAL_STORAGE_THEME_SETTINGS, JSON.stringify(newData))
 }
 
 function unsetTheme() {
