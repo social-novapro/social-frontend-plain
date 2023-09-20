@@ -140,7 +140,7 @@ function addNavigation() {
 
 function newNavigation() {
     document.getElementById('expandingNavBar').innerHTML = `
-        <ul class="navbar-nav">
+        <ul class="navbar-nav navigation-style">
             <li class="nav-item pointerCursor" id="navSection0">
                 <div id="page2Nav" class="nav-link" onclick="switchNav(5)">
                     <span class="material-symbols-outlined nav-button";>home</span>
@@ -288,6 +288,7 @@ async function switchNav(pageVal) {
 function showModal(html, showClose) {
     document.getElementById('modalContainer').classList.add("showModal");
     document.getElementById('modal').innerHTML = html;
+    document.getElementById('modal').classList.add("menu-style");
 
     if (showClose == "hide") return true;
     else return showModalClose();
@@ -295,7 +296,7 @@ function showModal(html, showClose) {
 
 function showModalClose() {
     document.getElementById('modal').innerHTML+=`
-        <button class="buttonStyled" onclick="closeModal()">Close</button>
+        <button class="menuButton menuButton-style" onclick="closeModal()">Close</button>
     `;
 }
 

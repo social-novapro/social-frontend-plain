@@ -347,7 +347,7 @@ async function popupActions(postID, hideParent, hideReplies, owner) {
     if (elementPopup) return elementPopup.remove();
 
     document.getElementById(`postElement_${postID}`).innerHTML+=`
-        <div id="popupOpen_${postID}" class="publicPost" style="position: element(#popupactions_${postID});">
+        <div id="popupOpen_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
             ${owner && mobileClient? `
                 <p>Owner Actions</p>
                 <p>---</p>
@@ -385,7 +385,7 @@ async function viewParentPost(postID, parentPostID) {
         //document.getElementById()
         document.getElementById(`parent_${postID}`).innerHTML = `
             <div class="posts-style publicPost areaPost" id="openedParent_${postID}">
-                <div class="publicPost areaPost">
+                <div class="publicPost areaPost posts-style">
                     <p>Parent post has been deleted.</p>
                 </div>
             </div>
@@ -405,7 +405,7 @@ async function viewParentPost(postID, parentPostID) {
 
     const postEle = postElementCreate({post: postData, user: userData});
     document.getElementById(`parent_${postID}`).innerHTML = `
-        <div class="publicPost areaPost" id="openedParent_${postID}">${postEle}</div>
+        <div class="publicPost areaPost posts-style" id="openedParent_${postID}">${postEle}</div>
     `;
     document.getElementById(`parentViewing_${postID}`).innerText = "Close parent post.";
 
@@ -430,7 +430,7 @@ async function viewReplies(postID) {
     if (debug) console.log(replyData)
     if (replyData.code) {
         document.getElementById(`postElement_${postID}`).innerHTML+=`
-            <div id="repliesOpened_${postID}" class="publicPost" style="position: element(#popupactions_${postID});">
+            <div id="repliesOpened_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
                 <p>Replies</p>
                 <p>---</p>
                 There are no replies yet on this post.
@@ -456,7 +456,7 @@ async function viewReplies(postID) {
     }
 
     document.getElementById(`postElement_${postID}`).innerHTML+=`
-        <div id="repliesOpened_${postID}" class="publicPost" style="position: element(#popupactions_${postID});">
+        <div id="repliesOpened_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
             <p>Replies</p>
             <p>---</p>
             ${ele}
@@ -733,11 +733,11 @@ async function createPostModal() {
     await showModal(`
         <div id="postingModel">
         <h1>Create a new Post</h1>
-        <div id="postModel" class="postModalActions">
-            <p onclick="createPostPage()">Open Post Page</p>
+        <div id="postModel">
+            <button onclick="createPostPage()" class="menuButton menuButton-style" style="width:80%;">Open Post Page</button>
             <hr class="rounded">
-            <p onclick="createPost()">Upload Post</p>
-            <p onclick="closeModal()">Close</p>
+            <button onclick="createPost()" class="menuButton menuButton-style" style="width:80%;">Upload Post</button>
+            <button onclick="closeModal()" class="menuButton menuButton-style" style="width:80%;">Close</button>
         </div>
         <div class="search">
             <input type="text" class="addPollOption" id="pollCreateLink" placeholder="Link Poll via ID">
@@ -1111,80 +1111,80 @@ function settingsPage() {
     const ele = `
         <div id="settingsPage">
             <div class="" id="settingsPageContent">
-                <div class="userInfo">
+                <div class="menu menu-style">
                     <h1>Settings</h1>
                 </div>
                 <div class="inline">
-                    <div class="userInfo">
+                    <div class="menu menu-style">
                         <p>View your profile. As shown to other users.</p>
-                        <button class="userInfo buttonStyled" onclick="profile()">View Profile</button>
+                        <button class="menuButton menuButton-style" onclick="profile()">View Profile</button>
                         <hr class="rounded">
                         <p>Edit your public profile.</p>
-                        <button class="userInfo buttonStyled" onclick="userEditPage()">Edit Profile</button>
+                        <button class="menuButton menuButton-style" onclick="userEditPage()">Edit Profile</button>
                     </div>
-                    <div class="userInfo">
+                    <div class="menu menu-style">
                         <p><b>Notifications</b></p>
                         <div>
-                            <button class="userInfo buttonStyled" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
+                            <button class="menuButton menuButton-style" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
                             <div id="notificationsDiv"></div>
                         </div>
                         <div>
-                            <button class="userInfo buttonStyled" id="showSubscriptionsButton" onclick="showSubscriptions()">Show Subscriptions</button>
+                            <button class="menuButton menuButton-style" id="showSubscriptionsButton" onclick="showSubscriptions()">Show Subscriptions</button>
                             <div id="subscriptionsDiv"></div>
                         </div>
                     </div>
-                    <div class="userInfo">
+                    <div class="menu menu-style">
                         <p><b>Bookmarks</b></p>
-                        <button class="userInfo buttonStyled" id="showBookmarksButton" onclick="showBookmarks()">Show Bookmarks</button>
+                        <button class="menuButton menuButton-style" id="showBookmarksButton" onclick="showBookmarks()">Show Bookmarks</button>
                         <div id="bookmarksdiv"></div>
                     </div>
-                    <div id="feedSettings" class="userInfo">
+                    <div id="feedSettings" class="menu menu-style">
                         <p><b>Feed</b></p>
-                        <button class="userInfo buttonStyled" onclick="changeFeedSettings()">Feed Settings</p>
+                        <button class="menuButton menuButton-style" onclick="changeFeedSettings()">Feed Settings</p>
                     </div>
                     <div id="feedPopup"></div>
-                    <div id="themeEditor" class="userEditArea"><p><b>Client Theme</b></p>
-                        <button class="userInfo buttonStyled" onclick='editThemePanel("${headers.userid}")'>Open Editor</button>
-                        <button class="userInfo buttonStyled" onclick='createTheme()'>Create Theme</button>
-                        <button class="userInfo buttonStyled" onclick='viewThemes("${headers.userid}")'>Existing Theme</button>
+                    <div id="themeEditor" class="menu menu-style"><p><b>Client Theme</b></p>
+                        <button class="menuButton menuButton-style" onclick='editThemePanel("${headers.userid}")'>Open Editor</button>
+                        <button class="menuButton menuButton-style" onclick='createTheme()'>Create Theme</button>
+                        <button class="menuButton menuButton-style" onclick='viewThemes("${headers.userid}")'>Existing Theme</button>
                     </div> 
                     <div id="userThemeEditor"></div>
-                    <div id="emailSettings" class="userInfo">
+                    <div id="emailSettings" class="menu menu-style">
                         <p><b>Email</b></p>
-                        <button class="userInfo buttonStyled" onclick="changeEmailPage()">Email Settings</p>
+                        <button class="menuButton menuButton-style" onclick="changeEmailPage()">Email Settings</p>
                     </div>
                     <div id="emailPopup"></div>
-                    <div class="userInfo">
+                    <div class="menu menu-style">
                         <p><b>Password</b></p>
-                        <button class="userInfo buttonStyled"  onclick="changePasswordPage()">Change Password</p>
+                        <button class="menuButton menuButton-style"  onclick="changePasswordPage()">Change Password</p>
                     </div>
                     <div id="passwordPopup"></div>
-                    <div class="userInfo">
+                    <div class="menu menu-style">
                         <p>Sign out of your account.</p>
-                        <button class="userInfo buttonStyled" onclick="signOutPage()">Sign Out</button>
+                        <button class="menuButton menuButton-style" onclick="signOutPage()">Sign Out</button>
                         <div id="signOutConfirm"></div>
                     </div>
-                    <div class="userInfo">
+                    <div class="menu menu-style">
                         <p>Delete your account.</p>
-                        <button class="userInfo buttonStyled" onclick="deleteAccPage()">Delete Account</button>
+                        <button class="menuButton menuButton-style" onclick="deleteAccPage()">Delete Account</button>
                         <div id="deleteAccConfirm"></div>
                     </div>
-                    <div class="userInfo">
+                    <div class="menu menu-style">
                         <p><b>Other Pages</b></p>
                         <p>These are other pages that are related to interact.</p>
-                        <button class="userInfo buttonStyled" onclick="generateRelatedPages()">Show Pages</button>
+                        <button class="menuButton menuButton-style" onclick="generateRelatedPages()">Show Pages</button>
                         <div id="generateRelatedPages"></div>
                     </div>
-                    <div class="userInfo">
+                    <div class="menu menu-style">
                         <p><b>DevMode</b></p>
                         <p>Enable / Disable dev mode. This will allow you to see more information about the different elements of Interact.</p>
-                        <button class="userInfo buttonStyled" onclick="devModePage()">Dev Mode Settings</button>
+                        <button class="menuButton menuButton-style" onclick="devModePage()">Dev Mode Settings</button>
                         <div id="devModeConfirm"></div>
                     </div>
-                    <div class="userInfo">
+                    <div class="menu menu-style">
                         <p><b>Developer</b></p>
                         <p>Access your developer account, and any apps that has access to your account</p>
-                        <button class="userInfo buttonStyled" id="showDevOptionsButton" onclick="showDevOptions()">Show Dev Settings</button>
+                        <button class="menuButton menuButton-style" id="showDevOptionsButton" onclick="showDevOptions()">Show Dev Settings</button>
                         <div id="showDevDiv"></div>
                     </div>
                 </div>
@@ -1241,23 +1241,23 @@ function removeDeleteAccConfirm() {
 
 function signOutPage() {
     const ele = `
-        <div class="userInfo" id="signOutPage">
+        <div class="menu menu-stye" id="signOutPage">
             <p><b>Sign Out</b></p>
             <p>Are you sure you want to sign out?</p>
-            <div class="signInDiv">
-                <p class="buttonStyled"onclick="signOut()">Sign Out</p>
-            </div>
-            <button class="userInfo buttonStyled" onclick="removeSignOutConfirm()">Cancel</button></div>
+            <button class="menuButton menuButton-style"onclick="signOut()">Sign Out</p>
+            <button class="menuButton menuButton-style" onclick="removeSignOutConfirm()">Cancel</button></div>
         </div>
     `;
 
     document.getElementById("signOutConfirm").innerHTML = ele;
+    document.getElementById("signOutPage").classList.add("menu");
+    document.getElementById("signOutPage").classList.add("menu-style");
     return true;
 }
 
 async function deleteAccPage() {
     const ele = `
-        <div class="userInfo" id="deleteAccPage">
+        <div class="" id="deleteAccPage">
             <p><b>Delete Account</b></p>
             <p>Are you sure you want to delete your account?<br>This will send an email and you will need to confirm.</p>
             <div class="signInDiv">
@@ -1265,14 +1265,16 @@ async function deleteAccPage() {
                     <label for="userEdit_email_pass_delete"><p>Password</p></label>
                     <input type="password" id="userEdit_email_pass_delete" class="userEditForm" placeholder="Password">
                 </form>
-                <p class="buttonStyled"onclick="requestDeleteAcc()">Delete</p>
             </div>
-            <button class="userInfo buttonStyled" onclick="removeDeleteAccConfirm()">Cancel</button></div>
+            <button class="menuButton menuButton-style"onclick="requestDeleteAcc()">Delete</button>
+            <button class="menuButton menuButton-style" onclick="removeDeleteAccConfirm()">Cancel</button></div>
             <p id="resultDeleteRequest"></p>
         </div>
     `;
     
     document.getElementById("deleteAccConfirm").innerHTML = ele;
+    document.getElementById("deleteAccConfirm").classList.add("menu");
+    document.getElementById("deleteAccConfirm").classList.add("menu-style");
     document.getElementById("userEdit_password_delete").addEventListener("submit", function (e) { e.preventDefault()})
 }
 
@@ -1301,14 +1303,12 @@ async function requestDeleteAcc() {
 
 function devModePage() {
     const ele = `
-        <div class="userInfo" id="devModePage">
+        <div class="menu menu-style" id="devModePage">
             <p><b>Dev Mode</b></p>
             <p>Dev Mode is ${debug ? "enabled" : "disabled"}</p>
             <p>Are you sure you want to enter dev mode?</p>
-            <div class="signInDiv">
-                <p class="buttonStyled" onclick="switchDevMode()">Dev Mode</p>
-            </div>
-            <button class="userInfo buttonStyled" onclick="removeDevModeConfirm()">Cancel</button></div>
+            <button class="menuButton menuButton-style" onclick="switchDevMode()">Dev Mode</button>
+            <button class="menuButton menuButton-style" onclick="removeDevModeConfirm()">Cancel</button></div>
         </div>
     `;
 
@@ -1348,49 +1348,50 @@ async function userEditHtml(userID) {
     
     document.getElementById("mainFeed").innerHTML =  `
         <div class="userEdit">
-            <div class="userInfo">
+            <div class="menu menu-style">
                 <h1>Edit Profile</h1>
             </div>
-            <div class="userEditArea">
+            <div class="menu menu-style">
                 <p><b>Save any changes made</b></p>
-                <button class="userInfo buttonStyled" onclick="userEdit()">Save</button>
+                <button class="menuButton menuButton-style" onclick="userEdit()">Save</button>
             </div>
-            <div class="userEditArea">
+            <div class="menu menu-style">
                 <p><b>Profile Image</b></p>
                 ${profileData.userData.profileURL ? `<img src="${profileData.userData.profileURL}" class="profileImage">` : "No image set"}
                 <form id="userEdit_profileImage" class="contentMessage" onsubmit="userEdit('profileImage')">
                     <input id="userEdit_profileImage_text" type="text" class="userEditForm" placeholder="Profile Image URL">
                 </form>
             </div>
-            <div class="userEditArea">
+            <div class="menu menu-style">
                 <p><b>Display Name</b></p>
                 ${profileData.userData.displayName ? `<p>${profileData.userData.displayName}` : "No display name set"}
                 <form id="userEdit_displayName" class="contentMessage" onsubmit="userEdit('displayName')">
                     <input id="userEdit_displayName_text" type="text" class="userEditForm" placeholder="Display Name">
                 </form>
             </div>
-            <div class="userEditArea">
+            <div class="menu menu-style">
                 <p><b>Username</b></p>
                 ${profileData.userData.username ? `<p>${profileData.userData.username}` : "No username set"}
                 <form id="userEdit_username" class="contentMessage" onsubmit="userEdit('username')">
                     <input type="text" id="userEdit_username_text" class="userEditForm" placeholder="Username">
                 </form>
             </div>
-            <div class="userEditArea">
+            <div class="menu menu-style">
                 <p><b>Status</b></p>
                 ${profileData.userData.statusTitle ? `<p>${profileData.userData.statusTitle}` : "No status set"}
                 <form id="userEdit_status" class="contentMessage" onsubmit="userEdit('status')">
                     <input type="text" id="userEdit_status_text" class="userEditForm" placeholder="Status">
                 </form> 
             </div>
-            <div class="userEditArea">
+            <div class="menu menu-style">
                 <p><b>Description</b></p>
                 ${profileData.userData.description ? `<p>${profileData.userData.description}` : "No description set" }
                 <form id="userEdit_description" class="contentMessage" onsubmit="userEdit('description')">
                     <input type="text" id="userEdit_description_text" class="userEditForm" placeholder="Description">
                 </form>
             </div>
-            <div class="userEditArea"><p><b>Pronouns</b></p>
+            <div class="menu menu-style">
+                <p><b>Pronouns</b></p>
                 ${profileData.userData.pronouns ? `<p>${profileData.userData.pronouns}` : "No pronouns set"}
                 <form id="userEdit_pronouns" class="contentMessage" onsubmit="userEdit('pronouns')">
                     <input type="text" id="userEdit_pronouns_text" class="userEditForm" placeholder="Pronouns">
@@ -1398,7 +1399,7 @@ async function userEditHtml(userID) {
             </div>
             ${profileData.userData.creationTimestamp ? 
                 `  
-                    <div class="userEditArea">
+                    <div class="menu menu-style">
                         <p><b>Creation</b></p>
                         <p>${timesince}</p>
                     </div>
@@ -1406,16 +1407,16 @@ async function userEditHtml(userID) {
             }
             ${profileData.verified ? 
                 `
-                    <div class="userEditArea">
+                    <div class="menu menu-style">
                         <p>Verified</p>
                     </div>
                 ` : `
-                    <div class="userEditArea">
+                    <div class="menu menu-style">
                         <p><b>Verify ✔️</b></p>
-                        <div class="searchSelect search">
-                            <input id="content_request_verification"  placeholder="Why do you want to verify?">
-                            <button onclick="requestVerification()">Request</button>
+                        <div class="searchSelect search menu-style">
+                            <input id="content_request_verification" placeholder="Why do you want to verify?">
                         </div>
+                        <button class="menuButton menuButton-style" onclick="requestVerification()">Request</button>
                     </div>
                 `
                 /*
@@ -1458,7 +1459,7 @@ async function editThemePanel() {
 
 async function createTheme() {
     var ele = `
-        <div class="userInfo">
+        <div class="menu menu-style">
         <p><b>Theme Editor</b></p>
         <p>Change the theme of your profile and experince.</p>
     `;
@@ -1478,7 +1479,7 @@ async function createTheme() {
                 <label for="userEdit_themeSettings_create_fork"><p>Fork existing theme</p></label>
                 <input type="text" id="userEdit_themeSettings_create_fork" class="userEditForm" placeholder="Theme ID">
             </form>
-        <button class="userInfo buttonStyled" onclick="createThemeSettings()">Create Theme Settings</button>
+            <button class="menuButton menuButton-style" onclick="createThemeSettings()">Create Theme Settings</button>
         </div>
     `;
 
@@ -1490,7 +1491,7 @@ async function editTheme(themeSettings) {
     const possibleThemeEdits = await getPossibleThemeEdits();
     
     var ele = `
-        <div class="userInfo">
+        <div class="menu menu-style">
         <p><b>Theme Editor</b></p>
         <p>Change the theme of your profile and experince.</p>
         <p>Theme Name: ${themeSettings.theme_name}</p>
@@ -1527,7 +1528,7 @@ async function editTheme(themeSettings) {
         `;
     };
 
-    ele += `</form><button class="userInfo buttonStyled" onclick="`;
+    ele += `</form><button class="menuButton menuButton-style" onclick="`;
 
     if (themeSettings.userID == headers.userid) ele += `submitThemeSettings('${themeSettings._id}')">Submit Theme Edits`;
     else ele += `forkThemeSettings('${themeSettings._id}')">Fork Theme`;
@@ -1549,11 +1550,11 @@ async function viewThemes(userID) {
     if (!themes || themes.error) return showModal(`<p>Error: ${themes.code}, ${themes.msg}</p>`)
 
     var ele = `
-        <div class="userInfo">
+        <div class="menu menu-style">
             <p><b>View Themes</b></p>
-            <p>View your themes.</p>
-            <div class="searchSelect search">
-                <select id="viewThemeSelect" name="theme">
+            <p>View your themes. Press select, to use, and an editor will appear.</p>
+            <hr class="rounded">
+            <select id="viewThemeSelect" name="theme">
     `;
 
     var amount=0;
@@ -1563,8 +1564,9 @@ async function viewThemes(userID) {
     }
 
     ele += `
-                </select>
-                <button onclick="selectTheme(true)">Select Theme</button>
+            </select>
+            <div>   
+                <button class="menuButton menuButton-style" onclick="selectTheme(true)">Select Theme</button>
             </div>
         </div>
     `;
@@ -1813,15 +1815,15 @@ async function userHtml(userID) {
     
     document.getElementById("mainFeed").innerHTML =  `
         ${clientUser ? `
-            <div class="userInfo">
+            <div class="menu menu-style">
                 <p><b>Edit Profile</b></p>
-                <button class="buttonStyled" onclick="userEditPage()">Edit Page</button>
+                <button class="menuButton menuButton-style" onclick="userEditPage()">Edit Page</button>
             </div>
             `: ""
         }
         ${profileData.userData?.profileURL != null ? 
             `
-                <div class="userInfo">
+                <div class="menu menu-style">
                     <p><b>Profile Image</b></p>
                     ${profileData.userData?.profileURL != null ?  `
                         <img class="profileUserHtmlLarge" src="${profileData.userData.profileURL}"></img>
@@ -1829,28 +1831,28 @@ async function userHtml(userID) {
                 </div>
             ` : ``
         }
-        <div class="userInfo">
+        <div class="menu menu-style">
             <p><b>Notifications</b></p>
             <a id="notificationSub" onclick="subNotifi('${profileData.userData._id}')">Subscribe</a>
         </div>
-        <div class="userInfo">
+        <div class="menu menu-style">
             <p><b>Display Name</b></p>
             <p>${profileData.userData.displayName}</p>
         </div>
-        <div class="userInfo">
+        <div class="menu menu-style">
             <p><b>Username</b></p>
             <p>${profileData.userData.username}</p>
         </div>
         ${profileData.userData.statusTitle ? 
 
             `
-                <div class="userInfo">
+                <div class="menu menu-style">
                     <p><b>Status</b></p>
                     <p>${profileData.userData.statusTitle}</p>
                 </div>
             ` : ``
         }
-        <div class="userInfo">
+        <div class="menu menu-style">
             <p><b>Description</b></p>
             <p>${profileData.userData.description}</p>
         </div> 
@@ -1864,26 +1866,26 @@ async function userHtml(userID) {
         }   
         ${profileData.userData.pronouns ? 
             `
-                <div class="userInfo"><p><b>Pronouns</b></p>
+                <div class="menu menu-style"><p><b>Pronouns</b></p>
                     <p>${profileData.userData.pronouns}</p>
                 </div>
             ` : ``
         }
         ${profileData.userData.creationTimestamp ? 
             `  
-                <div class="userInfo">
+                <div class="menu menu-style">
                     <p><b>Creation</b></p>
                     <p>${timesince}</p>
                 </div>
             `: ``
         }
-        <div class="userInfo">
+        <div class="menu menu-style">
             <p><b>Theme</b></p>
-            <button class="userInfo buttonStyled" onclick='viewThemes("${profileData.userData._id}")'>View Themes</button>
+            <button class="menuButton menuButton-style" onclick='viewThemes("${profileData.userData._id}")'>View Themes</button>
         </div>
         <div id="userThemeEditor"></div>
         ${profileData.included.posts ? `
-            <div class="userInfo">
+            <div class="menu menu-style">
                 <p><b>Posts</b></p>
                 <p>${profileData.postData.length}</p>
             </div>
@@ -1899,7 +1901,7 @@ async function userHtml(userID) {
 
 async function changePasswordPage() {
     const ele = `
-        <div class="userInfo">
+        <div class="menu menu-style">
             <p><b>Change Password</b></p>
             <p>Request change password, then check email and update with URL sent.</p>
             <hr class="rounded">
@@ -1907,7 +1909,7 @@ async function changePasswordPage() {
                 <label for="userEdit_password_old_text"><p>Password</p></label>
                 <input type="password" id="userEdit_password_old_text" autocomplete="current-password" class="userEditForm" placeholder="Password">
             </form>
-            <button class="userInfo buttonStyled" onclick="requestChangePassword()">Change Password</button>
+            <button class="menuButton menuButton-style" onclick="requestChangePassword()">Change Password</button>
             <div id="completed_change_pass"></div>
         </div>
     `
@@ -1956,16 +1958,16 @@ async function changeFeedSettings() {
     const selectedDate = getTimeSince(getPref.timestamp)
     
     var ele = `
-        <div class="userInfo">
+        <div class="menu menu-style">
             <p><b>Change your default feed</p></b>
             <hr class="rounded">
             <p>Current default feed is:<br><b>${currentDefaultOption.niceName}</b> selected ${selectedDate.sinceOrUntil == "current" ? "just changed" : `${selectedDate.sinceOrUntil == "since" ? selectedDate.value + " ago" : selectedDate.value}`}
     `;
     for (const feed of allowed) {
         if (!feed.speical) ele += `
-        <div class="userInfo">
+        <div class="menu menu-style">
             <p>${feed.description}</p>
-            <button class="userInfo buttonStyled ${getPref.preferredFeed==feed.name ? 'activeFeed' : ''}" onclick="changePref('${feed.name}')">${feed.niceName}</button>
+            <button class="menuButton menuButton-style ${getPref.preferredFeed==feed.name ? 'activeFeed' : ''}" onclick="changePref('${feed.name}')">${feed.niceName}</button>
         </div>
         `
     }
@@ -2012,7 +2014,7 @@ async function changeEmailPage() {
     const emailData = await fetchClientEmailData();
 
     const ele = `
-        <div class="userInfo">
+        <div class="menu menu-style">
             <div> 
                 <p><b>Current Email Settings</b></p>
                 <hr class="rounded">
@@ -2049,7 +2051,7 @@ async function changeEmailPage() {
                     <label for="userEdit_email_pass"><p>Password</p></label>
                     <input type="password" id="userEdit_email_pass" class="userEditForm" placeholder="Password">
                 </form>
-                <button class="userInfo buttonStyled" onclick="editEmailRequest()">Submit Email</button>
+                <button class="menuButton menuButton-style" onclick="editEmailRequest()">Submit Email</button>
                 <p id="resultAddRequest"></p>
             </div>
             ${emailData.verified ? `
@@ -2061,7 +2063,7 @@ async function changeEmailPage() {
                     <label for="userEdit_email_pass_remove"><p>Password</p></label>
                     <input type="password" id="userEdit_email_pass_remove" class="userEditForm" placeholder="Password">
                 </form>
-                <button class="userInfo buttonStyled" onclick="removeEmailRequest('${emailData.email}')">Remove Email</button>
+                <button class="menuButton menuButton-style" onclick="removeEmailRequest('${emailData.email}')">Remove Email</button>
                 <p id="resultRemoveRequest"></p>
             </div> 
             ` : ``}
@@ -2094,7 +2096,7 @@ async function createEditEmailSettingsView(emailSettings) {
         `
     }
 
-    ele+=`</form><button class="userInfo buttonStyled" onclick="editEmailSettings()">Submit Email Settings</button>`;
+    ele+=`</form><button class="menuButton menuButton-style" onclick="editEmailSettings()">Submit Email Settings</button>`;
     
     document.getElementById("emailSettingOptions").innerHTML = ele;
     document.getElementById("userEdit_emailSettings").addEventListener("submit", function (e) { e.preventDefault()})
@@ -2580,7 +2582,7 @@ async function showDevOptions() {
     var firstEle = `
         <hr class="rounded" id="showDevAreShown">
         <p>Account Status</p>
-        <div class="userInfo">
+        <div class="menu menu-style">
             ${res.developer ? `<p>You have an Interact Developer Account</p>`:``}
             ${res.applications&&res.AppTokens ? `<p>You have ${res.AppTokens.length} Approved Applications</p>`: ``}
             ${res.allowedApplications&&res.AppAccesses ? `<p>${res.AppAccesses.length} Connected Applications`: ``} 
@@ -2592,7 +2594,7 @@ async function showDevOptions() {
         devAccEle=`
             <hr class="rounded">
             <p>Developer Account</p>
-            <div class="userInfo">
+            <div class="menu menu-style">
                 ${res.DeveloperToken._id ? `<p>devToken: <p onclick="revealDevOptions('devToken')" id="devToken" class="blur">${res.DeveloperToken._id}</p>`:``}
                 ${res.DeveloperToken.premium ? `<p>Premium Dev Account</p>`:`<p>Regular Dev Account</p>`}
                 ${res.DeveloperToken.creationTimestamp ? `<p>Dev account created: ${checkDate(res.DeveloperToken.creationTimestamp)}</p>`:`<p>Unknown creation date</p>`}
@@ -2604,10 +2606,10 @@ async function showDevOptions() {
         devAccEle=`
             <hr class="rounded">
             <p>Developer Account</p>
-            <div class="userInfo" id="devAcc">
-                <p>Signup for a developer account.</p>
-                <div class="searchSelect search">
-                    <button onclick="requestDevToken()">Signup</button>
+            <div class="menu menu-style" id="devAcc">
+                <p>Sign up for a developer account.</p>
+                <div class="">
+                    <button class="menuButton menuButton-style" onclick="requestDevToken()">Sign Up</button>
                 </div>
             </div>
         `
@@ -2624,7 +2626,7 @@ async function showDevOptions() {
         for (const appToken of res.AppTokens.reverse()) {
             amount++;
             appTokensEle+=`
-                <div class="userInfo">
+                <div class="menu menu-style">
                     <p>appToken #${amount} of ${res.AppTokens.length}</p>
                     <p>app name: ${appToken.appName ? appToken.appName : `Unknown`}
                     ${appToken._id ? `<p>appToken: <p onclick="revealDevOptions('appTokens', ${amount})" id="appToken_${amount}" class="blur">${appToken._id}</p>`:``}
@@ -2639,13 +2641,13 @@ async function showDevOptions() {
     // create new app token
     if (res.developer) {
         appTokensEle+=`
-            <div class="userInfo" id="newAppToken">
+            <div class="menu menu-style" id="newAppToken">
                 <p>Generate New App Token</p>
                 <p>Please input an application name</p>
-                <div class="searchSelect search">
-                    <input id="appName_AppTokenRequest" placeholder="Application Name:">
+                <div class="searchSelect search menu-style">
+                    <input class="menu-style" id="appName_AppTokenRequest" placeholder="Application Name:">
                 </div>
-                <button onclick="requestAppToken(${amount})">Generate Token</button>
+                <button class="menuButton menuButton-style" onclick="requestAppToken(${amount})">Generate Token</button>
             </div>
         `
     }
@@ -2656,7 +2658,7 @@ async function showDevOptions() {
         for (const appAccess of res.AppAccesses) {
             amount++;
             appAccessEle+=`
-                <div class="userInfo">
+                <div class="menu menu-style">
                     <p>appAccess ${amount} of ${res.AppAccesses.length}</p>
                     ${appAccess.appToken ? `<p>Using appToken: <p onclick="revealDevOptions('appAccess', ${amount})" id="appAccess_${amount}" class="blur">${appAccess.appToken}</p>`:``}
                 </div>
@@ -2704,7 +2706,7 @@ async function requestAppToken(amount) {
     if (!requestRes.ok || requestRes.error) return console.log({error: `${requestRes?.error ? requestRes.error : "an unknown error"}`});
 
     const newEle = `
-        <div class="userInfo">
+        <div class="menu menu-style">
             <p>NEW TOKEN</p>
             <p>appToken #${newAmount}</p>
             <p>app name: ${appTokenData.appName ? appTokenData.appName : `Unknown`}
@@ -2720,7 +2722,7 @@ async function requestAppToken(amount) {
         <div class="searchSelect search">
             <input id="appName_AppTokenRequest" placeholder="Application Name:">
         </div>
-        <button onclick="requestAppToken(${newAmount})">Generate Token</button>
+        <button class="menuButton menuButton-style" onclick="requestAppToken(${newAmount})">Generate Token</button>
     `
     document.getElementById('newAppToken').innerHTML=newRequestEle
     document.getElementById('appTokenList').innerHTML+=newEle;
@@ -2976,7 +2978,7 @@ async function getPossibleFeeds() {
 */
 function loadingHTML(text) {
     const ele = `
-        <div id="loadingSection" class="loading userInfo">
+        <div id="loadingSection" class="loading menu menu-style">
             <h1>${text ? text : "Loading..."}</h1>
             <canvas id="loadingBar"></canvas>
         </div>
@@ -3002,7 +3004,7 @@ function listenForLoading() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.beginPath();
         ctx.arc(centerX, centerY, radius, 0, angle);
-        ctx.strokeStyle = 'green';
+        ctx.strokeStyle = 'rgb(39, 113, 240)';
         ctx.lineWidth = 10;
         ctx.stroke();
         angle += Math.PI / 15;
@@ -3027,6 +3029,7 @@ async function changeFeedHeader(current) {
 
     document.getElementById("possibleFeeds").innerHTML = ele;
     document.getElementById("possibleFeeds").classList.add("possibleFeeds")
+    document.getElementById("possibleFeeds").classList.add("navSecondary-style");
     document.getElementById("topPadding").classList.add("activeFeeds");
 }
 
@@ -3037,7 +3040,6 @@ async function changeFeed(feedType) {
 // GET DATA FROM API FOR MAIN FEED
 async function getFeed(feedType) {
     const feedToUse = feedType || 'userFeed'
-
 
     searchBar()
     // postBar()
@@ -3259,9 +3261,10 @@ async function quotePost(postID) {
     await showModal(`
         <h1>Create a new Post</h1>
         <div class="postModalActions">
-            <p onclick="createPost({'quoteID':'${postID}'})">Upload Post</p>
-            <p onclick="closeModal()">Close</p>
+            <button class="menuButton menuButton-style" style="width:80%;" onclick="createPost({'quoteID':'${postID}'})">Upload Post</button>
+            <button class="menuButton menuButton-style" style="width:80%;" onclick="closeModal()">Close</button>
         </div>
+        <hr class="rounded">
         <div class="post">
             <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'}</p>
             <div class="postContent" id="postContentArea_${post._id}">
@@ -3288,9 +3291,10 @@ async function replyPost(postID) {
     await showModal(`
         <h1>Create a new Reply</h1>
         <div class="postModalActions">
-            <p onclick="createPost({'replyID':'${postID}'})">Upload Reply</p>
-            <p onclick="closeModal()">Close</p>
+            <button class="menuButton menuButton-style" style="width:80%;" onclick="createPost({'replyID':'${postID}'})">Upload Reply</button>
+            <button class="menuButton menuButton-style" style="width:80%;" onclick="closeModal()">Close</button>
         </div>
+        <hr class="rounded">
         <div class="post">
             <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'}</p>
             <div class="postContent" id="postContentArea_${post._id}">
@@ -3426,7 +3430,7 @@ async function searchResult(input) {
             if (user.creationTimestamp) timesince = checkDate(user.creationTimestamp)
             
             return `
-                <div class="publicPost searchUser">
+                <div class="publicPost posts-style">
                     <p class="${user._id == currentUserLogin.userID ? "ownUser" : "otherUser"}" onclick="userHtml('${user._id}')"> ${user.displayName} @${user.username} | ${user.creationTimestamp ? timesince : '' }</p>
                     <p>${user.description ? user.description : "no description"}</p>
                     <p>Following: ${user.followingCount} | Followers: ${user.followerCount}</p>
