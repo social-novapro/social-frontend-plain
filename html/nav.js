@@ -41,7 +41,11 @@ async function loadTheme() {
     const prevSettings = getThemeSettings();
     
     const currentTheme = await getTheme();
-    if (!currentTheme || !currentTheme.colourTheme) return false;
+    if (!currentTheme || !currentTheme.colourTheme) {
+        // sets empty theme
+        await applyThemeNav({});
+        return false;
+    };
     if (
         prevSettings &&
         prevSettings._id == currentTheme._id && 
@@ -60,7 +64,7 @@ function getThemeSettings() {
     else {
         currentThemeSettings = JSON.parse(themeSettings);
         if (!currentThemeSettings || !currentThemeSettings.colourTheme) return false;
-        applyThemeNav(currentThemeSettings.colourTheme);
+        quickApplyThemeNav(currentThemeSettings.colourTheme);
 
         return currentThemeSettings;
     }
@@ -70,12 +74,46 @@ function setThemeSettings(newData) {
     localStorage.setItem(LOCAL_STORAGE_THEME_SETTINGS, JSON.stringify(newData))
 }
 
-async function applyThemeNav(themeSettings) {
+async function applyThemeNav(theme) {
+    const themeSettings = theme.colourTheme;
+
+    setThemeSettings(theme);
+
+    const findSettings = await getPossibleThemeEdits();
+    // removes current theme
+    unsetTheme()
+   
     const style = document.createElement('style');
     style.id="themeStyle"
+    //style.innerHTML = `\``;
+        
+    for (const option of findSettings) {
+        const optionName = option.option;
+        if (optionName == "_id") continue;
+        if (themeSettings && themeSettings[optionName]) style.innerHTML += setTheme(optionName, themeSettings[optionName])
+        else style.innerHTML += setTheme(optionName, null)
+    }
+
+    // applies new theme
+    document.head.appendChild(style);
+
+    return true;
+}
+
+function unsetTheme() {
+    const rmStyle = document.getElementById('themeStyle');
+    if (rmStyle) document.head.removeChild(rmStyle);
+    return true;
+}
+
+function quickApplyThemeNav(themeSettings) {
+    const style = document.createElement('style');
+    style.id="themeStyle"
+    console.log("e")
         
     for (const option in themeSettings) {
         //const optionName = option.option;
+        console.log(option)
         if (option == "_id") continue;
         style.innerHTML += setTheme(option, themeSettings[option] ? themeSettings[option] : null);
     }

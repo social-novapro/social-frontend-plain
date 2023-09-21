@@ -1146,7 +1146,8 @@ function settingsPage() {
                     <div id="themeEditor" class="menu menu-style"><p><b>Client Theme</b></p>
                         <button class="menuButton menuButton-style" onclick='editThemePanel("${headers.userid}")'>Open Editor</button>
                         <button class="menuButton menuButton-style" onclick='createTheme()'>Create Theme</button>
-                        <button class="menuButton menuButton-style" onclick='viewThemes("${headers.userid}")'>Existing Theme</button>
+                        <button class="menuButton menuButton-style" onclick='viewThemes("${headers.userid}")'>Existing Themes</button>
+                        <button class="menuButton menuButton-style" onclick='unsetThemeFrontend()'>Unset Theme</button>
                     </div> 
                     <div id="userThemeEditor"></div>
                     <div id="emailSettings" class="menu menu-style">
@@ -1488,6 +1489,8 @@ async function createTheme() {
 }
 
 async function editTheme(themeSettings) {
+    if (!themeSettings || themeSettings.error) return await createTheme();
+
     const possibleThemeEdits = await getPossibleThemeEdits();
     
     var ele = `
@@ -1512,6 +1515,15 @@ async function editTheme(themeSettings) {
                     <option value="3" ${themeSettings.privacy ==3 ? 'selected' : ''}>Private</option>
                 </select>
             </div>
+            <hr class="rounded">
+            <div>
+                <b><label for="themeSetting_locked">Lock Theme:<br></label></b>
+                <p>When locked, you will be no longer allowed to edit this version of the theme. You will be still able edit values, then select fork.</p>
+                <select id="themeSetting_locked" name="locked">
+                    <option value="0" ${!themeSettings.locked ? 'selected' : ''}>Unlocked</option>
+                    <option value="1" ${themeSettings.locked === true ? 'selected' : ''}>Lock</option>
+                </select>
+
     `;
 
     // TEST FOR NULL DATAS
@@ -1528,12 +1540,26 @@ async function editTheme(themeSettings) {
         `;
     };
 
-    ele += `</form><button class="menuButton menuButton-style" onclick="`;
+    ele += `</form>`
+    // submit
+    ele += `
+        <button 
+            class="menuButton menuButton-style" 
+            onclick="forkThemeSettings('${themeSettings._id}')"
+        >Fork Theme</button>`;
 
-    if (themeSettings.userID == headers.userid) ele += `submitThemeSettings('${themeSettings._id}')">Submit Theme Edits`;
-    else ele += `forkThemeSettings('${themeSettings._id}')">Fork Theme`;
-
-    ele += `</button></div>`;
+    if (themeSettings.userID == headers.userid && themeSettings.locked !== true) ele +=`
+        <button 
+            class="menuButton menuButton-style" 
+            onclick="submitThemeSettings('${themeSettings._id}')"
+        >Submit Edits</button>
+        <button 
+            class="menuButton menuButton-style" 
+            onclick="submitDeleteTheme('${themeSettings._id}')"
+        >Delete Theme</button>
+    `;
+    
+    ele+=`</div>`;
 
 
     //ele += `</form><button class="userInfo buttonStyled" onclick="submitThemeSettings('${themeSettings._id}')">Submit Theme Edits</button></div>`
@@ -1575,9 +1601,18 @@ async function viewThemes(userID) {
     return true;
 }
 
+async function unsetThemeFrontend() {
+    const theme = await unsetThemeAPI();
+    if (!theme || theme.error) return showModal(`<p>Error: ${theme.code}, ${theme.msg}</p>`)
+
+    await applyTheme({ });
+
+    showModal(`<p>Success! Your current theme has been unset.</p>`)
+}
+
 async function selectTheme(toEdit) {
     const themeID = document.getElementById("viewThemeSelect").value;
-    console.log("ghr", themeID)
+
     const theme = await setThemeAPI(themeID);
     if (!theme || theme.error) return showModal(`<p>Error: ${theme.code}, ${theme.msg}</p>`)
 
@@ -1635,10 +1670,35 @@ async function getPossibleThemeEdits() {
     return res
 }
 
+async function unsetThemeAPI() {
+    const response = await fetch(`${apiURL}/users/profile/theme/unset`, {
+        method: 'DELETE',
+        headers,
+    });
+
+    const res = await response.json();
+    if (debug) console.log(res)
+
+    return res;
+}
+
 async function setThemeAPI(themeID) {
     const response = await fetch(`${apiURL}/users/profile/theme/set/${themeID}`, {
         method: 'POST',
         headers,
+    });
+
+    const res = await response.json();
+    if (debug) console.log(res)
+
+    return res;
+}
+
+async function submitDeleteTheme(themeID) {
+    const response = await fetch(`${apiURL}/users/profile/theme/submit/delete/`, {
+        method: 'DELETE',
+        headers,
+        body: JSON.stringify({themeID})
     });
 
     const res = await response.json();
@@ -1671,7 +1731,7 @@ async function getThemes(userID) {
     return res;
 }
 
-function getThemeChanges(themeID, possibleThemeEdits) {
+function getThemeChanges(themeID, possibleThemeEdits, ignoreLock) {
     const reqBody = [];
 
     const changeName = document.getElementById(`themeSetting_name`).value;
@@ -1679,6 +1739,12 @@ function getThemeChanges(themeID, possibleThemeEdits) {
 
     const changePrivacy = document.getElementById(`themeSetting_privacy`).value;
     if (changePrivacy) reqBody.push({ option: "privacy", value: changePrivacy});
+
+    if (!ignoreLock) {
+        const changeLock = document.getElementById(`themeSetting_locked`).value;
+        console.log(changeLock)
+        if (changeLock) reqBody.push({ option: "locked", value: changeLock == 1 ? true : false});
+    }
 
     for (const option of possibleThemeEdits) {
         const themeVal =  document.getElementById(`themeSetting_${option.option}`).value;
@@ -1690,7 +1756,8 @@ function getThemeChanges(themeID, possibleThemeEdits) {
 
 async function forkThemeSettings(themeID) {
     const possibleThemeEdits = await getPossibleThemeEdits();
-    const reqBody = getThemeChanges(themeID, possibleThemeEdits); // get changes
+    const reqBody = getThemeChanges(themeID, possibleThemeEdits, true); // get changes
+
     // forked
     const response = await fetch(`${apiURL}/users/profile/theme/fork/${themeID}`, {
         method: 'POST',
