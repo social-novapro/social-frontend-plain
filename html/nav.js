@@ -287,11 +287,22 @@ async function switchNav(pageVal) {
 
 function showModal(html, showClose) {
     document.getElementById('modalContainer').classList.add("showModal");
-    document.getElementById('modal').innerHTML = html;
-    document.getElementById('modal').classList.add("menu-style");
+    document.getElementById('modalContainer').innerHTML = `
+        <div class="modal menu-style"" id="modal">${html}</div>
+    `;
+
+    listenerContainer();
 
     if (showClose == "hide") return true;
     else return showModalClose();
+}
+
+function listenerContainer() {
+    document.getElementById('modalContainer').addEventListener('click', function(event) {
+        if (event.target === modalContainer) {
+            return closeModal();
+        }
+    });
 }
 
 function showModalClose() {
@@ -302,7 +313,8 @@ function showModalClose() {
 
 function closeModal() {
     document.getElementById('modalContainer')?.classList.remove("showModal");
-    document.getElementById('modal').innerHTML = "";
+    document.getElementById('modalContainer').innerHTML = "";
+
     return true;
 }
 
