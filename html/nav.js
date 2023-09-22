@@ -326,7 +326,7 @@ async function switchNav(pageVal) {
 function showModal(html, showClose) {
     document.getElementById('modalContainer').classList.add("showModal");
     document.getElementById('modalContainer').innerHTML = `
-        <div class="modal menu-style"" id="modal">${html}</div>
+        <div class="modal menu-style" id="modal">${html}</div>
     `;
 
     listenerContainer();

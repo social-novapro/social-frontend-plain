@@ -734,10 +734,9 @@ async function createPostModal() {
         <div id="postingModel">
         <h1>Create a new Post</h1>
         <div id="postModel">
-            <button onclick="createPostPage()" class="menuButton menuButton-style" style="width:80%;">Open Post Page</button>
-            <hr class="rounded">
-            <button onclick="createPost()" class="menuButton menuButton-style" style="width:80%;">Upload Post</button>
-            <button onclick="closeModal()" class="menuButton menuButton-style" style="width:80%;">Close</button>
+            <button onclick="createPostPage()" class="menuButton menuButton-style">Open Post Page</button>
+            <button onclick="createPost()" class="menuButton menuButton-style">Upload Post</button>
+            <button onclick="closeModal()" class="menuButton menuButton-style">Close</button>
         </div>
         <div class="search">
             <input type="text" class="addPollOption" id="pollCreateLink" placeholder="Link Poll via ID">
@@ -3328,8 +3327,8 @@ async function quotePost(postID) {
     await showModal(`
         <h1>Create a new Post</h1>
         <div class="postModalActions">
-            <button class="menuButton menuButton-style" style="width:80%;" onclick="createPost({'quoteID':'${postID}'})">Upload Post</button>
-            <button class="menuButton menuButton-style" style="width:80%;" onclick="closeModal()">Close</button>
+            <button class="menuButton menuButton-style" onclick="createPost({'quoteID':'${postID}'})">Upload Post</button>
+            <button class="menuButton menuButton-style" onclick="closeModal()">Close</button>
         </div>
         <hr class="rounded">
         <div class="post">
@@ -3358,8 +3357,8 @@ async function replyPost(postID) {
     await showModal(`
         <h1>Create a new Reply</h1>
         <div class="postModalActions">
-            <button class="menuButton menuButton-style" style="width:80%;" onclick="createPost({'replyID':'${postID}'})">Upload Reply</button>
-            <button class="menuButton menuButton-style" style="width:80%;" onclick="closeModal()">Close</button>
+            <button class="menuButton menuButton-style" onclick="createPost({'replyID':'${postID}'})">Upload Reply</button>
+            <button class="menuButton menuButton-style" onclick="closeModal()">Close</button>
         </div>
         <hr class="rounded">
         <div class="post">
