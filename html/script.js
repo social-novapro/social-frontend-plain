@@ -732,7 +732,7 @@ async function userPage(username) {
 async function createPostModal() {
     await showModal(`
         <div id="postingModel">
-        <h1>Create a new Post</h1>
+        <h1 class="font_h1-style">Create a new Post</h1>
         <div id="postModel">
             <button onclick="createPostPage()" class="menuButton menuButton-style">Open Post Page</button>
             <button onclick="createPost()" class="menuButton menuButton-style">Upload Post</button>
@@ -1111,7 +1111,7 @@ function settingsPage() {
         <div id="settingsPage">
             <div class="" id="settingsPageContent">
                 <div class="menu menu-style">
-                    <h1>Settings</h1>
+                    <h1 class="font_h1-style">Settings</h1>
                 </div>
                 <div class="inline">
                     <div class="menu menu-style">
@@ -1349,7 +1349,7 @@ async function userEditHtml(userID) {
     document.getElementById("mainFeed").innerHTML =  `
         <div class="userEdit">
             <div class="menu menu-style">
-                <h1>Edit Profile</h1>
+                <h1 class="font_h1-style">Edit Profile</h1>
             </div>
             <div class="menu menu-style">
                 <p><b>Save any changes made</b></p>
@@ -1838,11 +1838,13 @@ function unsetTheme() {
 }
 
 function setTheme(name, value) {
-    return `
-        .${name}-style {
-            background-color: ${value};
-        }
-    `;
+    if (name.includes("font")) {
+        var newName = name.replace("font_", "");
+        newName+= "-style"
+        return `.${newName}, .${newName}  p, .${newName} h1, .${newName} a, .${newName} button, .${newName} h2 { color: ${value}; } `;
+    }
+    
+    return `.${name}-style { background-color: ${value}; } `;
 }
 
 function isHexColor (hex) {
@@ -3045,7 +3047,7 @@ async function getPossibleFeeds() {
 function loadingHTML(text) {
     const ele = `
         <div id="loadingSection" class="loading menu menu-style">
-            <h1>${text ? text : "Loading..."}</h1>
+            <h1 class="h1-style">${text ? text : "Loading..."}</h1>
             <canvas id="loadingBar"></canvas>
         </div>
     `;
@@ -3140,10 +3142,10 @@ function test() {
 
     document.getElementById("mainFeed").innerHTML = `
         <div class="mainNameEasterEgg"> 
-            <h1>You pressed the logo!!</h1>
-            <p>You pressed the header name, thats pretty cool of you! Thank you for checking out interact!</p>
-            <p>Press the button below to go back!</p>
-            <button class="buttonStyled" onclick="switchNav(5)">Main Feed!</button>
+            <h1 class="h1-style">You pressed the logo!!</h1>
+            <p class="p-style">You pressed the header name, thats pretty cool of you! Thank you for checking out interact!</p>
+            <p class=_p-style">Press the button below to go back!</p>
+            <button class="menuButton menuButton-style" onclick="switchNav(5)">Main Feed!</button>
         </div>
     `
 }
@@ -3317,13 +3319,14 @@ async function submitEdit(postID) {
 }
 async function quotePost(postID) {
     const postResponse = await fetch(`${apiURL}/get/post/${postID}`, { method: 'GET', headers})
-    if (!postResponse.ok) return showModal(`<h1>Error</h1><p>something went wrong</p>`)
+    if (!postResponse.ok) return showModal(`<h1 class="h1-style">Error</h1><p>something went wrong</p>`)
     const post = await postResponse.json()
     const userResponse = await fetch(`${apiURL}/get/userByID/${post.userID}`, { method: 'GET', headers })
         
-    if (!userResponse.ok) return showModal(`<h1>Error</h1><p>something went wrong</p>`)
+    if (!userResponse.ok) return showModal(`<h1 class="h1-style">Error</h1><p>something went wrong</p>`)
     const user = await userResponse.json()
     if (debug) console.log(user)
+
     await showModal(`
         <h1>Create a new Post</h1>
         <div class="postModalActions">

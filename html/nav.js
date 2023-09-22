@@ -125,11 +125,13 @@ function quickApplyThemeNav(themeSettings) {
 }
 
 function setTheme(name, value) {
-    return `
-        .${name}-style {
-            background-color: ${value};
-        }
-    `;
+    if (name.includes("font")) {
+        var newName = name.replace("font_", "");
+        newName+= "-style"
+        return `.${newName}, .${newName}  p, .${newName} h1, .${newName} a, .${newName} button, .${newName} h2 { color: ${value}; } \n`;
+    }
+    
+    return `.${name}-style { background-color: ${value}; } \n`;
 }
 
 async function getTheme(themeID) {
