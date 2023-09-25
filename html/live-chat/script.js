@@ -268,7 +268,7 @@ function addToList(data, content, user, timeStamp, message) {
             ${data.message?.replyTo ? `
                 <p style="font-size: 8;" class="edited contentMessage replyToMessage replyTo_${data.message.replyTo}" onclick="highlightMessage('${data.message.replyTo}')" id="replyContent_${data._id}"><i>${getContent(data.message.replyTo)}</i></p>
             `: ""}
-            <p class="subheaderMessage ${user._id == currentUserLogin.userID ? "ownUser" : "otherUser"}">${user.displayName} @${user.username} | ${timesince}</p>
+            <p class="subheaderMessage ${user._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}">${user.displayName} @${user.username} | ${timesince}</p>
             <div class="contentMainArea" id="contentMainArea_${data._id}">
                 <p class="contentMessage" id="contentArea_${data._id}">${imageContent.content}</p>
                 ${data.message?.edited ? '<p class="edited contentMessage"><i>(edited)</i></p>' : ''}

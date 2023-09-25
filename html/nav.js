@@ -7,6 +7,7 @@ var pathArray = window.location.pathname.split( '/' );
 
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 var LOCAL_STORAGE_THEME_SETTINGS = 'social.themeSettings'
+var LOCAL_STORAGE_THEME_POSSIBLE = 'social.themePossible'
 
 // console.log(config)
 var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
@@ -38,7 +39,7 @@ async function startup(){
 }
 
 async function loadTheme() {
-    const prevSettings = getThemeSettings();
+    const prevSettings = getThemeSettings(); // and loads 
     
     const currentTheme = await getTheme();
     if (!currentTheme || !currentTheme.colourTheme) {
@@ -49,11 +50,11 @@ async function loadTheme() {
     if (
         prevSettings &&
         prevSettings._id == currentTheme._id && 
-        prevSettings.edited == currentTheme.edited
+        prevSettings.timestamp_edited == currentTheme.timestamp_edited
     ) return true;
     else setThemeSettings(currentTheme);
 
-    await applyThemeNav(currentTheme.colourTheme);
+    await applyThemeNav(currentTheme);
 
     return true;
 }
@@ -72,6 +73,7 @@ function getThemeSettings() {
 
 function setThemeSettings(newData) {
     localStorage.setItem(LOCAL_STORAGE_THEME_SETTINGS, JSON.stringify(newData))
+    //if (newData && !newData.error) localStorage.setItem(LOCAL_STORAGE_THEME_SETTINGS, JSON.stringify(newData))
 }
 
 async function applyThemeNav(theme) {
@@ -80,18 +82,20 @@ async function applyThemeNav(theme) {
     setThemeSettings(theme);
 
     const findSettings = await getPossibleThemeEdits();
+    if (findSettings && !findSettings.error) localStorage.setItem(LOCAL_STORAGE_THEME_POSSIBLE, JSON.stringify(findSettings))
+
     // removes current theme
     unsetTheme()
    
     const style = document.createElement('style');
     style.id="themeStyle"
     //style.innerHTML = `\``;
-        
+    
     for (const option of findSettings) {
         const optionName = option.option;
         if (optionName == "_id") continue;
-        if (themeSettings && themeSettings[optionName]) style.innerHTML += setTheme(optionName, themeSettings[optionName])
-        else style.innerHTML += setTheme(optionName, null)
+        if (themeSettings && themeSettings[optionName]) style.innerHTML += setTheme(optionName, themeSettings[optionName], option.styles)
+        else style.innerHTML += setTheme(optionName, null, option.styles)
     }
 
     // applies new theme
@@ -109,13 +113,20 @@ function unsetTheme() {
 function quickApplyThemeNav(themeSettings) {
     const style = document.createElement('style');
     style.id="themeStyle"
-    console.log("e")
-        
-    for (const option in themeSettings) {
-        //const optionName = option.option;
-        console.log(option)
-        if (option == "_id") continue;
-        style.innerHTML += setTheme(option, themeSettings[option] ? themeSettings[option] : null);
+    const possible = JSON.parse(localStorage.getItem(LOCAL_STORAGE_THEME_POSSIBLE))
+
+    if (possible && possible[0]) {
+        for (const option of possible) {
+            const optionName = option.option;
+            if (optionName == "_id") continue;
+            if (themeSettings && themeSettings[optionName]) style.innerHTML += setTheme(optionName, themeSettings[optionName], option.styles)
+            else style.innerHTML += setTheme(optionName, null)
+        }
+    } else {
+        for (const option in themeSettings) {
+            if (option == "_id") continue;
+            style.innerHTML += setTheme(option, themeSettings[option] ? themeSettings[option] : null);
+        }
     }
 
     // applies new theme
@@ -124,11 +135,29 @@ function quickApplyThemeNav(themeSettings) {
     return true;
 }
 
-function setTheme(name, value) {
+function getStyles(name) {
+    const possible = JSON.parse(localStorage.getItem(LOCAL_STORAGE_THEME_POSSIBLE))
+    
+    if (possible && possible[0]) {
+        for (const option of possible) {
+            if (option.option == name) return option.styles;
+        }
+    }
+}
+
+function setTheme(name, value, styles) {
     if (name.includes("font")) {
         var newName = name.replace("font_", "");
-        newName+= "-style"
-        return `.${newName}, .${newName}  p, .${newName} h1, .${newName} a, .${newName} button, .${newName} h2 { color: ${value}; } \n`;
+        newName+= "-style";
+        var styling = `.${newName}`;
+        
+        if (styles) {
+            for (const style of styles) {
+                styling += `, .${newName} ${style} `
+            }
+        }
+
+        return `${styling} { color: ${value}; } \n`;
     }
     
     return `.${name}-style { background-color: ${value}; } \n`;
@@ -153,7 +182,7 @@ async function getPossibleThemeEdits() {
 
     const res = await response.json();
 
-    return res
+    return res;
 }
 
 // console.log(hostedURL)

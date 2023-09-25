@@ -92,7 +92,6 @@
 .userEditForm {
     background-color:  var(--main-button-color);
     color: var(--main-p-color)
-
 }
 .debug p {
     font-size: smaller;
@@ -101,10 +100,10 @@
 .easteregg {
     padding: 15px;
 }
-.ownUser {
+.ownUser-style {
     color: rgb(81, 144, 251);
 }
-.otherUser {
+.otherUser-style {
     color: rgb(146, 146, 146)
 }
 .subheaderMessage {

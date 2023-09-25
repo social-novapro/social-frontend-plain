@@ -73,6 +73,7 @@ var currentFeedType
 
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 var LOCAL_STORAGE_THEME_SETTINGS = 'social.themeSettings'
+var LOCAL_STORAGE_THEME_POSSIBLE = 'social.themePossible'
 
 // let loginUserToken = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
 
@@ -214,9 +215,9 @@ function postElementCreate({ post, user, type, hideParent, hideReplies, pollData
     if (imageContent.imageFound)if (debug) console.log(imageContent.attachments)
     if (type=="basic"){
         return `
-            <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'} | ${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
+            <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'} | ${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
             <div class="postContent posts-style" id="postContentArea_${post._id}">
-                <div class="textAreaPost">
+                <div class="textAreaPost posts_content-style">
                     <p id="postContent_${post._id}">${imageContent.content}</p>
                     ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
                 </div>
@@ -235,9 +236,9 @@ function postElementCreate({ post, user, type, hideParent, hideReplies, pollData
                         <p onclick="viewParentPost('${post._id}', '${post.replyData.postID}')" id="parentViewing_${post._id}">This was a reply, click here to see.</p>
                     ` : ``}
                 `: ``}
-                <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'}<br class="spacer_2px">${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
+                <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'}<br class="spacer_2px">${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
                 <div class="postContent" id="postContentArea_${post._id}">
-                    <div class="textAreaPost">
+                    <div class="textAreaPost posts_content-style">
                         <p id="postContent_${post._id}">${imageContent.content}</p>
                         ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
                     </div>
@@ -259,7 +260,7 @@ function postElementCreate({ post, user, type, hideParent, hideReplies, pollData
                     <p>userID: ${post.userID}</p>
                     ${post.pollID ? `<p>pollID: ${post.pollID}</p>` : `` }
                 </div>
-                <div class="actionOptions pointerCursor"> 
+                <div class="actionOptions pointerCursor posts_action-style"> 
                     ${post.totalLikes ? 
                         `<p onclick="likePost('${post._id}')" ${postIsLiked == true ? 'class="likedColour"':''} id="likePost_${post._id}">${puralDataType('like', post.totalLikes)}</p>` :
                         `<p onclick="likePost('${post._id}')" id="likePost_${post._id}">like</p>`
@@ -1807,6 +1808,8 @@ async function applyTheme(theme) {
     setThemeSettings(theme);
 
     const findSettings = await getPossibleThemeEdits();
+    if (findSettings && !findSettings.error) localStorage.setItem(LOCAL_STORAGE_THEME_POSSIBLE, JSON.stringify(findSettings))
+
     // removes current theme
     unsetTheme()
    
@@ -1817,7 +1820,7 @@ async function applyTheme(theme) {
     for (const option of findSettings) {
         const optionName = option.option;
         if (optionName == "_id") continue;
-        if (themeSettings && themeSettings[optionName]) style.innerHTML += setTheme(optionName, themeSettings[optionName])
+        if (themeSettings && themeSettings[optionName]) style.innerHTML += setTheme(optionName, themeSettings[optionName], option.styles)
         else style.innerHTML += setTheme(optionName, null)
     }
 
@@ -1835,16 +1838,6 @@ function unsetTheme() {
     const rmStyle = document.getElementById('themeStyle');
     if (rmStyle) document.head.removeChild(rmStyle);
     return true;
-}
-
-function setTheme(name, value) {
-    if (name.includes("font")) {
-        var newName = name.replace("font_", "");
-        newName+= "-style"
-        return `.${newName}, .${newName}  p, .${newName} h1, .${newName} a, .${newName} button, .${newName} h2 { color: ${value}; } `;
-    }
-    
-    return `.${name}-style { background-color: ${value}; } `;
 }
 
 function isHexColor (hex) {
@@ -3091,7 +3084,7 @@ async function changeFeedHeader(current) {
 
     var ele = '<div class="">';
     for (const feed of possibleFeeds) {
-        ele += `<button class="buttonStyled ${current==feed.name ? 'activeFeed' : ''}" onclick="getFeed('${feed.name}')">${feed.niceName}</button>`
+        ele += `<button class="buttonStyled navSecondary ${current==feed.name ? 'activeFeed' : ''}" onclick="getFeed('${feed.name}')">${feed.niceName}</button>`
     }
     ele += '</div>'
 
@@ -3205,7 +3198,7 @@ function buildView(posts) {
                     <div class="subheaderMessage">
                         <p 
                             ${user ? ` onclick="userHtml('${post.userID}')" 
-                            class="${user._id == currentUserLogin.userID ? "ownUser" : "otherUser"}"
+                            class="${user._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}"
                         >
                             ${user.displayName} @${user.username}` : '>Unknown User'} | ${timesince ? timesince : ""}</p> 
                         </p>
@@ -3335,7 +3328,7 @@ async function quotePost(postID) {
         </div>
         <hr class="rounded">
         <div class="post">
-            <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'}</p>
+            <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'}</p>
             <div class="postContent" id="postContentArea_${post._id}">
                 <div class="textAreaPost">
                     <p id="postContent_${post._id}">${post.content}</p>
@@ -3365,7 +3358,7 @@ async function replyPost(postID) {
         </div>
         <hr class="rounded">
         <div class="post">
-            <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'}</p>
+            <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'}</p>
             <div class="postContent" id="postContentArea_${post._id}">
                 <div class="textAreaPost">
                     <p id="postContent_${post._id}">${post.content}</p>
@@ -3500,7 +3493,7 @@ async function searchResult(input) {
             
             return `
                 <div class="publicPost posts-style">
-                    <p class="${user._id == currentUserLogin.userID ? "ownUser" : "otherUser"}" onclick="userHtml('${user._id}')"> ${user.displayName} @${user.username} | ${user.creationTimestamp ? timesince : '' }</p>
+                    <p class="${user._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" onclick="userHtml('${user._id}')"> ${user.displayName} @${user.username} | ${user.creationTimestamp ? timesince : '' }</p>
                     <p>${user.description ? user.description : "no description"}</p>
                     <p>Following: ${user.followingCount} | Followers: ${user.followerCount}</p>
                     <p class="debug">${user._id}</p>
