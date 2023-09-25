@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html id="html" lang="en">
+<html lang="en">
     <head>
         <meta charset="utf-8">
         <title>Interact</title> 
@@ -8,10 +8,7 @@
         <link rel="stylesheet" type="text/css" href="/style.css">
         <link rel="stylesheet" type="text/css" href="/mainStyle.css">
         <script src="/config.js" defer></script>
-        <!-- Navigation section-->
-        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
         <script src="/nav.js" defer></script>
-        <!-- Navigation section-->
         <script src="/script.js" defer></script>
         <link rel="icon" type="image/png" href="/favicon.ico">
         <meta property="og:image" content="https://interact.novapro.net/apple-touch-icon.png">
@@ -31,21 +28,19 @@
         <meta name="twitter:title" content="Interact">
     </head>
 	<body>
-        <div id="expandingNavBar" class="navbar"></div>
-        <div id="expandingMainContent" class="mainArea">
+        <div id="navArea"></div>
+        <div class='mainArea'>
             <div class="main-header">
-                <h2 onclick="test()">Interact</h2>
-                <p>Created by <i><a class="buttonStyled"  target="_blank" href="https://novapro.net/">Nova Productions</a></i></p>
+                <h1>Welcome to <button class="buttonStyled"  onclick="test()">Interact!</button></h1>
+                <p>Created by <i><button class="buttonStyled"  href="https://novapro.net/">Nova Productions</button></i></p>
             </div>
-            <div id="possibleFeeds"></div>
-            <div id="topPadding" class="top-page-padding"></div>
             <div id="mainSelections"></div>
             <div id="postBar"></div>
             <div id="searchArea"></div>
             <div class="modalContainer" id="modalContainer"><div class="modal" id="modal"></div></div>
             <div id="mainFeed" class="main-feed"><p class="publicPost">Loading...</div>
-            <div class="end-page-padding"></div>
-            </div>
         </div>
 	</body>
+    <p>Sorry this page was not found, please go home.</p>
+    <a class="buttonStyle" href="/">Go Home.</a>
 </html\>
