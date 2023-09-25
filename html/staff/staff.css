@@ -1,0 +1,70 @@
+.style {
+    background-color: #2b2b2e;
+    text-align: center;
+    border-radius: 60px;
+    font-size: 12px;
+    color: #E6E6E6;
+    display: inline-block;
+    height: 250px;
+    padding: 20px;
+    width: 250px;
+    outline-color: #6b6b6b;
+    border: 5px solid #6e6e6e;
+}
+
+.danAss {
+    position: relative;
+    top: 50px ;
+    left: 400px ;
+}
+
+.samAss {
+    position: relative;
+    top: 50px ;
+    left: 440px ;
+}
+
+.leoAss {
+    position: relative;
+    top: 50px ;
+    left: 485px ;
+}
+
+.syrxAss {
+    position: relative;
+    top: 400px ;
+    left: -350px ;
+}
+
+.flavioAss {
+    position: relative;
+    top: 400px ;
+    left: -300px ;
+}
+
+/* .louieAss {
+    position: absolute;
+    top: 600px ;
+    left: 1250px ;
+} */
+
+img {
+    width: 200px;
+    border-radius: 60px;
+    padding-top: 15px;
+}
+
+/* STAFF PAGES STYLES */
+
+.staffPage {
+    position: relative;
+    top: 50px ;
+    left: 750px ;
+}
+
+.p1Staff {
+    text-align: center;
+    margin-top: 100px;
+    font-size: 20px;
+    color: #E6E6E6;
+}
