@@ -30,17 +30,17 @@
         <div class="allArea">
             <div id="expandingNavBar" class="navbar"></div>
             <div id="expandingMainContent" class="mainArea background-style">
-                <h1 class="main-header">Interact Live Chat</h1>
+                <h1 class="main-header navSecondary-style">Interact Live Chat</h1>
                 <div id="topPadding" class="top-page-padding"></div>
                 <p id="userCount">Current User Count: 0</p>
                 <p id="actiondescription">Action</p>
                 <div class="modalContainer" id="modalContainer"><div class="modal" id="modal"></div></div>
-                <div class="messageType">
+                <div class="messageType menu menu-style">
                     <form onsubmit="sendmessage()" onkeyup="clientUserType()" id="messageTypingForm">
-                        <input type="text" spellCheck="false" id="messageBar" placeholder="Type your message!">
+                        <input type="text" spellCheck="false" id="messageBar" class="menu-style" placeholder="Type your message!">
                     </form>
                 </div>
-                <p class="sendButton" onclick="sendmessage()">Send message</p>
+                <p class="sendButton menuButton menuButton-style" onclick="sendmessage()">Send message</p>
                 <div id="userTyping"></div>
                 <div id="messages" class="allMessages"></div>
                 <div id="onlinePeople" class="onlinePeople"></div>

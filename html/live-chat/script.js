@@ -270,10 +270,10 @@ function addToList(data, content, user, timeStamp, message) {
             `: ""}
             <p class="subheaderMessage ${user._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}">${user.displayName} @${user.username} | ${timesince}</p>
             <div class="contentMainArea" id="contentMainArea_${data._id}">
-                <p class="contentMessage" id="contentArea_${data._id}">${imageContent.content}</p>
+                <p class="contentMessage posts_content-style" id="contentArea_${data._id}">${imageContent.content}</p>
                 ${data.message?.edited ? '<p class="edited contentMessage"><i>(edited)</i></p>' : ''}
             </div>
-            <div class="messageActions">
+            <div class="messageActions posts_action-style">
                 <div id="replyDiv_${data._id}"><p onclick="replyToMessage('${data._id}')">Reply</p></div>
                 ${data.type==2 && user._id == currentUserLogin.userID  ?  `
                     <p id="deleteButton_${data._id}"><p onclick="deleteMessage('${data._id}')">Delete</p></p>

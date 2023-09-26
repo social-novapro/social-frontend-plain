@@ -740,7 +740,7 @@ async function createPostModal() {
             <button onclick="closeModal()" class="menuButton menuButton-style">Close</button>
         </div>
         <div class="search">
-            <input type="text" class="addPollOption" id="pollCreateLink" placeholder="Link Poll via ID">
+            <input type="text" class="addPollOption menu-style" id="pollCreateLink" placeholder="Link Poll via ID">
         </div>
         <textarea class="postTextArea" id="newPostTextArea"></textarea>
         <div id="foundTaggings"></div>
@@ -886,11 +886,11 @@ async function loginPage() {
         <form onsubmit="sendLoginRequest()" id="signInForm">
             <div>
                 <p>Enter Username:</p>
-                <p><input id="userUsernameLogin" placeholder="Username" type="text" name="username"></p>
+                <p><input id="userUsernameLogin" class="menu-style" placeholder="Username" type="text" name="username"></p>
             </div>
             <div>
                 <p>Enter Password</p>
-                <p><input id="userPasswordLogin" placeholder="Password" type="password" name="password"></p>
+                <p><input id="userPasswordLogin" class="menu-style" placeholder="Password" type="password" name="password"></p>
             </div>
             <input class="buttonStyled" type="submit">
         </form>
@@ -1264,10 +1264,10 @@ async function deleteAccPage() {
             <div class="signInDiv">
                 <form id="userEdit_password_delete" class="contentMessage">
                     <label for="userEdit_email_pass_delete"><p>Password</p></label>
-                    <input type="password" id="userEdit_email_pass_delete" class="userEditForm" placeholder="Password">
+                    <input type="password" id="userEdit_email_pass_delete" class="userEditForm menu-style" placeholder="Password">
                 </form>
             </div>
-            <button class="menuButton menuButton-style"onclick="requestDeleteAcc()">Delete</button>
+            <button class="menuButton menuButton-style" onclick="requestDeleteAcc()">Delete</button>
             <button class="menuButton menuButton-style" onclick="removeDeleteAccConfirm()">Cancel</button></div>
             <p id="resultDeleteRequest"></p>
         </div>
@@ -1360,42 +1360,42 @@ async function userEditHtml(userID) {
                 <p><b>Profile Image</b></p>
                 ${profileData.userData.profileURL ? `<img src="${profileData.userData.profileURL}" class="profileImage">` : "No image set"}
                 <form id="userEdit_profileImage" class="contentMessage" onsubmit="userEdit('profileImage')">
-                    <input id="userEdit_profileImage_text" type="text" class="userEditForm" placeholder="Profile Image URL">
+                    <input id="userEdit_profileImage_text" type="text" class="userEditForm menu-style" placeholder="Profile Image URL">
                 </form>
             </div>
             <div class="menu menu-style">
                 <p><b>Display Name</b></p>
                 ${profileData.userData.displayName ? `<p>${profileData.userData.displayName}` : "No display name set"}
                 <form id="userEdit_displayName" class="contentMessage" onsubmit="userEdit('displayName')">
-                    <input id="userEdit_displayName_text" type="text" class="userEditForm" placeholder="Display Name">
+                    <input id="userEdit_displayName_text" type="text" class="userEditForm menu-style" placeholder="Display Name">
                 </form>
             </div>
             <div class="menu menu-style">
                 <p><b>Username</b></p>
                 ${profileData.userData.username ? `<p>${profileData.userData.username}` : "No username set"}
                 <form id="userEdit_username" class="contentMessage" onsubmit="userEdit('username')">
-                    <input type="text" id="userEdit_username_text" class="userEditForm" placeholder="Username">
+                    <input type="text" id="userEdit_username_text" class="userEditForm menu-style" placeholder="Username">
                 </form>
             </div>
             <div class="menu menu-style">
                 <p><b>Status</b></p>
                 ${profileData.userData.statusTitle ? `<p>${profileData.userData.statusTitle}` : "No status set"}
                 <form id="userEdit_status" class="contentMessage" onsubmit="userEdit('status')">
-                    <input type="text" id="userEdit_status_text" class="userEditForm" placeholder="Status">
+                    <input type="text" id="userEdit_status_text" class="userEditForm menu-style" placeholder="Status">
                 </form> 
             </div>
             <div class="menu menu-style">
                 <p><b>Description</b></p>
                 ${profileData.userData.description ? `<p>${profileData.userData.description}` : "No description set" }
                 <form id="userEdit_description" class="contentMessage" onsubmit="userEdit('description')">
-                    <input type="text" id="userEdit_description_text" class="userEditForm" placeholder="Description">
+                    <input type="text" id="userEdit_description_text" class="userEditForm menu-style" placeholder="Description">
                 </form>
             </div>
             <div class="menu menu-style">
                 <p><b>Pronouns</b></p>
                 ${profileData.userData.pronouns ? `<p>${profileData.userData.pronouns}` : "No pronouns set"}
                 <form id="userEdit_pronouns" class="contentMessage" onsubmit="userEdit('pronouns')">
-                    <input type="text" id="userEdit_pronouns_text" class="userEditForm" placeholder="Pronouns">
+                    <input type="text" id="userEdit_pronouns_text" class="userEditForm menu-style" placeholder="Pronouns">
                 </form>
             </div>
             ${profileData.userData.creationTimestamp ? 
@@ -1415,7 +1415,7 @@ async function userEditHtml(userID) {
                     <div class="menu menu-style">
                         <p><b>Verify ✔️</b></p>
                         <div class="searchSelect search menu-style">
-                            <input id="content_request_verification" placeholder="Why do you want to verify?">
+                            <input id="content_request_verification" class="menu-style" placeholder="Why do you want to verify?">
                         </div>
                         <button class="menuButton menuButton-style" onclick="requestVerification()">Request</button>
                     </div>
@@ -1471,14 +1471,14 @@ async function createTheme() {
         <div class="signInDiv">
             <form id="userEdit_themeSettings_create" class="contentMessage">
                 <label for="userEdit_themeSettings_create_name"><p>Theme Name</p></label>
-                <input type="text" id="userEdit_themeSettings_create_name" class="userEditForm" placeholder="Theme Name">
+                <input type="text" id="userEdit_themeSettings_create_name" class="userEditForm menu-style" placeholder="Theme Name">
                 <label for="userEdit_themeSettings_create_privacy">Privacy:</label>
                 <select id="userEdit_themeSettings_create_privacy" name="privacy">
                     <option value="1">Public</option>
                     <option value="3">Private</option>
                 </select>
                 <label for="userEdit_themeSettings_create_fork"><p>Fork existing theme</p></label>
-                <input type="text" id="userEdit_themeSettings_create_fork" class="userEditForm" placeholder="Theme ID">
+                <input type="text" id="userEdit_themeSettings_create_fork" class="userEditForm menu-style" placeholder="Theme ID">
             </form>
             <button class="menuButton menuButton-style" onclick="createThemeSettings()">Create Theme Settings</button>
         </div>
@@ -1533,8 +1533,8 @@ async function editTheme(themeSettings) {
             <hr class="rounded">
             <div>
                 <b><label for="themeSetting_${option.option}">${option.name}<br>${option.description}<br></label></b>
-                <input type="color" id="themeSetting_${option.option}_color" value="${currentData}"/>
-                <input type="text" id="themeSetting_${option.option}" value="${currentData}"/>
+                <input type="color" class="menu-style" id="themeSetting_${option.option}_color" value="${currentData}"/>
+                <input type="text" class="menu-style" id="themeSetting_${option.option}" value="${currentData}"/>
                 <!--<div style="width: 5px; height: 5px; background-color: ${currentData};"></div>-->
             </div>
         `;
@@ -1968,7 +1968,7 @@ async function changePasswordPage() {
             <hr class="rounded">
             <form id="userEdit_change_password" class="contentMessage">
                 <label for="userEdit_password_old_text"><p>Password</p></label>
-                <input type="password" id="userEdit_password_old_text" autocomplete="current-password" class="userEditForm" placeholder="Password">
+                <input type="password" id="userEdit_password_old_text" autocomplete="current-password" class="userEditForm menu-style" placeholder="Password">
             </form>
             <button class="menuButton menuButton-style" onclick="requestChangePassword()">Change Password</button>
             <div id="completed_change_pass"></div>
@@ -2106,11 +2106,11 @@ async function changeEmailPage() {
                 <hr class="rounded">
                 <form id="userEdit_email" class="contentMessage" onsubmit="editEmailRequest()">
                     <label for="userEdit_email_text"><p>New Email</p></label>
-                    <input type="email" id="userEdit_email_text" autocomplete="false" autofill="false" class="userEditForm" placeholder="New Email">
+                    <input type="email" id="userEdit_email_text" autocomplete="false" autofill="false" class="userEditForm menu-style" placeholder="New Email">
                 </form>
                 <form id="userEdit_password" class="contentMessage" onsubmit="editEmailRequest()">
                     <label for="userEdit_email_pass"><p>Password</p></label>
-                    <input type="password" id="userEdit_email_pass" class="userEditForm" placeholder="Password">
+                    <input type="password" id="userEdit_email_pass" class="userEditForm menu-style" placeholder="Password">
                 </form>
                 <button class="menuButton menuButton-style" onclick="editEmailRequest()">Submit Email</button>
                 <p id="resultAddRequest"></p>
@@ -2122,7 +2122,7 @@ async function changeEmailPage() {
                 <hr class="rounded">
                 <form id="userEdit_password_remove" class="contentMessage" onsubmit="removeEmailRequest('${emailData.email}')">
                     <label for="userEdit_email_pass_remove"><p>Password</p></label>
-                    <input type="password" id="userEdit_email_pass_remove" class="userEditForm" placeholder="Password">
+                    <input type="password" id="userEdit_email_pass_remove" class="userEditForm menu-style" placeholder="Password">
                 </form>
                 <button class="menuButton menuButton-style" onclick="removeEmailRequest('${emailData.email}')">Remove Email</button>
                 <p id="resultRemoveRequest"></p>
@@ -2151,7 +2151,7 @@ async function createEditEmailSettingsView(emailSettings) {
         ele+=`
         <hr class="rounded">
             <div>
-                <input type="checkbox" id="emailSetting_${option.option}" name="interest" value="${option.option}"${emailSettings[option.option] ? ` checked ` : ""}/>
+                <input class="menu-style" type="checkbox" id="emailSetting_${option.option}" name="interest" value="${option.option}"${emailSettings[option.option] ? ` checked ` : ""}/>
                 <label for="${option.option}">${option.name}<br>${option.description}</label>
             </div>
         `
@@ -2780,8 +2780,8 @@ async function requestAppToken(amount) {
     const newRequestEle = `
         <p>Generate New App Token</p>
         <p>Please input an application name</p>
-        <div class="searchSelect search">
-            <input id="appName_AppTokenRequest" placeholder="Application Name:">
+        <div class="searchSelect search menu-style">
+            <input id="appName_AppTokenRequest" class="menu-style" placeholder="Application Name:">
         </div>
         <button class="menuButton menuButton-style" onclick="requestAppToken(${newAmount})">Generate Token</button>
     `
@@ -2870,8 +2870,8 @@ function searchBar() {
 
 function activeSearchBar() {
     document.getElementById("searchArea").innerHTML = `
-        <div class="searchSelect search">
-            <input id="searchBarArea" onkeyup="searchSocial()" placeholder="Search for Posts and Users...">
+        <div class="searchSelect search menu-style">
+            <input id="searchBarArea" class="menu-style" onkeyup="searchSocial()" placeholder="Search for Posts and Users...">
         </div>
     `
     document.getElementById('navSection5').innerHTML = `
@@ -2896,7 +2896,7 @@ function unactiveSearchBar() {
 function postBar() {
     document.getElementById("postBar").innerHTML = `
         <form id="searchBar" class="searchSelect search" onsubmit="createPost()">
-            <input type="text" id="newPostTextArea" placeholder="Type out your next update...">
+            <input type="text" class="menu-style" id="newPostTextArea" placeholder="Type out your next update...">
         </form>
     `
 
@@ -2921,10 +2921,10 @@ async function signupSocial() {
                 <h1>Dummy signup page</h1>
             </div>
             <div class="userInfo">
-                <input type="text" id="usernameProfile" placeholder="Your username">
+                <input type="text" id="usernameProfile" class="menu-style" placeholder="Your username">
             </div>
                 <div class="userInfo">
-                <input type="text" id="displaynameProfile" placeholder="Your displayname">
+                <input type="text" id="displaynameProfile" class="menu-style" placeholder="Your displayname">
             </div>
         </div>
     `
@@ -3249,7 +3249,7 @@ function editPost(postID, edited) {
     if (debug) console.log(oldMessage)
     document.getElementById(`postContentArea_${postID}`).innerHTML = `
         <form id="editPostForm" class="contentMessage"onsubmit="submitEdit('${postID}')">
-            <input type="text" id="editPostInput" class="contentMessage contentMessageFormEdit" value="${oldMessage}">
+            <input type="text" id="editPostInput" class="contentMessage contentMessageFormEdit menu-style" value="${oldMessage}">
         </form>
     `
     document.getElementById(`editButton_${postID}`).innerHTML=`<p onclick='cancelEdit("${postID}", "${oldMessage}", "${edited}")'>cancel edit</p>`
@@ -3607,23 +3607,23 @@ async function createPostPage() {
     if (debug) console.log("creating post")
 
     const ele = `
-        <div id="postPageDiv" class="postPageDiv">
+        <div id="postPageDiv" class="menu menu-style">
             <h1>Create a new Post</h1>
             <div class="postPageInput">
             <textarea class="postTextArea" onkeyup="onTypePostPage()" id="newPostTextArea">${data?.content ? data.content : ""}</textarea>
             </div>
             <div class="mainActions">
-                <p class="publicPost" onclick="leavePostPage()">Back</p>
-                <p class="publicPost" onclick="publishFromPostPage()">Upload Post</p>
-                <p class="publicPost" id="pollCreationButton" onclick="showPollCreation()">Add Poll</p>
-                <div class="publicPost">
+                <p class="publicPost menuButton menuButton-style" onclick="leavePostPage()">Back</p>
+                <p class="publicPost menuButton menuButton-style" onclick="publishFromPostPage()">Upload Post</p>
+                <p class="publicPost menuButton menuButton-style" id="pollCreationButton" onclick="showPollCreation()">Add Poll</p>
+                <div class="publicPost menuButton menuButton-style">
                     <p onclick="exportPostHeaderURL()">Create Post Template</p>
                     <p id="postURL_preview"></p>
                     <p id="postURL_messageURL"></p>
                 </div>
             </div>
             <div>
-                <input type="text" id="pollCreateLink" class="addPollOption" placeholder="Link Poll via ID" ${data.pollID ? `value="${data.pollID}"` : ""}></input>
+                <input type="text" id="pollCreateLink" class="addPollOption menu-style" placeholder="Link Poll via ID" ${data.pollID ? `value="${data.pollID}"` : ""}></input>
             </div>
             <div id="pollCreate"></div>
             <div id="foundTaggings"></div>
@@ -3883,15 +3883,15 @@ function showPollCreation() {
         <h1>Create New Poll</h1>
         <hr class="rounded">
         <div class="mainActions">
-            <p class="publicPost" onclick="addExtraOption()">Add Another Option</p>
-            <p class="publicPost" onclick="removeLastOption()">Remove Newest Option</p>
+            <p class="publicPost menuButton menuButton-style" onclick="addExtraOption()">Add Another Option</p>
+            <p class="publicPost menuButton menuButton-style" onclick="removeLastOption()">Remove Newest Option</p>
         </div>
         <hr class="rounded">
         <div id="pollCreation">
             <div id="optionAmount"></div>
             <div>
                 <p><u>Question</u></p>
-                <input type="text" id="pollCreateTitle" class="addPollOption" placeholder="Question">
+                <input type="text" id="pollCreateTitle" class="addPollOption menu-style" placeholder="Question">
             </div>
             <div id="options">${addOption(1)}${addOption(2)}</div>
         </div>
@@ -3965,7 +3965,7 @@ function addOption(num) {
     return `
         <div class="pollOption" id="option_${num}">
             <p><u>Option ${amount}</u></p>
-            <input type="text" class="addPollOption" id="poll_option_${num}" placeholder="Option ${amount}">
+            <input type="text" class="addPollOption menu-style" id="poll_option_${num}" placeholder="Option ${amount}">
         </div>
     `;
 }
@@ -4087,7 +4087,7 @@ function removeEditUser() {
 function editUser() {
     document.getElementById("mainFeed").innerHTML = `
         <div class="username">
-            <input id="newUsername"></input>
+            <input id="newUsername" class="menu-style"></input>
             <div id="resultEditUsername"></div>
             <button class="buttonStyled" onclick=renameUsername()>Edit Username</button>
         </div>
