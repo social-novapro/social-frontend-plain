@@ -264,16 +264,16 @@ function addToList(data, content, user, timeStamp, message) {
 
     // console.log(data.message)
     document.getElementById("messages").innerHTML+=`
-        <div class="message" id="${data._id}">
+        <div class="message posts-style" id="${data._id}">
             ${data.message?.replyTo ? `
                 <p style="font-size: 8;" class="edited contentMessage replyToMessage replyTo_${data.message.replyTo}" onclick="highlightMessage('${data.message.replyTo}')" id="replyContent_${data._id}"><i>${getContent(data.message.replyTo)}</i></p>
             `: ""}
-            <p class="subheaderMessage ${user._id == currentUserLogin.userID ? "ownUser" : "otherUser"}">${user.displayName} @${user.username} | ${timesince}</p>
+            <p class="subheaderMessage ${user._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}">${user.displayName} @${user.username} | ${timesince}</p>
             <div class="contentMainArea" id="contentMainArea_${data._id}">
-                <p class="contentMessage" id="contentArea_${data._id}">${imageContent.content}</p>
+                <p class="contentMessage posts_content-style" id="contentArea_${data._id}">${imageContent.content}</p>
                 ${data.message?.edited ? '<p class="edited contentMessage"><i>(edited)</i></p>' : ''}
             </div>
-            <div class="messageActions">
+            <div class="messageActions posts_action-style">
                 <div id="replyDiv_${data._id}"><p onclick="replyToMessage('${data._id}')">Reply</p></div>
                 ${data.type==2 && user._id == currentUserLogin.userID  ?  `
                     <p id="deleteButton_${data._id}"><p onclick="deleteMessage('${data._id}')">Delete</p></p>

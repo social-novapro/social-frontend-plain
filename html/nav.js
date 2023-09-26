@@ -6,6 +6,8 @@ var baseUrl = getUrl .protocol + "//" + getUrl.host + "/" + getUrl.pathname.spli
 var pathArray = window.location.pathname.split( '/' );
 
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
+var LOCAL_STORAGE_THEME_SETTINGS = 'social.themeSettings'
+var LOCAL_STORAGE_THEME_POSSIBLE = 'social.themePossible'
 
 // console.log(config)
 var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
@@ -33,6 +35,154 @@ async function startup(){
     checkNavCookie()
     addTitle() 
     checkLogin()
+    loadTheme();
+}
+
+async function loadTheme() {
+    const prevSettings = getThemeSettings(); // and loads 
+    
+    const currentTheme = await getTheme();
+    if (!currentTheme || !currentTheme.colourTheme) {
+        // sets empty theme
+        await applyThemeNav({});
+        return false;
+    };
+    if (
+        prevSettings &&
+        prevSettings._id == currentTheme._id && 
+        prevSettings.timestamp_edited == currentTheme.timestamp_edited
+    ) return true;
+    else setThemeSettings(currentTheme);
+
+    await applyThemeNav(currentTheme);
+
+    return true;
+}
+
+function getThemeSettings() {
+    const themeSettings = localStorage.getItem(LOCAL_STORAGE_THEME_SETTINGS)
+    if (!themeSettings) return false;
+    else {
+        currentThemeSettings = JSON.parse(themeSettings);
+        if (!currentThemeSettings || !currentThemeSettings.colourTheme) return false;
+        quickApplyThemeNav(currentThemeSettings.colourTheme);
+
+        return currentThemeSettings;
+    }
+}
+
+function setThemeSettings(newData) {
+    localStorage.setItem(LOCAL_STORAGE_THEME_SETTINGS, JSON.stringify(newData))
+    //if (newData && !newData.error) localStorage.setItem(LOCAL_STORAGE_THEME_SETTINGS, JSON.stringify(newData))
+}
+
+async function applyThemeNav(theme) {
+    const themeSettings = theme.colourTheme;
+
+    setThemeSettings(theme);
+
+    const findSettings = await getPossibleThemeEdits();
+    if (findSettings && !findSettings.error) localStorage.setItem(LOCAL_STORAGE_THEME_POSSIBLE, JSON.stringify(findSettings))
+
+    // removes current theme
+    unsetTheme()
+   
+    const style = document.createElement('style');
+    style.id="themeStyle"
+    //style.innerHTML = `\``;
+    
+    for (const option of findSettings) {
+        const optionName = option.option;
+        if (optionName == "_id") continue;
+        if (themeSettings && themeSettings[optionName]) style.innerHTML += setTheme(optionName, themeSettings[optionName], option.styles)
+        else style.innerHTML += setTheme(optionName, null, option.styles)
+    }
+
+    // applies new theme
+    document.head.appendChild(style);
+
+    return true;
+}
+
+function unsetTheme() {
+    const rmStyle = document.getElementById('themeStyle');
+    if (rmStyle) document.head.removeChild(rmStyle);
+    return true;
+}
+
+function quickApplyThemeNav(themeSettings) {
+    const style = document.createElement('style');
+    style.id="themeStyle"
+    const possible = JSON.parse(localStorage.getItem(LOCAL_STORAGE_THEME_POSSIBLE))
+
+    if (possible && possible[0]) {
+        for (const option of possible) {
+            const optionName = option.option;
+            if (optionName == "_id") continue;
+            if (themeSettings && themeSettings[optionName]) style.innerHTML += setTheme(optionName, themeSettings[optionName], option.styles)
+            else style.innerHTML += setTheme(optionName, null)
+        }
+    } else {
+        for (const option in themeSettings) {
+            if (option == "_id") continue;
+            style.innerHTML += setTheme(option, themeSettings[option] ? themeSettings[option] : null);
+        }
+    }
+
+    // applies new theme
+    document.head.appendChild(style);
+
+    return true;
+}
+
+function getStyles(name) {
+    const possible = JSON.parse(localStorage.getItem(LOCAL_STORAGE_THEME_POSSIBLE))
+    
+    if (possible && possible[0]) {
+        for (const option of possible) {
+            if (option.option == name) return option.styles;
+        }
+    }
+}
+
+function setTheme(name, value, styles) {
+    if (name.includes("font")) {
+        var newName = name.replace("font_", "");
+        newName+= "-style";
+        var styling = `.${newName}`;
+        
+        if (styles) {
+            for (const style of styles) {
+                styling += `, .${newName} ${style} `
+            }
+        }
+
+        return `${styling} { color: ${value}; } \n`;
+    }
+    
+    return `.${name}-style { background-color: ${value}; } \n`;
+}
+
+async function getTheme(themeID) {
+    const response = await fetch(`${themeID ? `${apiURL}/users/profile/theme/${themeID}` : `${apiURL}/users/profile/theme/user/`}`, {
+        method: 'GET',
+        headers,
+    });
+
+    const res = await response.json();
+
+    return res;
+}
+
+async function getPossibleThemeEdits() {
+    const response = await fetch(`${apiURL}/users/profile/theme/possible`, {
+        method: 'GET',
+        headers,
+    });
+
+    const res = await response.json();
+
+    return res;
 }
 
 // console.log(hostedURL)
@@ -59,7 +209,7 @@ function addNavigation() {
 
 function newNavigation() {
     document.getElementById('expandingNavBar').innerHTML = `
-        <ul class="navbar-nav">
+        <ul class="navbar-nav navigation-style">
             <li class="nav-item pointerCursor" id="navSection0">
                 <div id="page2Nav" class="nav-link" onclick="switchNav(5)">
                     <span class="material-symbols-outlined nav-button";>home</span>
@@ -206,21 +356,34 @@ async function switchNav(pageVal) {
 
 function showModal(html, showClose) {
     document.getElementById('modalContainer').classList.add("showModal");
-    document.getElementById('modal').innerHTML = html;
+    document.getElementById('modalContainer').innerHTML = `
+        <div class="modal menu-style" id="modal">${html}</div>
+    `;
+
+    listenerContainer();
 
     if (showClose == "hide") return true;
     else return showModalClose();
 }
 
+function listenerContainer() {
+    document.getElementById('modalContainer').addEventListener('click', function(event) {
+        if (event.target === modalContainer) {
+            return closeModal();
+        }
+    });
+}
+
 function showModalClose() {
     document.getElementById('modal').innerHTML+=`
-        <button class="buttonStyled" onclick="closeModal()">Close</button>
+        <button class="menuButton menuButton-style" onclick="closeModal()">Close</button>
     `;
 }
 
 function closeModal() {
     document.getElementById('modalContainer')?.classList.remove("showModal");
-    document.getElementById('modal').innerHTML = "";
+    document.getElementById('modalContainer').innerHTML = "";
+
     return true;
 }
 

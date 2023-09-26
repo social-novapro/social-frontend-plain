@@ -97,11 +97,11 @@ async function loginSplashScreen() {
     console.log('-- login splash screen')
     document.getElementById("mainFeed").innerHTML = `hello`
     document.getElementById("mainFeed").innerHTML = `
-        <div class="publicPost signInDiv">
+        <div class="menu menu-style">
             <h1><a onclick="changeYour()" id="badYourGrammer">You're</a> not signed in</h1>
             <p>Please sign into Interact to Proceed!</p>
-            <button class="buttonStyled" onclick="loginPage()">Log into Your Account</button>
-            <button class="buttonStyled" onclick="createUserPage()">Create an Account</button>
+            <button class="menuButton menuButton-style" onclick="loginPage()">Log into Your Account</button>
+            <button class="menuButton menuButton-style" onclick="createUserPage()">Create an Account</button>
         </div>
     `
     console.log('--- login splash screen end');
@@ -117,23 +117,23 @@ async function changeYour() {
 // USER LOGIN PAGE 
 async function loginPage() {
     document.getElementById("mainFeed").innerHTML = `
-        <div class="userInfo">
+        <div class="menu menu-style">
             <h1>Please Login!</h1>
             <form onsubmit="sendLoginRequest()" id="signInForm">
-                <div class="userInfo">
+                <div class="menu menu-style">
                     <p>Enter Username or Email:</p>
-                    <p><input class="contentMessage userEditForm" id="userUsernameLogin" placeholder="Username/Email" type="username" name="username"></p>
+                    <p><input class="contentMessage userEditForm menu-style" id="userUsernameLogin" placeholder="Username/Email" type="username" name="username"></p>
                 </div>
-                <div class="userInfo">
+                <div class="menu menu-style">
                     <p>Enter Password</p>
-                    <p><input class="contentMessage userEditForm" id="userPasswordLogin" placeholder="Password" type="password" name="password"></p>
+                    <p><input class="contentMessage userEditForm menu-style" id="userPasswordLogin" placeholder="Password" type="password" name="password"></p>
                 </div>
-                <div class="signInDiv">
-                    <button class="buttonStyled" type="submit">Login</button>
+                <div class="menu menu-style">
+                    <button class="menuButton menuButton-style" type="submit">Login</button>
                 </div>
             </form>
-            <div class="signInDiv">
-                <button class="buttonStyled" onclick="forgetPassPage()">Forgot Password</button>
+            <div class="menu menu-style">
+                <button class="menuButton menuButton-style" onclick="forgetPassPage()">Forgot Password</button>
             </div>
        </div>
     `
@@ -166,7 +166,7 @@ async function sendLoginRequest() {
 
 async function forgetPassPage() {
     document.getElementById("mainFeed").innerHTML = `
-        <div class="userInfo">
+        <div class="menu menu-style">
             <h1>Enter Details!</h1>
             <p>Enter your username or email to reset your password!</p>
             <p>Once you have entered your username or email, you will recieve an email with a link to reset your password!</p>
@@ -174,12 +174,12 @@ async function forgetPassPage() {
             <p>This will only work if you have an email set to your Interact account.</p>
             <p>Please contact us at <a href="mailto:daniel@novapro.net">daniel@novapro.net</a> for any problems with resetting your password</p>
             <form onsubmit="sendForgetRequest()" id="signInForm">
-                <div class="userInfo">
+                <div class="menu menu-style">
                     <p>Enter Username or Email:</p>
-                    <p><input class="contentMessage userEditForm" id="usernameForgetPass" placeholder="Username/Email" type="username" name="username"></p>
+                    <p><input class="contentMessage userEditForm menu-style" id="usernameForgetPass" placeholder="Username/Email" type="username" name="username"></p>
                 </div>
-                <div class="signInDiv">
-                    <button class="buttonStyled" type="submit">Submit Request</button>
+                <div class="menu menu-style">
+                    <button class="buttonStyled menuButton menuButton-style" type="submit">Submit Request</button>
                 </div>
             </form>
             <div id="forgotPassResponse"></div>
@@ -234,34 +234,34 @@ async function checkLoginUser() {
 
 function createUserPage() {
     document.getElementById("mainFeed").innerHTML = `
-        <div class="userInfo">
+        <div class="menu menu-style">
             <h1>Please Create an Account!</h1>
             <form onsubmit="createNewUserRequest()" id="createUserForm">
-                <div class="userInfo">
+                <div class="menu menu-style">
                     <p>Enter Your Email:</p>
-                    <input type="text" class="contentMessage userEditForm" id="emailCreate" placeholder="Email" type="text" name="email">
+                    <input type="text" class="contentMessage userEditForm menu-style" id="emailCreate" placeholder="Email" type="text" name="email">
                 </div>
-                <div class="userInfo">
+                <div class="menu menu-style">
                     <p>Enter Your New Username:</p>
-                    <input type="text" class="contentMessage userEditForm" id="usernameCreate" placeholder="Username" type="text" name="username">
+                    <input type="text" class="contentMessage userEditForm menu-style" id="usernameCreate" placeholder="Username" type="text" name="username">
                 </div>
-                <div class="userInfo">
+                <div class="menu menu-style">
                     <p>Enter Your New Displayname:</p>
-                    <input type="text" class="contentMessage userEditForm" id="displaynameCreate" placeholder="Displayname">
+                    <input type="text" class="contentMessage userEditForm menu-style" id="displaynameCreate" placeholder="Displayname">
                 </div>
-                <div class="userInfo">
+                <div class="menu menu-style">
                     <p>Enter Your New Password:</p>
-                    <input type="password" class="contentMessage userEditForm" id="passwordCreate" placeholder="Password" name="password">
+                    <input type="password" class="contentMessage userEditForm menu-style" id="passwordCreate" placeholder="Password" name="password">
                 </div>
-                <div class="userInfo">
+                <div class="menu menu-style">
                     <p>Enter Your Description:</p>
-                    <input type="text" class="contentMessage userEditForm" id="descriptionCreate" placeholder="Description">
+                    <input type="text" class="contentMessage userEditForm menu-style" id="descriptionCreate" placeholder="Description">
                 </div>
-                <div class="userInfo">
+                <div class="menu menu-style">
                     <p>Enter Your Pronouns:</p>
-                    <input type="text" class="contentMessage userEditForm" id="pronounsCreate" placeholder="Pronouns">
+                    <input type="text" class="contentMessage userEditForm menu-style" id="pronounsCreate" placeholder="Pronouns">
                 </div>
-                <div class="signInDiv">
+                <div class="menu menu-style">
                     <button class="buttonStyled" type="submit">Create Account</div>
                 </div>
             </form>
