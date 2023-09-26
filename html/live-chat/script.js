@@ -13,7 +13,7 @@ var headers = {
     "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421"
 }
 var verifiedConnection = false
-
+var loadingMessages = [];
 // console.log(config.dev.websocket_url)
 var wsURL = `${config ? `${config.current == "prod" ? config.prod.websocket_url : config.dev.websocket_url}` : 'https://interact-api.novapro.net/v1' }`
 
@@ -62,7 +62,7 @@ async function checkLogin() {
     }
     // console.log'running 4')
 
-    if (!loginUserToken) return window.location.href = "/begin/?live-chat";
+    if (!loginUserToken) return window.location.href = "/begin/?redirect=live-chat";
     else return checkWebSocket()
 }
 
@@ -166,6 +166,16 @@ function checkWebSocket() {
                         // }
                         // ws.send(JSON.stringify(oldmessages))
                     }
+                    else if (data.mesType==4) {
+                        loadMessages();
+                    }
+                    break;
+                case 11: 
+                    if (!data.success || !data.message) {
+                        updateReplyContent(data.messageID, "deleted")
+                    } else {
+                        updateReplyContent(data.messageID, data.messageData.message.content)
+                    }
                     break;
                 default:
                     alert("unhandled event occured")
@@ -255,11 +265,13 @@ function addToList(data, content, user, timeStamp, message) {
     // console.log(data.message)
     document.getElementById("messages").innerHTML+=`
         <div class="message" id="${data._id}">
+            ${data.message?.replyTo ? `
+                <p style="font-size: 8;" class="edited contentMessage replyToMessage replyTo_${data.message.replyTo}" onclick="highlightMessage('${data.message.replyTo}')" id="replyContent_${data._id}"><i>${getContent(data.message.replyTo)}</i></p>
+            `: ""}
             <p class="subheaderMessage ${user._id == currentUserLogin.userID ? "ownUser" : "otherUser"}">${user.displayName} @${user.username} | ${timesince}</p>
             <div class="contentMainArea" id="contentMainArea_${data._id}">
                 <p class="contentMessage" id="contentArea_${data._id}">${imageContent.content}</p>
                 ${data.message?.edited ? '<p class="edited contentMessage"><i>(edited)</i></p>' : ''}
-                ${data.message?.replyTo ? `<a class="edited contentMessage" href="#${data.message.replyTo}" onclick="highlightMessage('${data.message.replyTo}')"><i>(replying)</i></a>` : ''}
             </div>
             <div class="messageActions">
                 <div id="replyDiv_${data._id}"><p onclick="replyToMessage('${data._id}')">Reply</p></div>
@@ -275,6 +287,29 @@ function addToList(data, content, user, timeStamp, message) {
 
     objDiv.scrollTop = objDiv.scrollHeight;
 };
+
+function getContent(messageID) {
+    const content = document.getElementById(`contentArea_${messageID}`);
+    if (content) return content.innerHTML;
+    else {
+        loadingMessages.push(messageID)
+        return "loading..."
+    };
+}
+function loadMessages() {
+    if (loadingMessages.length == 0) return
+
+    for (const msg of loadingMessages) {
+        const messageSend = {
+            type: 11,
+            apiVersion: "1.0",
+            userID: currentUserLogin.userID,
+            messageID: msg,
+        }
+        loadingMessages.shift();
+        ws.send(JSON.stringify(messageSend))
+    }
+}
 
 function cancelReply(id) {
     document.getElementById(`contentArea_${id}`).classList.remove("replyingEle");
@@ -294,7 +329,7 @@ function highlightMessage(id) {
 function checkIfActiveReply() {
     var returnObj = {
         foundActive: false,
-        replyID: null
+        replyID: undefined
     };
 
     if(document.getElementById(`activeReply`)) {
@@ -380,12 +415,28 @@ function deleteMessage(id) {
 
 function removeFromList(data) {
     const { _id } = data
+    deleteReplyContent(_id)
     document.getElementById(_id).remove()
 }
 
 function editFromList(data) {
     const { _id } = data
+    updateReplyContent(_id, data.newMessage.content)
     document.getElementById(`contentMainArea_${_id}`).innerHTML = `<p class="contentMessage" id="contentArea_${_id}">${data.newMessage.content}</p><p class="edited"><i>(edited)</i></p>`
+}
+
+function deleteReplyContent(_id) {
+    const elements = document.getElementsByClassName(`replyTo_${_id}`);
+    for (const ele of elements) {
+        ele.innerHTML = `<i>deleted reply</i>`;
+    }
+}
+
+function updateReplyContent(id, content) {
+    const elements = document.getElementsByClassName(`replyTo_${id}`);
+    for (const ele of elements) {
+        ele.innerHTML = `<i>${content}</i>`
+    }
 }
 
 function checkDate(time){
@@ -408,8 +459,11 @@ function dateFromEpoch(time) {
     const day = date.getDate()
     const month = date.getMonth()
     const monthReadable = checkMonth(month)
+    const hoursRaw = date.getHours()
+    const hours = `${hoursRaw > 12 ? hoursRaw - 12 : hoursRaw}`;
+    const minutes = date.getMinutes();
 
-    return `${monthReadable} ${day}, ${year}`
+    return `${monthReadable} ${day}, ${year} at ${hours}:${minutes} ${hoursRaw > 12 ? 'PM' : 'AM'}`
 }
 
 function checkMonth(month) {
@@ -477,7 +531,7 @@ function getId(url) {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = url.match(regExp);
 
-    return (match && match[2].length === 11) ? match[2] : null;
+    return (match && match[2].length === 11) ? match[2] : undefined;
 }
 
 function checkForImage(content) {

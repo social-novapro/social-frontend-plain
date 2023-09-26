@@ -3,7 +3,7 @@ This is Interact Frontend  created by Daniel Kravec
 To build Docker Image:
 $ docker build -t novapro/interact .
 ```
-docker build -t novapro/interact . && docker tag novapro/interact registry.xnet.com:5000/novapro/interact:latest && sudo docker push registry.xnet.com:5000/novapro/interact
+docker build -t novapro/interact . && docker tag novapro/interact registry.xnet.com:5000/novapro/interact:latest && docker push registry.xnet.com:5000/novapro/interact
 ```
 To Run/Test localy:
 $ docker run --name interact -d novapro/interact:latest

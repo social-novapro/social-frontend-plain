@@ -8,6 +8,8 @@
             - custom feed (default when logged in)
             - following feed (just people you follow)
 
+    check if there are messages to be read
+    make a secondary message area
 // function that checks if user is logged in
 if (checkLoginUser()) {
     // if user is logged in, show the logout button
@@ -41,6 +43,9 @@ async function checkLoginUser() {
     return checkLogin.data
 }
 */
+var getUrl = window.location;
+var baseUrl = getUrl .protocol + "//" + getUrl.host + "/" + getUrl.pathname.split('/')[1];
+var pathArray = window.location.pathname.split( '/' );
 
 var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
 
@@ -64,12 +69,25 @@ var currentPage
 
 var searching
 var currentFeed 
+var currentFeedType
 
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 // let loginUserToken = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
 
 var debug = false
 
+var mobileClient = checkifMobile();
+var params = new URLSearchParams(window.location.search)
+
+function checkifMobile() {
+    const width = document.getElementById("html").clientWidth
+        console.log(width)
+    if (width < 900) {
+        return true;
+    } else {
+        return false;
+    }
+}
 
 // good luck
 if (location.protocol !== 'https:' && !((/localhost|(127|192\.168|10)\.(\d{1,3}\.?){2,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.(\d{1,3}\.?){2}/).test(location.hostname))) {
@@ -93,51 +111,100 @@ async function checkURLParams() {
         paramsFound: false
     }
 
-    const params = new URLSearchParams(window.location.search)
     const ifUsername = params.has('username')
     const ifPostID = params.has("postID")
     const ifSearch = params.has("search")
     const ifLoginRequest = params.has("login")
     const ifNewAccountLogin = params.has("newAccount")
+    const ifPostPage = params.has("posting");
+    const ifUserEdit = params.has("userEdit");
+    const ifSettings = params.has("settings");
+    const ifEmailSettings = params.has("emailSettings");
 
     if (ifUsername) {
         paramsFound = true
+        paramsInfo.paramsFound = true
         const usernameSearch = params.get('username')
         userPage(usernameSearch)
     }
     else if (ifPostID) {
         paramsFound = true
-        const usernameSearch = params.get('postID')
+        paramsInfo.paramsFound = true
+
+        const postIDSearch = params.get('postID')
+        // postPage()
+        postHtml(postIDSearch)
         // return userPage(usernameSearch)
     }
     else if (ifSearch) {
         paramsFound = true
+        paramsInfo.paramsFound = true
+
         const searchSearching = params.get('search')
         searchResult(searchSearching)
         addWritingToSeachBar(searchSearching)
     }
     else if (ifLoginRequest) {
         paramsFound = true
+        paramsInfo.paramsFound = true
+
         loginPage()
     }
     else if (ifNewAccountLogin) {
         paramsFound = true
+        paramsInfo.paramsFound = true
+
         loginSplashScreen()
+    }
+    else if (ifPostPage) {
+        paramsFound = true
+        paramsInfo.paramsFound = true
+
+        createPostPage()
+    } else if (ifUserEdit) {
+        paramsFound = true
+        paramsInfo.paramsFound = true
+
+        userEditPage()
+    } else if (ifSettings) {
+        paramsFound = true
+        paramsInfo.paramsFound = true
+
+        settingsPage()
+    } else if (ifEmailSettings) {
+        paramsFound = true
+        paramsInfo.paramsFound = true
+
+        settingsPage();
+        changeEmailPage();
+        document.getElementById("emailSettings").scrollIntoView();
     }
    
     return paramsInfo
 }
 
-function postElementCreate(post, user, type) {
+function postElementCreate({ post, user, type, hideParent, hideReplies, pollData, voteData }) {
+    if (!post) return;
     var timesince
     if (post.timePosted) timesince = checkDate(post.timePosted)
     const imageContent = checkForImage(post.content)
+    const owner = post.userID == currentUserLogin.userID ? true : false;
 
-   // imageContent.attachments
+    const options = {
+        hideParent : hideParent ? true : false, 
+        hideReplies : hideReplies ? true : false,
+        owner: owner,
+    }
+    
+    const timeSinceData = getTimeSince(post.timePosted);
+
+    const postIsLiked = post.liked ? true : false;
+
+    // imageContent.attachments
     if (imageContent.imageFound)if (debug) console.log(imageContent.attachments)
     if (type=="basic"){
         return `
-            <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'} | ${timesince}</p>
+            <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'} | ${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
             <div class="postContent" id="postContentArea_${post._id}">
                 <div class="textAreaPost">
                     <p id="postContent_${post._id}">${imageContent.content}</p>
@@ -147,50 +214,249 @@ function postElementCreate(post, user, type) {
         `
     }
     
-    return `
+    const element = `
         <div id="postElement_${post._id}" class="postElement">
+            ${!hideParent==true && post.isReply ? `
+                <div id="parent_${post._id}"></div>` 
+            : `` } 
             <div class="publicPost areaPost" id="postdiv_${post._id}">
-                <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'} | ${timesince}</p>
+                ${!hideParent==true && post.isReply ? `
+                    ${ post.replyData ? `
+                        <p onclick="viewParentPost('${post._id}', '${post.replyData.postID}')" id="parentViewing_${post._id}">This was a reply, click here to see.</p>
+                    ` : ``}
+                `: ``}
+                <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'}<br class="spacer_2px">${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
                 <div class="postContent" id="postContentArea_${post._id}">
                     <div class="textAreaPost">
                         <p id="postContent_${post._id}">${imageContent.content}</p>
                         ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
                     </div>
-                    ${post.quoteReplyPostID && post.quotedPost && post.quotedUser ? `<hr><div>${postElementCreate(post.quotedPost, post.quotedUser, "basic")}</div>` : ''}
+                    ${post.replyingPostID ? `<a class="replyingPost" href="#postElement_${post.replyingPostID}">Press here</a>` : ``}
+                    ${post.quoteReplyPostID && post.quotedPost && post.quotedUser ? `<hr><div>${postElementCreate({post: post.quotedPost, user: post.quotedUser, type: "basic"})}</div>` : ''}
                     <div class="PostAttachments">
                         ${imageContent.image ? `<div>${imageContent.attachments.map(function(attachment) {return `${attachment}`}).join(" ")}</div>`:''}
                     </div>
                 </div>
-                <p class="debug">${post._id} - from: ${post.userID}</p>
+                ${post.pollID ? `
+                    <div class="poll_option" id="pollContainer_${post._id}">
+                    ${pollData ? `
+                        ${pollElement(post._id, post.pollID, pollData, voteData)}
+                    `: ``}
+                    </div>
+                ` : `` }
+                <div class="debug">
+                    <p>postID: ${post._id}</p>
+                    <p>userID: ${post.userID}</p>
+                    ${post.pollID ? `<p>pollID: ${post.pollID}</p>` : `` }
+                </div>
                 <div class="actionOptions pointerCursor"> 
-                    <p onclick="likePost('${post._id}')" id="likePost_${post._id}">${post.totalLikes} likes</p>
-                    <p>${post.totalReplies} comments</p>
-                    <p id="quoteButton_${post._id}"><p onclick="quotePost('${post._id}')">quote post</p></p>
-                    ${post.userID == currentUserLogin.userID ? `
-                        <p onclick="deletePost('${post._id}')">delete post</p>
-                        <p id='editButton_${post._id}'><p onclick="editPost('${post._id}', '${post.edited}')">edit post</p></p>
-                    ` : '' }</p>
-                    <p id="popupactions_${post._id}" onclick="popupActions('${post._id}')">more</p>
+                    ${post.totalLikes ? 
+                        `<p onclick="likePost('${post._id}')" ${postIsLiked == true ? 'class="likedColour"':''} id="likePost_${post._id}">${puralDataType('like', post.totalLikes)}</p>` :
+                        `<p onclick="likePost('${post._id}')" id="likePost_${post._id}">like</p>`
+                    }
+                    ${post.totalReplies ? 
+                        `<p onclick="replyPost('${post._id}')">${puralDataType('reply', post.totalReplies)}</p>` : 
+                        `<p onclick="replyPost('${post._id}')">reply</p>`
+                    }
+                    ${post.totalQuotes ? 
+                        `<p onclick="quotePost('${post._id}')">${puralDataType('quote', post.totalQuotes)}</p>` : 
+                        `<p id="quoteButton_${post._id}">
+                            <p onclick="quotePost('${post._id}')">quote</p>
+                        </p>`
+                    }
+                    ${!mobileClient ? `
+                        ${post.userID == currentUserLogin.userID ? `
+                            <p onclick="deletePost('${post._id}')">delete post</p>
+                            <p id='editButton_${post._id}'>
+                                <p onclick="editPost('${post._id}', '${post.edited}')">edit post</p>
+                            </p>
+                        ` : ''}
+                    ` : ''}
+                    </p>
+                    <p id="popupactions_${post._id}" onclick="popupActions('${post._id}', '${options.hideParent}', '${options.hideReplies}', ${options.owner})">more</p>
                 </div>
             </div>
         </div>
     `
+
+    if (post.pollID && !pollData) {
+        createPollElement(post._id, post.pollID)
+        .then(function(ele) { 
+            if (ele) {
+                document.getElementById(`pollContainer_${post._id}`).innerHTML = ele; 
+                checkIfUserVoted(post.pollID)
+                .then(function(data) {
+                    if (data.error) {
+                        if (debug) console.log(data);
+                        return false;
+                    }
+                    if (data.voted && data.foundVote && data.foundVote.pollOptionID && data.foundVote.pollID == post.pollID) {
+                        colorizeOption(post.pollID, data.foundVote.pollOptionID);
+                        changeVoteOption(post.pollID, data.foundVote.pollOptionID);
+                    }
+                    devMode()
+                })
+            }
+        })
+    }
+
+    return element;
 }
 
-async function popupActions(postID) {
+function changeVoteOption(pollID, optionID) {
+    return false;//doesnt work properly, changed how it works
+
+    const element = document.getElementById(`poll_option_${pollID}_${optionID}`);
+    console.log(element);
+    if (debug) console.log(pollID);
+    if (userVoted == true) {
+        // colo
+        
+        // const myElement = document.getElementById('myElement');
+        element.onclick = `removeVote('${pollID}', '${optionID}')`;
+    } else {
+        // const myElement = document.getElementById('myElement');
+        element.onclick = `voteOption('${pollID}', '${optionID}')`;
+    }
+}
+
+function colorizeOption(pollID, optionID) {
+    const elementID = `poll_option_${pollID}_${optionID}`;
+    if (debug) console.log(elementID);
+    document.getElementById(elementID).classList.add("voted");
+}
+function removeColorOption(pollID, optionID) {
+    const elementID = `poll_option_${pollID}_${optionID}`;
+    if (debug) console.log(elementID)
+    document.getElementById(elementID).classList.remove("voted");
+}
+
+async function popupActions(postID, hideParent, hideReplies, owner) {
+    // options = JSON.parse(options)
     var elementPopup = document.getElementById(`popupOpen_${postID}`);
     if (elementPopup) return elementPopup.remove();
 
     document.getElementById(`postElement_${postID}`).innerHTML+=`
         <div id="popupOpen_${postID}" class="publicPost" style="position: element(#popupactions_${postID});">
+            ${owner && mobileClient? `
+                <p>Owner Actions</p>
+                <p>---</p>
+                <p onclick="deletePost('${postID}')">delete post</p>
+                <p id='editButton_${postID}'>
+                    <p onclick="editPost('${postID}')">edit post</p>
+                </p>
+            ` : ``}
             <p>Menu Actions</p>
             <p>---</p>
-            <p onclick="saveBookmark('${postID}')" id="saveBookmark_${postID}">Save to Bookmarks</p>
-            <p onclick="showEditHistory('${postID}')" id="editHistory_${postID}">Check Edit History</p>
-            <p onclick="showLikes('${postID}')" id="likedBy_${postID}">Check Who Liked</p>
+            <p class="pointerCursor" onclick="saveBookmark('${postID}')" id="saveBookmark_${postID}">Save to Bookmarks</p>
+            <p class="pointerCursor" onclick="showEditHistory('${postID}')" id="editHistory_${postID}">Check Edit History</p>
+            <p class="pointerCursor" onclick="showLikes('${postID}')" id="likedBy_${postID}">Check Who Liked</p>
+            ${hideReplies != true ? `<p class="pointerCursor" onclick="viewReplies('${postID}')" id="replies_${postID}">Check Replies</p>` : ``}
         </div>
     `;
 };
+
+async function viewParentPost(postID, parentPostID) {
+    if (document.getElementById(`openedParent_${postID}`)) {
+        document.getElementById(`parentViewing_${postID}`).innerText = "This was a reply, click here to see.";
+        return document.getElementById(`openedParent_${postID}`).remove();
+    }
+
+    const response = await fetch(`${apiURL}/get/post/${parentPostID}`, {
+        method: 'GET',
+        headers
+        // body: JSON.stringify(body)
+    });
+    
+    const postData = await response.json();
+    if (debug) console.log(postData);
+
+    if (postData.deleted == true || !postData.userID) {
+        document.getElementById(`parent_${postID}`).innerHTML = `
+            <div class="publicPost areaPost" id="openedParent_${postID}">
+                <div class="publicPost areaPost">
+                    <p>Parent post has been deleted.</p>
+                </div>
+            </div>
+        `;
+        document.getElementById(`parentViewing_${postID}`).innerText = "Close parent post.";
+
+        return;
+    }
+
+    const userRes = await fetch(`${apiURL}/get/userByID/${postData.userID}`, {
+        method: 'GET',
+        headers
+        // body: JSON.stringify(body)
+    });
+   
+    const userData = await userRes.json();
+
+    const postEle = postElementCreate({post: postData, user: userData});
+    document.getElementById(`parent_${postID}`).innerHTML = `
+        <div class="publicPost areaPost" id="openedParent_${postID}">${postEle}</div>
+    `;
+    document.getElementById(`parentViewing_${postID}`).innerText = "Close parent post.";
+
+}
+
+// async function 
+async function viewReplies(postID) {
+    if (document.getElementById(`repliesOpened_${postID}`)) {
+        document.getElementById(`replies_${postID}`).innerText = "Check replies";
+
+        return document.getElementById(`repliesOpened_${postID}`).remove();
+    }
+
+    // if ()
+    // http://localhost:5002/v1/get/postReplies/71f9a348-aa28-4443-a39d-4247620e43ce
+    const response = await fetch(`${apiURL}/get/postReplies/${postID}`, {
+        method: 'GET',
+        headers
+        // body: JSON.stringify(body)
+    });
+    const replyData = await response.json();
+    if (debug) console.log(replyData)
+    if (replyData.code) {
+        document.getElementById(`postElement_${postID}`).innerHTML+=`
+            <div id="repliesOpened_${postID}" class="publicPost" style="position: element(#popupactions_${postID});">
+                <p>Replies</p>
+                <p>---</p>
+                There are no replies yet on this post.
+            </div>
+        `;
+        if (debug) console.log("no replies")
+        return ;
+    }
+    // array
+
+    var ele = ``;
+    for (const reply of replyData.replies) {
+        // if (reply!=null) {
+            const userRes = await fetch(`${apiURL}/get/userByID/${reply.userID}`, {
+                method: 'GET',
+                headers
+                // body: JSON.stringify(body)
+            });
+            const userData = await userRes.json();
+            if (debug) console.log(userData)
+            ele+=postElementCreate({post: reply, user: userData, hideParent: true });
+        // }
+    }
+
+    document.getElementById(`postElement_${postID}`).innerHTML+=`
+        <div id="repliesOpened_${postID}" class="publicPost" style="position: element(#popupactions_${postID});">
+            <p>Replies</p>
+            <p>---</p>
+            ${ele}
+        </div>
+    `;
+
+    document.getElementById(`replies_${postID}`).innerText = "Close replies";
+    // get message
+    // postElementCreate
+
+}
 
 async function saveBookmark(postID, list) {
     const body = {
@@ -207,7 +473,7 @@ async function saveBookmark(postID, list) {
     const res = await response.json();
     if (debug) console.log(res)
     if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.error}`;
-    document.getElementById(`saved post to bookmarks`)
+    document.getElementById(`saveBookmark_${postID}`).innerText="Saved"
 }
 
 async function showLikes(postID) {
@@ -246,6 +512,185 @@ async function showEditHistory(postID) {
     document.getElementById(`editHistory_${postID}`).innerHTML=newElement;
 };
 
+function getTime() {
+    const d = new Date();
+    const currentTime = d.getTime()
+    return currentTime
+}
+
+function getTimeSince(time) {
+    var currentTime = getTime()
+
+    var diff = (currentTime - time)
+    if (currentTime < time) diff = (time - currentTime);
+
+    var years = Math.floor(diff / 31556952000)
+    var days = Math.floor(diff / 86400000) % 365;
+    var hours = Math.floor(diff / 3600000) % 24;
+    var minutes = Math.floor(diff / 60000) % 60;
+    var seconds = Math.floor(diff / 1000) % 60;
+    
+    var sinceNowUntil
+    if (currentTime < time) sinceNowUntil = "until"
+    else if (currentTime > time) sinceNowUntil = "since"
+    else if (currentTime == time) sinceNowUntil = "current"
+
+    var finalReturn = {
+        "sinceOrUntil" : sinceNowUntil,
+        "value" : ""
+    }
+
+    if (years) finalReturn.value = `${years}y ${days}d`
+    if (!years) finalReturn.value = `${days}d ${hours}h`
+    if (!years && !days) finalReturn.value = `${hours}h ${minutes}m`
+    if (!years && !days && !hours) finalReturn.value = `${minutes}m ${seconds}s`
+    if (!years && !days && !hours && !minutes) finalReturn.value = `${seconds}s`
+    if (!years && !days && !hours && !minutes && !seconds) {
+        finalReturn.value = `now`
+        finalReturn.sinceOrUntil = "current"
+    }
+
+    return finalReturn;
+}
+
+async function createPollElement(postID, pollID) {
+    return getPollData(pollID, {
+        method: 'GET',
+        headers,
+    })
+    .then(function (pollData) {
+        return pollElement(postID, pollID, pollData);
+    })
+    .catch(function (err) {
+        console.log(err);
+    });
+}
+
+function pollElement(postID, pollID, pollData, voteData) {
+    if (!pollData || !pollData.pollOptions) return;
+    var totalVotes = 0;
+
+    for (const option of pollData.pollOptions) {
+        if (option?.amountVoted) totalVotes+=option.amountVoted;
+    }
+
+    const timesinceData = getTimeSince(pollData.timestampEnding);
+
+    return `
+        <div id="pollElement_${postID}" class="pollElement">
+            <p id="pollQuestion_${postID}">${pollData.pollName}</p>
+            <div id="pollOptions_${postID}">
+                ${pollData.pollOptions.map((option, index) => { 
+                    return `
+                        <div id="pollOption_${postID}_${option._id}" class="pollOption">
+                            <div id="poll_option_${pollData._id}_${option._id}" class="poll_option ${voteData?.pollOptionID == option._id ? "voted" : ""}" onclick="voteOption('${pollID}', '${option._id}')">
+                                <p>${option.optionTitle}</p>
+                                <div class="debug">
+                                    <p>optionID: ${option._id}</p>
+                                    <p>indexID: ${option.currentIndexID || "unknown"}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+            <p>Total votes: ${totalVotes} | ${timesinceData.sinceOrUntil=="current" ? "ended just now" : `${timesinceData.sinceOrUntil=="since" ? ` ended ${timesinceData.value} ago` : `${timesinceData.value} time left`}`} </p>
+        </div>
+    `;
+}
+
+async function checkIfUserVoted(pollID) {
+    if (debug) console.log("check " + pollID)
+    // ttp://localhost:5002/v1/polls/
+    return fetch(`${apiURL}/polls/userVote/${pollID}`, {
+        method: 'GET',
+        headers,
+    })
+    .then(function (res) {
+        return res.json();
+    })
+    .then(function (data) {
+        return data;
+    })
+    .catch(function (err) {
+        console.log(err);
+    });
+}
+
+async function getPollData(pollID) {
+    return fetch(`${apiURL}/polls/get/${pollID}`, {
+        method: 'GET',
+        headers,
+    })
+    .then(function (res) {
+        return res.json();
+    })
+    .then(function (data) {
+        return data;
+    })
+    .catch(function (err) {
+        console.log(err);
+    });
+}
+
+async function removeVote(pollID, optionID) {
+    if (!pollID || !optionID) return alert("Error while removing vote");
+
+    const body = {
+        pollID,
+        pollOptionID: optionID
+    }
+    
+    const response = await fetch(`${apiURL}/polls/removeVote`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(body)
+    });
+
+    const res = await response.json();
+    if (debug) console.log(res)
+    if (res.error) return alert(`Error: ${res.msg}`);
+    
+    removeColorOption(pollID, optionID)
+    
+    if (debug) console.log("Removed vote!")
+}
+
+async function voteOption(pollID, optionID) {
+    if (!pollID || !optionID) return alert("Error while voting");
+
+    const element = document.getElementById(`poll_option_${pollID}_${optionID}`);
+    if (element.classList.contains("voted")) {
+        if (debug) console.log("Already voted for this option");
+        
+        await removeVote(pollID, optionID);
+        return;
+    }
+
+    const body = {
+        pollID,
+        pollOptionID: optionID
+    }
+    
+    const response = await fetch(`${apiURL}/polls/createVote`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(body)
+    });
+
+    const res = await response.json();
+    if (debug) console.log(res)
+    if (res.error) return alert(`Error: ${res.msg}`);
+    
+    if (res.oldVote) removeColorOption(res.oldVote.pollID, res.oldVote.pollOptionID)
+    colorizeOption(pollID, optionID)
+
+    if (debug) console.log("Voted!")
+}
+
+// async function postPage() {
+
+// }
 async function userPage(username) {
     searching = true
 
@@ -259,50 +704,6 @@ async function userPage(username) {
     userHtml(userData._id)
 
     return 
-    if (userData.displayName) document.title = `${userData.displayName} | Interact`
-
-    if (userData.code) {
-        return document.getElementById("mainFeed").innerHTML = `
-            <div class="publicPost signInDiv" id="userAccountPage">The user you requested to view does not exist.</div>
-        `   
-    }
-
-    document.getElementById("mainFeed").innerHTML = `
-        <div class="publicPost signInDiv" id="userAccountPage"></div>
-    `
-
-    if (userData.displayName && userData.username) {
-        document.getElementById("userAccountPage").innerHTML += `
-            <h1>${userData.displayName} - @${userData.username}</h1>
-        `
-    } else if (userData.displayName && !userData.username) {
-        document.getElementById("userAccountPage").innerHTML += `
-            <h1>${userData.displayName} - @(unknown))</h1>
-        `
-    } else if (!userData.displayName && userData.username) {
-        document.getElementById("userAccountPage").innerHTML / `
-            <h1>(unknown) - @${userData.username}</h1>
-        `
-    }
-
-    if (userData.verified) {
-        document.getElementById("userAccountPage").innerHTML += `
-            <p>Verified</p>
-        `
-    } else {
-        document.getElementById("userAccountPage").innerHTML += `
-            <p>Not Verified</p>
-        `
-    }
-    if (userData.description) {
-        document.getElementById("userAccountPage").innerHTML += `
-            <p>${userData.description}</p>
-        `
-    } else {
-        document.getElementById("userAccountPage").innerHTML += `
-            <p>There is no description for this user.</p>
-        `
-    }
 }
 
 /*
@@ -319,16 +720,86 @@ async function userPage(username) {
 
 async function createPostModal() {
     await showModal(`
+        <div id="postingModel">
         <h1>Create a new Post</h1>
-        <div class="postModalActions">
+        <div id="postModel" class="postModalActions">
+            <p onclick="createPostPage()">Open Post Page</p>
+            <hr class="rounded">
             <p onclick="createPost()">Upload Post</p>
             <p onclick="closeModal()">Close</p>
         </div>
+        <div class="search">
+            <input type="text" class="addPollOption" id="pollCreateLink" placeholder="Link Poll via ID">
+        </div>
         <textarea class="postTextArea" id="newPostTextArea"></textarea>
+        <div id="foundTaggings"></div>
+        </div>
     `, "hide")
 }
 
-/*
+async function socialTypePost() {
+    // return false; // remove once feature is done
+    if (debug) console.log("socialTypePost")
+    const content = document.getElementById('newPostTextArea').value
+    const foundTags = await findTag(content)
+    if (foundTags.found == false) {
+        if (document.getElementById('taggingsOpened')) {
+            document.getElementById('foundTaggings').innerHTML=""
+        }
+        return false;
+    };
+
+    var taggings = ""
+    if (debug) console.log("!!")
+    for (const index of foundTags.results) {
+        taggings+=`
+            <div class=""onclick="autoCompleteUser('${index.user.username}')">
+                <p>${index.user.username}</p>
+                ${index.user.description ? `<p>${index.user.description}</p>` : ``}
+                <p>${index.possiblity}% match</p>
+            </div>
+        `
+    }
+    if (debug) console.log(taggings)
+    document.getElementById('foundTaggings').innerHTML=`
+        <div id="taggingsOpened"></div>
+        ${taggings}
+    `
+}
+
+async function autoCompleteUser(username) {
+    const content = document.getElementById('newPostTextArea').value
+    const contentArgs = content.split(" ")
+
+    // replaces with new value
+    contentArgs[contentArgs.length-1] = `@${username} `;
+    document.getElementById('foundTaggings').innerHTML=""
+
+    
+    document.getElementById('newPostTextArea').value = contentArgs.join(" ")
+    document.getElementById('newPostTextArea').focus()
+}
+
+async function findTag(content) {
+    const contentArgs = content.split(/[ ]+/)
+    const searchUser = contentArgs[contentArgs.length-1];
+
+    if (searchUser==''||searchUser=="@") return { found: false };
+    if (!searchUser.startsWith("@")) return { found: false };
+    const response = await fetch(`${apiURL}/get/taguserSearch/${searchUser.replace("@", "")}`, {
+        method: 'GET',
+        headers,
+    });
+    
+    if (debug) console.log(response)
+    const res = await response.json();
+    if (debug) console.log(res)
+    if (res.error) return { found: false };
+    if (!res) return { found: false }
+    if (!res[0]) return { found: false }
+    return {found: true, results: res};
+}
+
 document.addEventListener('keypress', logKey);
 
 function logKey(e) {
@@ -336,7 +807,7 @@ function logKey(e) {
         searchBar()
         document.getElementById('searchBarArea').focus()
     }
-}*/
+}
 
 /*
 async function showModal(html, showClose) {
@@ -434,7 +905,6 @@ async function sendLoginRequest() {
    //  currentUserLogin = userData.accessToken
     if (response.ok) {
         if (userData.public._id) currentUserLogin.userid = userData.public._id
-
         saveLoginUser(userData)
         // save user token to cookie
         // setCookie(currentUser,cvalue,exdays) {}
@@ -537,27 +1007,420 @@ async function profile() {
 }
 
 async function userEdit(action) {
-    const newValue = document.getElementById(`userEdit_${action}_text`).value
-    headers[`new${action.toLowerCase()}`] = newValue
+    const possibleEdits = ["profileImage", "displayName", "username", "status", "description", "pronouns"];
+    var actions = []; 
+    
+    if (!action) {
+        for (const possible of possibleEdits) {
+            const value = document.getElementById(`userEdit_${possible}_text`).value
+            if (value) actions.push({action: possible, value})
+        }
+    }
+
+    if (action) {
+        if (!possibleEdits.includes(action)) return showModal(`<p>Error: ${action} is not a valid action</p>`)
+        actions.push({action, value: document.getElementById(`userEdit_${action}_text`).value})
+    }
+
+    if (!actions|| !actions[0]) return showModal(`<p>Error: No actions to perform</p>`)
+
+    var tempHeaders = headers;
+
+    for (const actionData of actions) {
+        tempHeaders[`new${actionData.action.toLowerCase()}`] = actionData.value
+    }
 
     const response = await fetch(`${apiURL}/put/userEdit`, {
         method: 'PUT',
         headers
-    })
+    });
+
     const newUser = await response.json()
-    if (!response.ok) return console.log("error")
+    if (!response.ok) return console.log(newUser)
 
     // return window.location.href = `${document.getElementById('userEdit_username_text').value}`
-    console.log(newUser)
+    if (debug) console.log(newUser)
+    return showModal("<p>Success! You can now close this page.</p>")
 }
 
-async function userHtml(userID) {
+async function postHtml(postID) {
+    const postRes = await fetch(`${apiURL}/get/post/${postID}`, {
+        method: 'GET',
+        headers,
+    })
+
+    const postData = await postRes.json()
+
+    if (!postData || !postRes.ok || postData.deleted) return console.log("error with post");
+
+    const userRes = await fetch(`${apiURL}/get/userByID/${postData.userID}`, {
+        method: 'GET',
+        headers,
+    })
+    
+    const userData = await userRes.json();
+    const ele = postElementCreate({post: postData, user: userData});
+    document.getElementById("mainFeed").innerHTML = ele
+
+    return 
+    if (postRes.isReply) {
+
+    } else {
+
+    }
+    // const ele = ``;
+
+
+    /*
+    | Mother of post  (recursivly)
+    |
+    | Actual Post (will be main, large)
+
+        scrolls down to actual post, +  half of mother post vieable
+
+        loads one comment index (most recent)
+    */
+}
+async function getFullUserData(userID) {
     const response = await fetch(`${apiURL}/get/user/${userID}`, {
         method: 'GET',
         headers,
     })
     
     const profileData = await response.json()
+
+    if (!response.ok) return console.log("error with user");
+    return profileData;
+}
+
+function settingsPage() {
+    changeHeader("?settings")
+
+    const ele = `
+        <div id="settingsPage">
+            <div class="" id="settingsPageContent">
+                <div class="userInfo">
+                    <h1>Settings</h1>
+                </div>
+                <div class="inline">
+                    <div class="userInfo">
+                        <p>View your profile. As shown to other users.</p>
+                        <button class="userInfo buttonStyled" onclick="profile()">View Profile</button>
+                        <hr class="rounded">
+                        <p>Edit your public profile.</p>
+                        <button class="userInfo buttonStyled" onclick="userEditPage()">Edit Profile</button>
+                    </div>
+                    <div class="userInfo">
+                        <p><b>Notifications</b></p>
+                        <div>
+                            <button class="userInfo buttonStyled" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
+                            <div id="notificationsDiv"></div>
+                        </div>
+                        <div>
+                            <button class="userInfo buttonStyled" id="showSubscriptionsButton" onclick="showSubscriptions()">Show Subscriptions</button>
+                            <div id="subscriptionsDiv"></div>
+                        </div>
+                    </div>
+                    <div class="userInfo">
+                        <p><b>Bookmarks</b></p>
+                        <button class="userInfo buttonStyled" id="showBookmarksButton" onclick="showBookmarks()">Show Bookmarks</button>
+                        <div id="bookmarksdiv"></div>
+                    </div>
+                    <div id="feedSettings" class="userInfo">
+                        <p><b>Feed</b></p>
+                        <button class="userInfo buttonStyled" onclick="changeFeedSettings()">Feed Settings</p>
+                    </div>
+                    <div id="feedPopup"></div>
+                    <div id="emailSettings" class="userInfo">
+                        <p><b>Email</b></p>
+                        <button class="userInfo buttonStyled" onclick="changeEmailPage()">Email Settings</p>
+                    </div>
+                    <div id="emailPopup"></div>
+                    <div class="userInfo">
+                        <p><b>Password</b></p>
+                        <button class="userInfo buttonStyled"  onclick="changePasswordPage()">Change Password</p>
+                    </div>
+                    <div id="passwordPopup"></div>
+                    <div class="userInfo">
+                        <p>Sign out of your account.</p>
+                        <button class="userInfo buttonStyled" onclick="signOutPage()">Sign Out</button>
+                        <div id="signOutConfirm"></div>
+                    </div>
+                    <div class="userInfo">
+                        <p>Delete your account.</p>
+                        <button class="userInfo buttonStyled" onclick="deleteAccPage()">Delete Account</button>
+                        <div id="deleteAccConfirm"></div>
+                    </div>
+                    <div class="userInfo">
+                        <p><b>Other Pages</b></p>
+                        <p>These are other pages that are related to interact.</p>
+                        <button class="userInfo buttonStyled" onclick="generateRelatedPages()">Show Pages</button>
+                        <div id="generateRelatedPages"></div>
+                    </div>
+                    <div class="userInfo">
+                        <p><b>DevMode</b></p>
+                        <p>Enable / Disable dev mode. This will allow you to see more information about the different elements of Interact.</p>
+                        <button class="userInfo buttonStyled" onclick="devModePage()">Dev Mode Settings</button>
+                        <div id="devModeConfirm"></div>
+                    </div>
+                    <div class="userInfo">
+                        <p><b>Developer</b></p>
+                        <p>Access your developer account, and any apps that has access to your account</p>
+                        <button class="userInfo buttonStyled" id="showDevOptionsButton" onclick="showDevOptions()">Show Dev Settings</button>
+                        <div id="showDevDiv"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="settingsContent"></div>
+        </div>
+    `;
+
+    document.getElementById("mainFeed").innerHTML = ele;
+    devMode();
+
+    return true;
+}
+
+function generateRelatedPages() {
+    const related = [
+        { name: "Analytics", url: "https://interact-analytics.novapro.net" },
+        { name: "Interact Info", url: "https://novapro.net/interact/" },
+        { name: "Admin Page", url: "/admin/" },
+        { name: "GitHub", url: "https://github.com/social-novapro/" },
+        { name: "Nova Productions", url: "https://novapro.net/" },
+        { name: "dkravec site", url: "https://dkravec.net/" },
+    ];
+
+    var ele = '';
+
+    for (const rel of related) {
+        ele+=`
+            <button class="userInfo buttonStyled" onclick="relatedPagesSwitch('${rel.url}')">${rel.name}</button>
+        `
+    }
+
+    document.getElementById("generateRelatedPages").innerHTML=ele;
+}
+
+function relatedPagesSwitch(page) {
+    window.location.href=page;
+}
+
+function removeDevModeConfirm() {
+    document.getElementById("devModeConfirm").innerHTML = "";
+    return true;
+}
+
+function removeSignOutConfirm() {
+    document.getElementById("signOutConfirm").innerHTML = "";
+    return true;
+}
+
+function removeDeleteAccConfirm() {
+    document.getElementById("deleteAccConfirm").innerHTML = "";
+    return true;
+}
+
+function signOutPage() {
+    const ele = `
+        <div class="userInfo" id="signOutPage">
+            <p><b>Sign Out</b></p>
+            <p>Are you sure you want to sign out?</p>
+            <div class="signInDiv">
+                <p class="buttonStyled"onclick="signOut()">Sign Out</p>
+            </div>
+            <button class="userInfo buttonStyled" onclick="removeSignOutConfirm()">Cancel</button></div>
+        </div>
+    `;
+
+    document.getElementById("signOutConfirm").innerHTML = ele;
+    return true;
+}
+
+async function deleteAccPage() {
+    const ele = `
+        <div class="userInfo" id="deleteAccPage">
+            <p><b>Delete Account</b></p>
+            <p>Are you sure you want to delete your account?<br>This will send an email and you will need to confirm.</p>
+            <div class="signInDiv">
+                <form id="userEdit_password_delete" class="contentMessage">
+                    <label for="userEdit_email_pass_delete"><p>Password</p></label>
+                    <input type="password" id="userEdit_email_pass_delete" class="userEditForm" placeholder="Password">
+                </form>
+                <p class="buttonStyled"onclick="requestDeleteAcc()">Delete</p>
+            </div>
+            <button class="userInfo buttonStyled" onclick="removeDeleteAccConfirm()">Cancel</button></div>
+            <p id="resultDeleteRequest"></p>
+        </div>
+    `;
+    
+    document.getElementById("deleteAccConfirm").innerHTML = ele;
+    document.getElementById("userEdit_password_delete").addEventListener("submit", function (e) { e.preventDefault()})
+}
+
+async function requestDeleteAcc() {
+    const password = document.getElementById("userEdit_email_pass_delete")?.value;
+
+    const response = await fetch(`${apiURL}/users/reqDelete/`, {
+        method: 'DELETE',
+        headers,
+        body: JSON.stringify({
+            password: password
+        })
+    });
+
+    const res = await response.json();
+    if (!response.ok || res.error) {
+        document.getElementById("resultDeleteRequest").innerHTML = `<p>Failed ${res.error ? res.msg : "unknown reason"}</p>`
+        showModal(`<p>Failed ${res.error ? res.msg : "unknown reason"}</p>`)
+        return false
+    } else {
+        document.getElementById("resultDeleteRequest").innerHTML = `<p>Success, check your email.</p>`
+    }
+
+    return res;
+}
+
+function devModePage() {
+    const ele = `
+        <div class="userInfo" id="devModePage">
+            <p><b>Dev Mode</b></p>
+            <p>Dev Mode is ${debug ? "enabled" : "disabled"}</p>
+            <p>Are you sure you want to enter dev mode?</p>
+            <div class="signInDiv">
+                <p class="buttonStyled" onclick="switchDevMode()">Dev Mode</p>
+            </div>
+            <button class="userInfo buttonStyled" onclick="removeDevModeConfirm()">Cancel</button></div>
+        </div>
+    `;
+
+    document.getElementById("devModeConfirm").innerHTML = ele;
+    return true;
+}
+
+function switchDevMode() {
+    debugModeSwitch()
+    devMode();
+    devModePage()
+}
+
+async function userEditPage() {
+    await userEditHtml(currentUserLogin.userID);
+    //alert("ok")
+    return true;
+}
+
+async function userEditHtml(userID) {
+    const profileData = await getFullUserData(userID)
+    if (!profileData) return showModal("<div><p>Sorry, this user does not exist!</p></div>")
+
+    if (userID != currentUserLogin.userID) return showModal("<div><p>Sorry, you can't edit this user!</p></div>");
+    changeHeader("?userEdit")
+
+
+    var timesince
+    if (profileData.userData.creationTimestamp) timesince = checkDate(profileData.userData.creationTimestamp)
+
+    var clientUser = profileData.userData._id === currentUserLogin.userID ? true : false
+    if (profileData?.userData?.displayName) document.title = `${profileData?.userData?.displayName} | Interact`
+    
+    document.getElementById("mainFeed").innerHTML =  `
+        <div class="userEdit">
+            <div class="userInfo">
+                <h1>Edit Profile</h1>
+            </div>
+            <div class="userEditArea">
+                <p><b>Save any changes made</b></p>
+                <button class="userInfo buttonStyled" onclick="userEdit()">Save</button>
+            </div>
+            <div class="userEditArea">
+                <p><b>Profile Image</b></p>
+                ${profileData.userData.profileURL ? `<img src="${profileData.userData.profileURL}" class="profileImage">` : "No image set"}
+                <form id="userEdit_profileImage" class="contentMessage" onsubmit="userEdit('profileImage')">
+                    <input id="userEdit_profileImage_text" type="text" class="userEditForm" placeholder="Profile Image URL">
+                </form>
+            </div>
+            <div class="userEditArea">
+                <p><b>Display Name</b></p>
+                ${profileData.userData.displayName ? `<p>${profileData.userData.displayName}` : "No display name set"}
+                <form id="userEdit_displayName" class="contentMessage" onsubmit="userEdit('displayName')">
+                    <input id="userEdit_displayName_text" type="text" class="userEditForm" placeholder="Display Name">
+                </form>
+            </div>
+            <div class="userEditArea">
+                <p><b>Username</b></p>
+                ${profileData.userData.username ? `<p>${profileData.userData.username}` : "No username set"}
+                <form id="userEdit_username" class="contentMessage" onsubmit="userEdit('username')">
+                    <input type="text" id="userEdit_username_text" class="userEditForm" placeholder="Username">
+                </form>
+            </div>
+            <div class="userEditArea">
+                <p><b>Status</b></p>
+                ${profileData.userData.statusTitle ? `<p>${profileData.userData.statusTitle}` : "No status set"}
+                <form id="userEdit_status" class="contentMessage" onsubmit="userEdit('status')">
+                    <input type="text" id="userEdit_status_text" class="userEditForm" placeholder="Status">
+                </form> 
+            </div>
+            <div class="userEditArea">
+                <p><b>Description</b></p>
+                ${profileData.userData.description ? `<p>${profileData.userData.description}` : "No description set" }
+                <form id="userEdit_description" class="contentMessage" onsubmit="userEdit('description')">
+                    <input type="text" id="userEdit_description_text" class="userEditForm" placeholder="Description">
+                </form>
+            </div>
+            <div class="userEditArea"><p><b>Pronouns</b></p>
+                ${profileData.userData.pronouns ? `<p>${profileData.userData.pronouns}` : "No pronouns set"}
+                <form id="userEdit_pronouns" class="contentMessage" onsubmit="userEdit('pronouns')">
+                    <input type="text" id="userEdit_pronouns_text" class="userEditForm" placeholder="Pronouns">
+                </form>
+            </div> 
+            ${profileData.userData.creationTimestamp ? 
+                `  
+                    <div class="userEditArea">
+                        <p><b>Creation</b></p>
+                        <p>${timesince}</p>
+                    </div>
+                `: ``
+            }
+            ${profileData.verified ? 
+                `
+                    <div class="userEditArea">
+                        <p>Verified</p>
+                    </div>
+                ` : `
+                    <div class="userEditArea">
+                        <p><b>Verify ✔️</b></p>
+                        <div class="searchSelect search">
+                            <input id="content_request_verification"  placeholder="Why do you want to verify?">
+                            <button onclick="requestVerification()">Request</button>
+                        </div>
+                    </div>
+                `
+                /*
+                <form onsubmit="requestVerification()" id="verifyUserForm">
+                        <input type="text" id="content_request_verification" placeholder="Why do you want to verify?">
+                    </form>
+                */
+            }
+        </div>
+    `
+
+    if (clientUser) {
+        document.getElementById("userEdit_displayName").addEventListener("submit", function (e) { e.preventDefault()})
+        document.getElementById("userEdit_username").addEventListener("submit", function (e) { e.preventDefault()})
+        document.getElementById("userEdit_description").addEventListener("submit", function (e) { e.preventDefault()})
+        document.getElementById("userEdit_pronouns").addEventListener("submit", function (e) { e.preventDefault()})
+        document.getElementById("userEdit_status").addEventListener("submit", function (e) { e.preventDefault()})
+        document.getElementById("userEdit_profileImage").addEventListener("submit", function (e) { e.preventDefault()})
+    }
+    return true; 
+}
+
+async function userHtml(userID) {
+    const profileData = await getFullUserData(userID)
+    if (!profileData) return showModal("<div><p>Sorry, this user does not exist!</p></div>")
+
+    changeHeader('?username='+profileData.userData.username, 'Profile')
 
     var timesince
     if (profileData.userData.creationTimestamp) timesince = checkDate(profileData.userData.creationTimestamp)
@@ -566,130 +1429,65 @@ async function userHtml(userID) {
     if (profileData?.userData?.displayName) document.title = `${profileData?.userData?.displayName} | Interact`
     
     profileData.postData.reverse()
+    if (debug) console.log(profileData)
+
     // profileData.included.post ? profileData.postData.reverse() : profileData.postData = []
+    
     document.getElementById("mainFeed").innerHTML =  `
+        ${clientUser ? `
+            <div class="userInfo">
+                <p><b>Edit Profile</b></p>
+                <button class="buttonStyled" onclick="userEditPage()">Edit Page</button>
+            </div>
+            `: ""
+        }
+        ${profileData.userData?.profileURL != null ? 
+            `
+                <div class="userInfo">
+                    <p><b>Profile Image</b></p>
+                    ${profileData.userData?.profileURL != null ?  `
+                        <img class="profileUserHtmlLarge" src="${profileData.userData.profileURL}"></img>
+                    ` : ``}
+                </div>
+            ` : ``
+        }
         <div class="userInfo">
             <p><b>Notifications</b></p>
             <a id="notificationSub" onclick="subNotifi('${profileData.userData._id}')">Subscribe</a>
-            ${clientUser ? 
-                `
-                    <div>
-                        <button class="buttonStyled" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
-                        <div id="notificationsDIv"></div>
-                    </div>
-                    <div>
-                        <button class="buttonStyled" id="showSubscriptionsButton" onclick="showSubscriptions()">Show Subscriptions</button>
-                        <div id="subscriptionsDiv"></div>
-                    </div>
-                ` : `` 
-            }
         </div>
         <div class="userInfo">
             <p><b>Display Name</b></p>
-            ${clientUser ? 
-                `
-                    <form id="userEdit_displayName" class="contentMessage" onsubmit="userEdit('displayName')">
-                        <input id="userEdit_displayName_text" type="text" class="userEditForm" value="${profileData.userData.displayName}">
-                    </form>
-                ` : `
-                    <p>${profileData.userData.displayName}</p>
-                `
-            }
+            <p>${profileData.userData.displayName}</p>
         </div>
         <div class="userInfo">
             <p><b>Username</b></p>
-            ${clientUser ? 
-                `
-                    <form id="userEdit_username" class="contentMessage" onsubmit="userEdit('username')">
-                        <input type="text" id="userEdit_username_text" class="userEditForm" value="${profileData.userData.username}">
-                    </form>
-                ` : `
-                    <p>${profileData.userData.username}</p>
-                `
-            }
+            <p>${profileData.userData.username}</p>
         </div>
-        ${profileData.userData.statusTitle  || clientUser ? 
+        ${profileData.userData.statusTitle ? 
+
             `
                 <div class="userInfo">
                     <p><b>Status</b></p>
-                    ${clientUser ?
-                        `
-                            <form id="userEdit_status" class="contentMessage" onsubmit="userEdit('status')">
-                                <input type="text" id="userEdit_status_text" class="userEditForm" value="${profileData.userData.statusTitle}">
-                            </form> 
-                        ` : `
-                            <p>${profileData.userData.statusTitle}</p>
-                        `
-                    }
+                    <p>${profileData.userData.statusTitle}</p>
                 </div>
             ` : ``
         }
         <div class="userInfo">
             <p><b>Description</b></p>
-            ${clientUser ? 
-                `
-                    <form id="userEdit_description" class="contentMessage" onsubmit="userEdit('description')">
-                        <input type="text" id="userEdit_description_text" class="userEditForm" value="${profileData.userData.description}">
-                    </form>
-                ` : `
-                    <p>${profileData.userData.description}</p>
-                `
-            }
+            <p>${profileData.userData.description}</p>
         </div> 
-        ${clientUser ?
-            `
-                <div class="userInfo">
-                    <p><b>Bookmarks</b></p>
-                    <button class="buttonStyled" id="showBookmarksButton" onclick="showBookmarks()">Show Bookmarks</button>
-                    <div id="bookmarksdiv"></div>
-                </div>
-            ` : ``
-        }
-        ${clientUser ?
-            `
-                <div class="userInfo">
-                    <p><b>Developer</b></p>
-                    <button class="buttonStyled" id="showDevOptionsButton" onclick="showDevOptions()">Show Dev Settings</button>
-                    <div id="showDevDiv"></div>
-                </div>
-            ` : ``
-        }
         ${profileData.verified ? 
             `
                 <div class="userInfo">
                     <p>Verified</p>
                 </div>
             ` : `
-                ${clientUser ? 
-                `
-                    <div class="userInfo">
-                        <p><b>Verify ✔️</b></p>
-                        <div class="searchSelect search">
-                            <input id="content_request_verification"  placeholder="Why do you want to verify?">
-                            <button onclick="requestVerification()">Request</button>
-                        </div>
-                    </div>
-                ` : ``}
             `
-            /*
-             <form onsubmit="requestVerification()" id="verifyUserForm">
-                    <input type="text" id="content_request_verification" placeholder="Why do you want to verify?">
-                </form>
-            */
         }   
-    
-        ${profileData.userData.pronouns || clientUser ? 
+        ${profileData.userData.pronouns ? 
             `
                 <div class="userInfo"><p><b>Pronouns</b></p>
-                    ${clientUser ? 
-                        `
-                            <form id="userEdit_pronouns" class="contentMessage" onsubmit="userEdit('pronouns')">
-                                <input type="text" id="userEdit_pronouns_text" class="userEditForm" value="${profileData.userData.pronouns}">
-                            </form>
-                        ` : `
-                            <p>${profileData.userData.pronouns}</p>
-                        `
-                    }
+                    <p>${profileData.userData.pronouns}</p>
                 </div>
             ` : ``
         }
@@ -708,24 +1506,355 @@ async function userHtml(userID) {
             </div>
             <hr class="rounded">
             ${profileData.postData.map(function(post) {
-                return postElementCreate(post, profileData.userData)                
+                return postElementCreate({post: post, user: profileData.userData})                
             }).join(" ")}
         ` : ``}
     `
 
-    if (clientUser) {
-        document.getElementById("userEdit_displayName").addEventListener("submit", function (e) { e.preventDefault()})
-        document.getElementById("userEdit_username").addEventListener("submit", function (e) { e.preventDefault()})
-        document.getElementById("userEdit_description").addEventListener("submit", function (e) { e.preventDefault()})
-        document.getElementById("userEdit_pronouns").addEventListener("submit", function (e) { e.preventDefault()})
-        document.getElementById("userEdit_status").addEventListener("submit", function (e) { e.preventDefault()})
+    return;
+}
+
+async function changePasswordPage() {
+    const ele = `
+        <div class="userInfo">
+            <p><b>Change Password</b></p>
+            <p>Request change password, then check email and update with URL sent.</p>
+            <hr class="rounded">
+            <form id="userEdit_change_password" class="contentMessage">
+                <label for="userEdit_password_old_text"><p>Password</p></label>
+                <input type="password" id="userEdit_password_old_text" autocomplete="current-password" class="userEditForm" placeholder="Password">
+            </form>
+            <button class="userInfo buttonStyled" onclick="requestChangePassword()">Change Password</button>
+            <div id="completed_change_pass"></div>
+        </div>
+    `
+    //await showModal(ele)
+
+    document.getElementById("passwordPopup").innerHTML = ele;
+
+    document.getElementById("userEdit_change_password").addEventListener("submit", function (e) { e.preventDefault()})
+}
+
+async function requestChangePassword() {
+    const password = document.getElementById("userEdit_password_old_text")?.value
+    if (!password) return showModal("<p>Please enter your current password</p>");
+
+    const response = await fetch(`${apiURL}/auth/password/change/`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ "password": password })
+    });
+
+    const res = await response.json();
+    if (debug) console.log(res)
+    if (res.error) return showModal(`<p>Failed ${res.error ? res.msg : "unknown reason"}</p>`)
+     
+    document.getElementById("completed_change_pass").innerHTML = `<p>Success, check your email.</p>`
+    return showModal(`<p>Success, check your email.</p>`)
+
+}
+
+async function fetchClientEmailData() {
+    const response = await fetch(`${apiURL}/emails/userData/`, {
+        method: 'GET',
+        headers
+    });
+
+    const res = await response.json();
+    if (debug) console.log(res)
+    return res
+}
+
+async function changeFeedSettings() {
+    const allowed = await getPossibleFeeds();
+    if (!allowed) return alert("Error getting feeds")
+    const getPref = await getPrefAPI()
+    const currentDefaultOption = allowed.find(allow => allow.name === getPref.preferredFeed);
+    const selectedDate = getTimeSince(getPref.timestamp)
+    
+    var ele = `
+        <div class="userInfo">
+            <p><b>Change your default feed</p></b>
+            <hr class="rounded">
+            <p>Current default feed is:<br><b>${currentDefaultOption.niceName}</b> selected ${selectedDate.sinceOrUntil == "current" ? "just changed" : `${selectedDate.sinceOrUntil == "since" ? selectedDate.value + " ago" : selectedDate.value}`}
+    `;
+    for (const feed of allowed) {
+        if (!feed.speical) ele += `
+        <div class="userInfo">
+            <p>${feed.description}</p>
+            <button class="userInfo buttonStyled ${getPref.preferredFeed==feed.name ? 'activeFeed' : ''}" onclick="changePref('${feed.name}')">${feed.niceName}</button>
+        </div>
+        `
     }
-  
-    return document.getElementById("page2Nav").innerHTML = `<div id="page2Nav"><button class="buttonStyled"  onclick="switchNav(5)" id="page2">Home</button>`
+
+    ele +="</div>"
+    document.getElementById("feedPopup").innerHTML = ele;
+}
+
+async function changePref(feedName) {
+    const changed = changePrefAPI(feedName);
+    if (!changed || changed.error) alert(`An error occured while changing${changed.error? `: ${changed.msg}`: ""}`);
+    await changeFeedSettings();
+}
+
+async function getPrefAPI() {
+    try {
+        const response = await fetch(`${apiURL}/feeds/preference`, {
+            method: "GET",
+            headers
+        })
+        var data = await response.json();
+        if (debug) console.log(data)
+        return data; 
+    } catch {
+        return false;
+    }
+}
+async function changePrefAPI(feedName) {
+    var data;
+    try {
+        const response = await fetch(`${apiURL}/feeds/preference`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ setPref: feedName })
+        })
+        var data = await response.json();
+        if (debug) console.log(data)
+        return data; 
+    } catch {
+        return data;
+    }
+}
+async function changeEmailPage() {
+    const emailData = await fetchClientEmailData();
+
+    const ele = `
+        <div class="userInfo">
+            <div> 
+                <p><b>Current Email Settings</b></p>
+                <hr class="rounded">
+                <p>Current Email: ${emailData.email}</p>
+                <p>Email Verified: ${emailData.verified}</p>
+                ${emailData.verified && emailData.timestampVerified ? `
+                    <p>Verified Since: ${checkDate(emailData.timestampVerified)}</p>
+                ` : ``}
+                ${emailData.emailSetting != emailData.email ? `
+                    <p>Attempting Verification for: ${emailData.emailSetting}</p>
+                ` : ``}
+                ${emailData.removeRequest ? `
+                    <p>Attempting Removal for: ${emailData.removeRequest}</p>
+                ` : ``}
+            </div>
+            <div>
+            <hr class="rounded">
+            <p><b>Email Notifications</b></p>
+                ${emailData.verified ? `
+                    <div id="emailSettingOptions"></div>
+                ` : `
+                    <p>Email is not verified, can not change email settings</p>
+                `}
+            </div>
+            <div>
+                <hr class="rounded">
+                <p><b>Change Email</b></p>
+                <hr class="rounded">
+                <form id="userEdit_email" class="contentMessage" onsubmit="editEmailRequest()">
+                    <label for="userEdit_email_text"><p>New Email</p></label>
+                    <input type="email" id="userEdit_email_text" autocomplete="false" autofill="false" class="userEditForm" placeholder="New Email">
+                </form>
+                <form id="userEdit_password" class="contentMessage" onsubmit="editEmailRequest()">
+                    <label for="userEdit_email_pass"><p>Password</p></label>
+                    <input type="password" id="userEdit_email_pass" class="userEditForm" placeholder="Password">
+                </form>
+                <button class="userInfo buttonStyled" onclick="editEmailRequest()">Submit Email</button>
+                <p id="resultAddRequest"></p>
+            </div>
+            ${emailData.verified ? `
+            <div>
+                <hr class="rounded">
+                <p><b>Remove Email</b></p>
+                <hr class="rounded">
+                <form id="userEdit_password_remove" class="contentMessage" onsubmit="removeEmailRequest('${emailData.email}')">
+                    <label for="userEdit_email_pass_remove"><p>Password</p></label>
+                    <input type="password" id="userEdit_email_pass_remove" class="userEditForm" placeholder="Password">
+                </form>
+                <button class="userInfo buttonStyled" onclick="removeEmailRequest('${emailData.email}')">Remove Email</button>
+                <p id="resultRemoveRequest"></p>
+            </div> 
+            ` : ``}
+        </div>
+    `
+
+    if (emailData.verified) {
+        createEditEmailSettingsView(emailData.emailSettings);
+    }
+
+    document.getElementById("emailPopup").innerHTML = ele;
+    
+    document.getElementById("userEdit_email").addEventListener("submit", function (e) { e.preventDefault()})
+    document.getElementById("userEdit_password").addEventListener("submit", function (e) { e.preventDefault()})
+    document.getElementById("userEdit_password_remove").addEventListener("submit", function (e) { e.preventDefault()})
+}
+
+async function createEditEmailSettingsView(emailSettings) {
+    const possibleOptions = await getPossibleEmailSettings();
+
+    var ele = `<form id="userEdit_emailSettings">`;
+
+    for (const option of possibleOptions) {
+        ele+=`
+        <hr class="rounded">
+            <div>
+                <input type="checkbox" id="emailSetting_${option.option}" name="interest" value="${option.option}"${emailSettings[option.option] ? ` checked ` : ""}/>
+                <label for="${option.option}">${option.name}<br>${option.description}</label>
+            </div>
+        `
+    }
+
+    ele+=`</form><button class="userInfo buttonStyled" onclick="editEmailSettings()">Submit Email Settings</button>`;
+    
+    document.getElementById("emailSettingOptions").innerHTML = ele;
+    document.getElementById("userEdit_emailSettings").addEventListener("submit", function (e) { e.preventDefault()})
+}
+
+async function editEmailSettings() {
+    // Get the form element
+    const form = document.getElementById("userEdit_emailSettings");
+
+    // Get all the checkboxes within the form
+    const checkboxes = form.querySelectorAll("input[type='checkbox']");
+
+    // Create an array to store the changed values
+    const changedItems = [];
+
+    // Loop through each checkbox and check if its checked state has changed
+    checkboxes.forEach((checkbox) => {
+        if (checkbox.checked !== checkbox.defaultChecked) {
+            changedItems.push(checkbox.value);
+        }
+    });
+
+    const reqBody = [];
+    
+    var i=0;
+    for (item of changedItems) {
+        //[ { option: "notifications", value: true }]
+        reqBody.push({ option: item, value: document.getElementById(`emailSetting_${item}`).checked })
+    }
+
+
+    const response = await fetch(`${apiURL}/emails/settings`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(reqBody),
+    });
+
+    
+    const res = await response.json();
+
+    if (debug) console.log(res);
+    if (!response.ok || res.error) return showModal(`<p>${res.msg}</p>`);
+
+    createEditEmailSettingsView(res);
+}
+
+async function getPossibleEmailSettings() {
+    const response = await fetch(`${apiURL}/emails/settings`, {
+        method: 'GET',
+        headers,
+    })
+
+    const res = await response.json();
+    if (debug) console.log(res);
+    return res;
+}
+
+async function removeEmailRequest(currentEmail) {
+    const password = document.getElementById("userEdit_email_pass_remove")?.value;
+    if (!password) return showModal("Please enter your password");
+
+    const response = await fetch(`${apiURL}/emails/remove`, {
+        method: 'DELETE',
+        headers,
+        body: JSON.stringify({
+            email: currentEmail,
+            password: password
+        })
+    });
+
+    const res = await response.json();
+    if (debug) console.log(res);
+    if (!response.ok) {
+        document.getElementById("resultRemoveRequest").innerHTML = `<p>Failed</p>`
+    } else {
+        document.getElementById("resultRemoveRequest").innerHTML = `<p>Success</p>`
+    }
+    return res;
+}
+
+async function updateEmail() {
+
+}
+
+// change password
+async function changePassword() {
+    // get old password
+    // get new password
+    // get new password confirm
+    // compare passwords
+    // submit api call
+}
+
+// change email
+async function editEmailRequest(hasCurrent) {
+    const email = document.getElementById("userEdit_email_text")?.value
+    const password = document.getElementById("userEdit_email_pass")?.value
+    if (!email) return showModal("<p>Please enter an email</p>");
+    if (!password) return showModal("<p>Please enter your password</p>");
+
+    const validated = await validateEmail(email)
+    if (validated.valid != true) return showModal("<div><p>Please enter a valid email</p></div>");
+
+    const updatedEmail = await addEmailAccount({email, password});
+    if (!updatedEmail) return showModal("<div><p>There was an error updating your email</p></div>");
+}
+
+async function validateEmail(email) {
+    const response = await fetch(`${apiURL}/emails/requests/validEmail/${email}`, {
+        method: 'GET',
+        headers
+    });
+
+    const res = await response.json();
+    if (debug) console.log(res)
+    return res
+}
+
+async function editEmailAccount() {
+    // change email
+}
+
+async function addEmailAccount({ email, password }) {
+    const response = await fetch(`${apiURL}/emails/set/`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({"email" : email, "password" : password})
+    });
+
+    const res = await response.json();
+    
+    if (!response.ok || res.error) {
+        document.getElementById("resultAddRequest").innerHTML = `<p>Failed</p>`
+        return false
+    } else {
+        document.getElementById("resultAddRequest").innerHTML = `<p>Success</p>`
+    }
+
+    return res;
 }
 
 async function subNotifi(subUser) {
-    const response = await fetch(`${apiURL}/post/subUser/${subUser}`, {
+    const response = await fetch(`${apiURL}/notifications/sub/${subUser}`, {
         method: 'POST',
         headers
     });
@@ -737,7 +1866,7 @@ async function subNotifi(subUser) {
 }
 
 async function unsubUser(userID, username) {
-    const response = await fetch(`${apiURL}/delete/unsubUser/${userID}`, {
+    const response = await fetch(`${apiURL}/notifications/unsub/${userID}`, {
         method: 'DELETE',
         headers
     });
@@ -745,7 +1874,22 @@ async function unsubUser(userID, username) {
     if (debug) console.log(res)
     if (!response.ok || res.error) return document.getElementById(`subList_${userID}`).innerHTML=`error while unsubscribing`
 
-    document.getElementById(`subList_${userID}`).innerHTML=`Unsubscribed to <a onclick="userHtml('${userID}')">${username}</a>.`
+    document.getElementById(`subList_${userID}`).innerHTML=`Unsubscribed from <a onclick="userHtml('${userID}')">${username}</a>.`
+}
+
+async function unsubAll(userID) {
+    const response = await fetch(`${apiURL}/notifications/unsubAll/`, {
+        method: 'DELETE',
+        headers
+    });
+
+    try {
+        const res = await response.json();
+        if (!response.ok || res.error) return document.getElementById(`subscriptionsDiv`).innerHTML=`error while unsubscribing`
+        else return document.getElementById(`subscriptionsDiv`).innerHTML=`Unsubscribed from all users.`
+    } catch {
+        return document.getElementById(`subscriptionsDiv`).innerHTML=`error while unsubscribing`
+    }
 }
 
 function hideBookmarks() {
@@ -790,7 +1934,7 @@ async function showBookmarks() {
             if (debug) console.log(save)
             const newData = await getPostAndProfileData(save)
             if (newData.error) ele+=`<p>error</p>`
-            else ele+= postElementCreate(newData.postData, newData.profileData, "basic")
+            else ele+= postElementCreate({post: newData.postData, user: newData.profileData, type : "basic"})
             // ele+=
         }
         ele+=`</div>`
@@ -808,7 +1952,8 @@ function hideSubscriptions() {
 async function showSubscriptions() {
     if (document.getElementById('subscriptionsAreShown')) return hideSubscriptions()
     document.getElementById('showSubscriptionsButton').innerHTML="Hide Subscriptions"
-    const response = await fetch(`${apiURL}/get/subscriptions/`, {
+    
+    const response = await fetch(`${apiURL}/notifications/subscriptions/`, {
         method: 'GET',
         headers
     });
@@ -845,6 +1990,7 @@ async function showSubscriptions() {
     
 
     var ele = `<hr class="rounded" id="subscriptionsAreShown"><p>${res.length} Subscriptions</p><hr class="rounded">`
+    ele = ele+`<div><a id="unsuballbutton" onclick="unsubAll()">unsub from all users.</a><hr class="rounded"></div>`;
 
     for (const sub of res.reverse()) {
         const userData = await getUserDataSimple(sub._id) 
@@ -873,7 +2019,7 @@ async function showNotifications() {
     if (document.getElementById('notificationsAreShown')) return hideNotifications()
     document.getElementById('showNotificationsButton').innerHTML="Hide Notifcations"
 
-    const response = await fetch(`${apiURL}/get/notifications/`, {
+    const response = await fetch(`${apiURL}/notifications/getList`, {
         method: 'GET',
         headers
     });
@@ -884,7 +2030,9 @@ async function showNotifications() {
     if (!response.ok) return document.getElementById('showNotificationsButton').innerHTML=`error`
     
 
-    var ele = `<hr class="rounded" id="bookmarksAreShown"><p id="amount_notifications">${res.amountFound} Notifications</p><hr class="rounded">`
+    var ele = `<hr class="rounded" id="notificationsAreShown"><p id="amount_notifications">${res.amountFound} Notifications</p><hr class="rounded">`
+    ele = ele+`<div><a id="dismissAll" onclick="dismissAll()">dismiss all notifications.</a><hr class="rounded"></div>`;
+    
     /*
         type: String (one)
             1: someone followed
@@ -900,27 +2048,43 @@ async function showNotifications() {
         };
     */
 
+    // console.log(res)
+
+    var foundUsers = {};
+
     for (const notifi of res.notifications.reverse()) {
         switch (notifi.type) {
             case 5:
-                const userData = await getUserDataSimple(notifi.userID) 
+                if (!foundUsers[notifi.userID]) foundUsers[notifi.userID] = await getUserDataSimple(notifi.userID);
+                const userData = foundUsers[notifi.userID];
+
                 ele+=`
                     <div class="buttonStyled" id="notification_${notifi._id}">
-                        <a onclick="showPost('${notifi.postID}')">${userData.username} has posted! (click to see)</a>
+                        <a onclick="showPost('${notifi.postID}')"><b>${userData?.username ? userData.username : "Unknown User" }</b> has posted! (click to see)</a>
                         <p onclick="dismissNotification('${notifi._id}')">Dismiss Notification.</p>
                     </div>
                 `
-            break;
-        
+                break;
+            case 7: 
+                if (!foundUsers[notifi.userID])  foundUsers[notifi.userID] = await getUserDataSimple(notifi.userID);
+                const userData2 = foundUsers[notifi.userID];
+
+                ele+=`
+                    <div class="buttonStyled" id="notification_${notifi._id}">
+                        <a onclick="showPost('${notifi.postID}')"><b>${userData2?.username ? userData2.username : "Unknown User" }</b> quoted your post!(click to see)</a>
+                        <p onclick="dismissNotification('${notifi._id}')">Dismiss Notification.</p> 
+                    </div>
+                `
             default:
                 break;
         }
     }
    
-    document.getElementById("notificationsDIv").innerHTML=ele
+    document.getElementById("notificationsDiv").innerHTML=ele
 }
+
 async function dismissNotification(notificationID) {
-    const response = await fetch(`${apiURL}/delete/dismissNotification/${notificationID}`, {
+    const response = await fetch(`${apiURL}/notifications/dismiss/${notificationID}`, {
         method: 'DELETE',
         headers
     });
@@ -931,16 +2095,28 @@ async function dismissNotification(notificationID) {
     document.getElementById(`notification_${notificationID}`).remove();
 
     var input = document.getElementById("amount_notifications").innerText
-    console.log(input)
+
     var newInput = input.replace(" Notifications", "")
-    console.log(input)
-    console.log(newInput)
 
     newInput--
-    console.log(newInput)
 
     document.getElementById("amount_notifications").innerHTML=`${newInput} Notifications` 
 };
+
+async function dismissAll() {
+    const response = await fetch(`${apiURL}/notifications/dismissAll/`, {
+        method: 'DELETE',
+        headers
+    });
+
+    try {
+        const res = await response.json();
+        if (!response.ok || res.error) return document.getElementById(`notificationsDiv`).innerHTML=`error while dismissing`
+        else return document.getElementById(`notificationsDiv`).innerHTML=`Dismissed all notifications.`
+    } catch {
+        return document.getElementById(`notificationsDiv`).innerHTML=`error while dismissing`
+    }
+}
 
 async function showPost(postID) {
     const response = await fetch(`${apiURL}/get/post/${postID}`, {
@@ -950,11 +2126,11 @@ async function showPost(postID) {
 
     const res = await response.json();
     if (debug) console.log(res)
-    if (!response.ok) return 
+    if (!response.ok) return showModal("<p>Post was not found</p>")
 
     const user = await getUserDataSimple(res.userID)
     if (debug) console.log(user)
-    const ele = postElementCreate(res, user)
+    const ele = postElementCreate({post: res, user: user})
     document.getElementById('mainFeed').innerHTML=ele
 }
 /*
@@ -973,7 +2149,7 @@ async function getUserDataSimple(userID) {
     const res = await response.json();
     if (debug) console.log(res)
     if (!response.ok) return 
-    else  return res
+    else return res
 }
 
 async function hideDevOptions() {
@@ -1037,8 +2213,10 @@ async function showDevOptions() {
                 ${res.DeveloperToken._id ? `<p>devToken: <p onclick="revealDevOptions('devToken')" id="devToken" class="blur">${res.DeveloperToken._id}</p>`:``}
                 ${res.DeveloperToken.premium ? `<p>Premium Dev Account</p>`:`<p>Regular Dev Account</p>`}
                 ${res.DeveloperToken.creationTimestamp ? `<p>Dev account created: ${checkDate(res.DeveloperToken.creationTimestamp)}</p>`:`<p>Unknown creation date</p>`}
+                ${res.DeveloperToken._id ? `<p onclick="copyToClipboard('${res.DeveloperToken._id}')">Copy Token</p>` : ""}
             </div>
         `;
+
     } else {
         devAccEle=`
             <hr class="rounded">
@@ -1052,24 +2230,42 @@ async function showDevOptions() {
         `
     };
 
-    var appTokensEle='';
+    var appTokensEle='<hr class="rounded"><p>App Token</p>';
+
+    // list of app token
+    var amount=0;
     if (res.applications&&res.AppTokens) {
-        appTokensEle+=`<hr class="rounded"><p>App Token${res.AppTokens.length>=2 ? 's': ''}</p>`
+        appTokensEle=`<hr class="rounded"><p>App Token${res.AppTokens.length>=2 ? 's': ''}</p><div id="appTokenList">`
         
-        var amount=0;
+        // var amount=0;
         for (const appToken of res.AppTokens.reverse()) {
             amount++;
             appTokensEle+=`
                 <div class="userInfo">
-                    <p>appToken ${amount} of ${res.AppTokens.length}</p>
+                    <p>appToken #${amount} of ${res.AppTokens.length}</p>
                     <p>app name: ${appToken.appName ? appToken.appName : `Unknown`}
                     ${appToken._id ? `<p>appToken: <p onclick="revealDevOptions('appTokens', ${amount})" id="appToken_${amount}" class="blur">${appToken._id}</p>`:``}
+                    ${appToken._id ? `<p onclick="copyToClipboard('${appToken._id}')">Copy Token</p>` : ""}
                     <p>API Uses: ${appToken.APIUses? appToken.APIUses : `0`}
                     ${appToken.creationTimestamp ? `<p>Application created: ${checkDate(appToken.creationTimestamp)}</p>`:`<p>Unknown creation date</p>`}
                 </div>
             `;
         };
+        appTokensEle+="</div>"
     };
+    // create new app token
+    if (res.developer) {
+        appTokensEle+=`
+            <div class="userInfo" id="newAppToken">
+                <p>Generate New App Token</p>
+                <p>Please input an application name</p>
+                <div class="searchSelect search">
+                    <input id="appName_AppTokenRequest" placeholder="Application Name:">
+                </div>
+                <button onclick="requestAppToken(${amount})">Generate Token</button>
+            </div>
+        `
+    }
 
     var appAccessEle=`<hr class="rounded"><p>App Connections</p>`;
     if (res.allowedApplications&&res.AppTokens) {
@@ -1090,6 +2286,62 @@ async function showDevOptions() {
     document.getElementById("showDevDiv").innerHTML=ele;
     return;
 };
+
+function copyToClipboard(data) {
+    navigator.clipboard.writeText(data);
+}
+
+async function requestAppToken(amount) {
+    const newAmount = amount+1;
+    const appName = document.getElementById('appName_AppTokenRequest').value;
+    if (debug) console.log(appName);
+    const userDevToken = document.getElementById('devToken').innerText;
+    if (debug) console.log(userDevToken);
+    document.getElementById('newAppToken').innerHTML="loading";
+
+    if (!appName){
+        return document.getElementById('newAppToken').innerText="Failed! Please input a new app name!";
+
+    };
+    if (!userDevToken) {
+        return document.getElementById('newAppToken').innerText="Failed! No user dev token, please request a developer account!";
+    };
+    const data = {
+        appname: appName,
+        userdevtoken: userDevToken
+    }
+    const requestRes = await fetch(`${apiURL}Priv/post/newAppToken`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data)
+    });
+
+    const appTokenData = await requestRes.json();
+    if (debug) console.log(appTokenData)
+    if (!requestRes.ok || requestRes.error) return console.log({error: `${requestRes?.error ? requestRes.error : "an unknown error"}`});
+
+    const newEle = `
+        <div class="userInfo">
+            <p>NEW TOKEN</p>
+            <p>appToken #${newAmount}</p>
+            <p>app name: ${appTokenData.appName ? appTokenData.appName : `Unknown`}
+            ${appTokenData._id ? `<p>appToken: <p onclick="revealDevOptions('appTokens', ${newAmount})" id="appToken_${newAmount}" class="blur">${appTokenData._id}</p>`:``}
+            ${appTokenData._id ? `<p onclick="copyToClipboard('${appTokenData._id}')">Copy Token</p>` : ""}
+            <p>API Uses: ${appTokenData.APIUses? appTokenData.APIUses : `0`}
+            ${appTokenData.creationTimestamp ? `<p>Application created: ${checkDate(appTokenData.creationTimestamp)}</p>`:`<p>Unknown creation date</p>`}
+        </div>
+    `;
+    const newRequestEle = `
+        <p>Generate New App Token</p>
+        <p>Please input an application name</p>
+        <div class="searchSelect search">
+            <input id="appName_AppTokenRequest" placeholder="Application Name:">
+        </div>
+        <button onclick="requestAppToken(${newAmount})">Generate Token</button>
+    `
+    document.getElementById('newAppToken').innerHTML=newRequestEle
+    document.getElementById('appTokenList').innerHTML+=newEle;
+}
 
 async function requestDevToken() {
     document.getElementById('devAcc').innerHTML="loading";
@@ -1176,14 +2428,22 @@ function activeSearchBar() {
             <input id="searchBarArea" onkeyup="searchSocial()" placeholder="Search for Posts and Users...">
         </div>
     `
-    document.getElementById('searchBar').innerHTML = `
-        <button class="buttonStyled" onclick="unactiveSearchBar()" id="page6">Remove Search</button>
+    document.getElementById('navSection5').innerHTML = `
+        <div id="searchBar" class="nav-link" onclick="unactiveSearchBar()">
+            <span class="material-symbols-outlined nav-button";>search</span>
+            <span class="link-text pointerCursor" id="page6">Remove</span>
+        </div>
+
     `
 }
 function unactiveSearchBar() {
     document.getElementById("searchArea").innerHTML = ``
-    document.getElementById('searchBar').innerHTML = `
-        <button class="buttonStyled" onclick="activeSearchBar()" id="page6">Search</button>
+    document.getElementById('navSection5').innerHTML = `
+        <div id="searchBar" class="nav-link" onclick="activeSearchBar()">
+            <span class="material-symbols-outlined nav-button";>search</span>
+            <span class="link-text pointerCursor" id="page6">Search</span>
+        </div>
+
     `
 }
 
@@ -1235,9 +2495,14 @@ function checkLoginUser() {
 
 // DEBUGGING MODE
 function devMode() {
-    debug = getCookie("debugMode");
-    if (debug == "true") addDebug()
-    else removeDebug()
+    const debugStr = getCookie("debugMode");
+    if (debugStr == "true") {
+        debug = true;
+        addDebug();
+    } else {
+        debug=false;
+        removeDebug();
+    }
 }
 
 // ADDING DEBUG INFO TO EVERYTHING
@@ -1309,23 +2574,61 @@ function getCookie(cname) {
     return "";
 }
 
+async function getPossibleFeeds() {
+    try {
+        const response = await fetch(`${apiURL}/feeds/possibleFeeds`, { method: 'GET', headers})
+        var data = await response.json();
+        if (debug) console.log(data);
+        return data
+    } catch (error) {
+        console.log(error)
+        return false;
+    }
+}
+
+async function changeFeedHeader(current) {
+    const possibleFeeds = await getPossibleFeeds();
+    if (!possibleFeeds) return console.log("error getting possible feeds");
+
+    var ele = '<div class="">';
+    for (const feed of possibleFeeds) {
+        ele += `<button class="buttonStyled ${current==feed.name ? 'activeFeed' : ''}" onclick="getFeed('${feed.name}')">${feed.niceName}</button>`
+    }
+    ele += '</div>'
+
+    document.getElementById("possibleFeeds").innerHTML = ele;
+    document.getElementById("possibleFeeds").classList.add("possibleFeeds")
+    document.getElementById("topPadding").classList.add("activeFeeds");
+}
+
+async function changeFeed(feedType) {
+    await getFeed(feedType);
+}
+
 // GET DATA FROM API FOR MAIN FEED
-async function getFeed() {
-    document.getElementById('mainFeed').innerHTML=``
+async function getFeed(feedType) {
+    const feedToUse = feedType || 'userFeed'
+
     searchBar()
     // postBar()
 
-    if (currentFeed) return buildView(currentFeed)
+    if (currentFeed && (feedToUse == currentFeedType)) return buildView(currentFeed)
     if (debug) console.log("loading feed")
 
-    const response = await fetch(`${apiURL}/get/allPosts`, { method: 'GET', headers})
+    const params = await checkURLParams()
+    if (params.paramsFound != false) return 
+
+    const response = await fetch(`${apiURL}/feeds/${feedToUse}`, { method: 'GET', headers})
     var data = await response.json()
 
+    currentFeedType = feedToUse;
     currentFeed = data.reverse()
 
-    const params = await checkURLParams()
-
-    if (params.paramsFound == false) return buildView(data)
+    if (params.paramsFound == false) {
+        buildView(data)
+        await changeFeedHeader(feedToUse);
+        return;
+    }
     else return
 }
 
@@ -1373,6 +2676,7 @@ function checkMonth(month) {
 
 // BUILDING MAIN FEED
 function buildView(posts) {
+    if (debug) console.log("buidlding view")
     if (searching) return
 
    // const userDiv = document.createElement("div") 
@@ -1381,10 +2685,16 @@ function buildView(posts) {
    // // document.getElementById("mainFeed").append(userDiv)
    // document.getElementById('test').innerText=`test`
 
-
+    document.getElementById('mainFeed').innerHTML=``
     document.getElementById("mainFeed").innerHTML = `
+        <div id="addToTop"></div>
         ${posts.map(function(postArray) {
-            return postElementCreate(postArray.postData, postArray.userData)
+            return postElementCreate({
+                post: postArray.postData,
+                user: postArray.userData, 
+                pollData: postArray.type?.poll=="included" ? postArray.pollData : null,
+                voteData: postArray.type?.vote=="included" ? postArray.voteData : null,
+            })
             /* 
             return `
                 <div class="postArea">
@@ -1421,7 +2731,11 @@ async function deletePost(postID) {
     if (debug) console.log(`deleting post ${postID}`)
     const response = await fetch(`${apiURL}/delete/removePost/${postID}`, { method: 'DELETE', headers})
 
-    if (response.status == 200) return document.getElementById(`postdiv_${postID}`).remove()
+    if (response.status == 200)  {
+        if (debug) console.log("post deleted")
+        document.getElementById(`popupOpen_${postID}`).remove()
+        return document.getElementById(`postdiv_${postID}`).remove()
+    }
     else return showModal("Error", "Something went wrong, please try again later")
 }
 //postContent_${post._id}
@@ -1460,7 +2774,7 @@ async function cancelEdit(postID, content, edited) {
 
     const user = await userData.json()
     if (debug) console.log(user)
-    return document.getElementById(`postElement_${postID}`).innerHTML = postElementCreate(post, user)
+    return document.getElementById(`postElement_${postID}`).innerHTML = postElementCreate({post, user})
 }
 
 async function submitEdit(postID) {
@@ -1520,12 +2834,60 @@ async function quotePost(postID) {
             </div>
         </div>
         <textarea class="postTextArea" id="newPostTextArea"></textarea>
+        <div id="foundTaggings"></div>
     `, "hide")
 }
 
+async function replyPost(postID) {
+    const postResponse = await fetch(`${apiURL}/get/post/${postID}`, { method: 'GET', headers})
+    if (!postResponse.ok) return showModal(`<h1>Error</h1><p>something went wrong</p>`)
+    const post = await postResponse.json()
+    const userResponse = await fetch(`${apiURL}/get/userByID/${post.userID}`, { method: 'GET', headers })
+        
+    if (!userResponse.ok) return showModal(`<h1>Error</h1><p>something went wrong</p>`)
+    const user = await userResponse.json()
+    if (debug) console.log(user)
+    await showModal(`
+        <h1>Create a new Reply</h1>
+        <div class="postModalActions">
+            <p onclick="createPost({'replyID':'${postID}'})">Upload Reply</p>
+            <p onclick="closeModal()">Close</p>
+        </div>
+        <div class="post">
+            <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser" : "otherUser"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'}</p>
+            <div class="postContent" id="postContentArea_${post._id}">
+                <div class="textAreaPost">
+                    <p id="postContent_${post._id}">${post.content}</p>
+                    ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
+                </div>
+            </div>
+        </div>
+        <textarea class="postTextArea" id="newPostTextArea"></textarea>
+        <div id="foundTaggings"></div>
+    `, "hide")
+}
 function checkIfLiked(postID) {
     if (document.getElementById(`likePost_${postID}`).classList.contains("likedColour")) return true
     else return false
+}
+
+// take in data then return the correct pural form of the data
+function puralDataType(type, amount) {
+    if (!amount || !type) return `${type}`
+
+    switch (type) {
+        case "like":
+            if (amount == 1) return `${amount} like`
+            else return `${amount} likes`;
+        case "reply":
+            if (amount == 1) return `${amount} reply`
+            else return `${amount} replies`;
+        case "quote":
+            if (amount == 1) return `${amount} quote`
+            else return `${amount} quotes`;
+        default:
+            return `${amount} ${type} (!!update puralDataType func!!)`
+    }
 }
 
 async function likePost(postID) {
@@ -1539,11 +2901,13 @@ async function likePost(postID) {
         const response = await fetch(`${apiURL}/delete/unlikePost/${postID}`, { method: 'DELETE', headers})
         data = await response.json()
 
-
-
-        if (!response.ok || data.error) return 
+        if (!response.ok || data.error) {
+            if (debug) console.log("something went wrong while liking");
+            return false;
+        }
+        
         document.getElementById(`likePost_${postID}`).classList.remove("likedColour");
-        document.getElementById(`likePost_${postID}`).innerText = `${data.totalLikes} likes`
+        document.getElementById(`likePost_${postID}`).innerText = puralDataType('like', data.totalLikes);
     }
     else {
         if (debug) console.log("liking post")
@@ -1551,10 +2915,13 @@ async function likePost(postID) {
 
         data = await response.json()
 
-        if (!response.ok || data.error) return 
+        if (!response.ok || data.error) {
+            if (debug) console.log("something went wrong while liking");
+            return false;
+        }
 
         document.getElementById(`likePost_${postID}`).classList.add("likedColour");
-        document.getElementById(`likePost_${postID}`).innerText = `${data.totalLikes} likes`
+        document.getElementById(`likePost_${postID}`).innerText = puralDataType('like', data.totalLikes)
     }
     
     if (debug) console.log(data)
@@ -1630,7 +2997,13 @@ async function searchResult(input) {
             `
         }).join(" ")}
         ${data.postsFound.reverse().map(function(postArray) {
-            return postElementCreate(postArray.postData, postArray.userData)
+            return postElementCreate({
+                post: postArray.postData,
+                user: postArray.userData, 
+                pollData: postArray.type?.poll=="included" ? postArray.pollData : null,
+                voteData: postArray.type?.vote=="included" ? postArray.voteData : null,
+            })
+            //return postElementCreate({post: postArray.postData, user: postArray.userData})
         }).join(" ")}
     `
 
@@ -1639,7 +3012,464 @@ async function searchResult(input) {
 }
 
 async function createPostPage() {
+    var preinput = false;
+    var data = { };
+    var paramsFound = [];
+    if (debug) console.log("params? " + getUrl.search)
+    if (debug) console.log("params != ?posting " + getUrl.search.includes("?posting"))
 
+    // content from header
+    const foundContentParam = params.get('content');
+    if (foundContentParam) {
+        preinput = true
+        data.content = foundContentParam
+        paramsFound.push({ "paramName" : "content", "paramValue" : foundContentParam})
+    }
+
+    // pollID from header
+    const foundPollIDParam = params.get('pollID');
+    if (foundPollIDParam) {
+        preinput = true
+        data.pollID = foundPollIDParam
+        paramsFound.push({ "paramName" : "pollID", "paramValue" : foundPollIDParam})
+    }
+   
+    // poll data from header
+    const foundPollParam = params.get('poll');
+    if (foundPollParam) {
+        preinput = true
+        data.poll = foundPollParam
+        paramsFound.push({ "paramName" : "poll", "paramValue" : foundPollParam})
+        
+        // poll options from header
+        const foundPollOptionsParam = params.get('pollOptions');
+        if (foundPollOptionsParam) {
+            preinput = true
+            data.pollOptions = foundPollOptionsParam
+            paramsFound.push({ "paramName" : "pollOptions", "paramValue" : foundPollOptionsParam})
+        }
+
+        // poll title from header
+        const foundPollTitleParam = params.get('pollTitle');
+        if (foundPollTitleParam) {
+            preinput = true
+            data.pollTitle = foundPollTitleParam
+            paramsFound.push({ "paramName" : "pollTitle", "paramValue" : foundPollTitleParam})
+        }
+
+        for (let i=1; i<=data.pollOptions;i++) {
+            const foundPollOptionParam = params.get(`poll_option_${i}`);
+            if (foundPollOptionParam) {
+                data[`poll_option_${i}`] = foundPollOptionParam
+                paramsFound.push({ "paramName" : `poll_option_${i}`, "paramValue" : foundPollOptionParam })
+            }
+        }
+    }
+
+    changePostPageNavButton('goto')
+
+    // from old post modal 
+    const foundModal = document.getElementById("postingModel");
+    if (debug) console.log("foundModal: " + foundModal);
+
+    if (foundModal) {
+        const content = document.getElementById('newPostTextArea')
+        if (debug) console.log("content: " + content)
+        if (content) {
+            content.remove()
+            if (content.value)data.content = content.value;
+            preinput = true;
+        };
+
+        const foundPollLink = document.getElementById('pollCreateLink');
+        if (foundPollLink) {
+            if (foundPollLink.value) data.pollID = foundPollLink.value
+            preinput = true;
+        }
+
+        closeModal();
+        foundModal.remove();
+    }
+
+    var paramString = ""
+    for (const param of paramsFound) {
+        if (debug) console.log(param.paramName, param.paramValue);
+        const str = createNewParam(param.paramName, param.paramValue);
+        if (str) paramString += str;
+    }
+    // if (data.content) changeHeader(`?posting&content=${encodeURIComponent(data.content)}`)
+    changeHeader(`?posting${paramString}`)
+
+    if (debug) console.log("creating post")
+
+    const ele = `
+        <div id="postPageDiv" class="postPageDiv">
+            <h1>Create a new Post</h1>
+            <div class="postPageInput">
+            <textarea class="postTextArea" onkeyup="onTypePostPage()" id="newPostTextArea">${data?.content ? data.content : ""}</textarea>
+            </div>
+            <div class="mainActions">
+                <p class="publicPost" onclick="leavePostPage()">Back</p>
+                <p class="publicPost" onclick="publishFromPostPage()">Upload Post</p>
+                <p class="publicPost" id="pollCreationButton" onclick="showPollCreation()">Add Poll</p>
+                <div class="publicPost">
+                    <p onclick="exportPostHeaderURL()">Create Post Template</p>
+                    <p id="postURL_preview"></p>
+                    <p id="postURL_messageURL"></p>
+                </div>
+            </div>
+            <div>
+                <input type="text" id="pollCreateLink" class="addPollOption" placeholder="Link Poll via ID" ${data.pollID ? `value="${data.pollID}"` : ""}></input>
+            </div>
+            <div id="pollCreate"></div>
+            <div id="foundTaggings"></div>
+        </div>
+    `;
+
+    document.getElementById("mainFeed").innerHTML = ele;
+
+    // add all data found from headers
+    if (data.poll) {
+        if (data.pollOptions) {
+            showPollCreation();
+            const currentAmountOptions = checkPollOptionAmount();
+            for (let i=currentAmountOptions+1; i<=data.pollOptions; i++) {
+                if (debug) console.log("adding option: " + i)
+                document.getElementById("options").innerHTML += addOption(i);
+            }
+        }
+        if (data.pollTitle) {
+            document.getElementById("pollCreateTitle").value = data.pollTitle;
+        }
+
+        for (let i=1; i <= data.pollOptions; i++) {
+            const foundOption = data[`poll_option_${i}`];
+            if (foundOption) document.getElementById(`poll_option_${i}`).value = data[`poll_option_${i}`]
+        }
+    }
+};
+
+function createPostPageHeaders() {
+    const content = document.getElementById('newPostTextArea')?.value
+    const pollID = document.getElementById('pollCreateLink')?.value
+
+    const params = []
+
+    // content to post page header
+    if (content != undefined && content != null && content != "") {
+        if (debug) console.log("content")
+        const newParam = createNewParam("content", content)
+        params.push(newParam);
+    } else if (debug) console.log("no content")
+
+    // pollID to post page header
+    if (pollID != undefined && pollID != null && pollID != "") {
+        if (debug) console.log("pollID")
+        const newParam = createNewParam("pollID", pollID)
+        params.push(newParam);
+    } else if (debug) console.log("no pollID")
+    
+    // poll in ceation
+    const createPoll = document.getElementById('pollCreation')
+    if (createPoll) {
+        if (debug) console.log("poll")
+        const newParam = createNewParam("poll", true)
+        params.push(newParam);
+
+        // pollTitle
+        const pollTitle = document.getElementById('pollCreateTitle')?.value
+        if (pollTitle) {
+            const newParam = createNewParam("pollTitle", pollTitle)
+            params.push(newParam);
+        }
+
+        // options + amount of options 
+        const amountOptions = checkPollOptionAmount();
+        if (amountOptions) {
+            const newParam = createNewParam("pollOptions", amountOptions)
+            params.push(newParam);
+
+            for (let i = 1; i <= amountOptions; i++) {
+                const option = document.getElementById(`poll_option_${i}`)?.value
+                if (option !=null && option != undefined && option != "") {
+                    const newParam = createNewParam(`poll_option_${i}`, option)
+                    params.push(newParam);
+                }
+            }
+        }
+    } else if (debug) console.log("no poll")
+
+    if (debug) console.log(params)
+    var newString = `?posting`
+
+    for (const param of params) {
+        newString += param
+    };
+
+    return newString;
+}
+
+function exportPostHeaderURL() {
+    const newParam = createPostPageHeaders();
+    
+    const newString = `${baseUrl}${newParam}`
+
+    if (debug) console.log(newString);
+    copyToClipboard(newString);
+
+    document.getElementById("postURL_messageURL").innerHTML = `Copied!`
+    document.getElementById("postURL_preview").innerHTML = newString
+}
+
+async function onTypePostPage(e) {
+    socialTypePost()
+
+    return 
+    // this would change the top url. works, but not needed
+    const content = document.getElementById('newPostTextArea')?.value
+    if (content != null) newPostHeader("content", content) 
+    // createHeaderParamString('posting', true)
+}
+
+function newPostHeader(paramName, data) {
+    const newString = createNewParam(paramName, data);
+    if (debug) console.log("new param: " + newString)
+    const current = getUrl.search;
+    const hasParam = current.includes(paramName);
+
+    if (hasParam) {
+        const oldData = encodeURIComponent(params.get(paramName));
+        const newHeader = current.replace(`&${paramName}=${oldData}`, newString);
+        changeHeader(newHeader);
+        if (debug) console.log("newURL: " + getUrl.search)
+
+    } else {
+        const newHeader = current + newString;
+        changeHeader(newHeader);
+        if (debug) console.log("newURL: " + getUrl.search)
+    }
+
+    params = new URLSearchParams(getUrl.search)
+}
+
+function createNewParam(paramName, data) {
+    return `&${paramName}=${encodeURIComponent(data)}`;
+}
+
+async function publishPoll() {
+    if (debug) console.log("creating poll")
+    const amountOptions = checkPollOptionAmount();
+    if (amountOptions<2 || amountOptions>10) return showModal("<h1>Something went wrong.</h1><p>Please enter between 2 and 10 poll options</p>")
+
+    var options = [];
+    for (let i = 1; i <= amountOptions; i++) {
+        const option = getOption(i);
+        if (option) options.push(option);
+        if (debug) console.log(option)
+    }
+
+    if (options.length < 2 || options.length > 10) return showModal("<h1>Something went wrong.</h1><p>Please enter between 2 and 10 poll options</p>");
+
+    /*
+        pollName
+        timeLive
+        optioNAmount
+        option_[num]
+    */
+    var body = {
+        pollName: document.getElementById('pollCreateTitle')?.value,
+        // timeLive: document.getElementById('timeLive')?.value, add later
+        optionAmount: amountOptions,
+    };
+
+    for (let i = 0; i < options.length; i++) {
+        body[`option_${i+1}`] = options[i];
+    }
+
+    if (debug) console.log(body);
+
+    const response = await fetch(`${apiURL}/polls/create`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body)
+    });
+
+    const pollData = await response.json()
+    if (debug) console.log(pollData)
+
+    if (!response.ok) {
+        if (pollData.msg) showModal(`<h1>Something went wrong.</h1> <p>${pollData.code}\n${pollData.msg}</p>`)
+        else if (pollData.msg) showModal(`<h1>Something went wrong.</h1> <p>${pollData.error.code}\n${pollData.msg}</p>`)
+        else showModal(`<h1>Something went wrong.</h1> <p>${JSON.stringify(pollData)}</p>`)
+        return null;
+    }
+    
+    return pollData.pollData;
+};
+
+async function publishFromPostPage() {
+    if (debug) console.log("publishing post")
+    const createPoll = document.getElementById('pollCreation');
+
+    var pollID = null;
+    if (createPoll) {
+        const pollData = await publishPoll();
+        if (debug && pollID) console.log("new pollID: " + pollID)
+        if (pollData) pollID = pollData._id;
+        else return null;
+    }
+
+    /* if poll then publish poll first */
+    return createPost({ pollID: pollID ? pollID : null });
+};
+
+function changePostPageNavButton(method) {
+    return false;
+    if (method == "goto") {
+        document.getElementById('navSection4').innerHTML = `
+            <div id="page4Nav" class="nav-link" onclick="leavePostPage()">
+                <span class="material-symbols-outlined nav-button";>home</span>
+                <span class="link-text pointerCursor" id="page4">Home</span>
+            </div>
+        `
+    } else {
+        document.getElementById('navSection4').innerHTML = `
+            <div id="page4Nav" class="nav-link" onclick="createPostModal()">
+                <span class="material-symbols-outlined nav-button";>post_add</span>
+                <span class="link-text pointerCursor" id="page4">Create Post</span>
+            </div>
+        `
+    };
+};
+
+/*
+    user opens post page
+    - can get data from modal 
+
+    user types in post
+
+    user can add poll
+    when user press create, it will create a poll, then add the poll to the post via id
+*/
+
+async function leavePostPage() {
+    if (debug) console.log("leaving post")
+    if (getUrl.search=="?posting") changeHeader('')
+    //changePostPageNavButton('leave')
+    getFeed()
+}
+
+function removePollCreation() {
+    if (debug) console.log("removing poll")
+    document.getElementById("pollCreate").innerHTML = "";
+    document.getElementById("pollCreationButton").onclick=showPollCreation;
+    document.getElementById("pollCreationButton").innerHTML="Add Poll";
+}
+
+function showPollCreation() {
+    if (debug) console.log("creating poll")
+    document.getElementById("pollCreationButton").onclick=removePollCreation;
+    document.getElementById("pollCreationButton").innerHTML="Remove Poll";
+    
+    const content = document.getElementById('newPostTextArea')?.value
+    if (content) showinput = true
+
+    var ele = `
+        <hr class="rounded">
+        <h1>Create New Poll</h1>
+        <hr class="rounded">
+        <div class="mainActions">
+            <p class="publicPost" onclick="addExtraOption()">Add Another Option</p>
+            <p class="publicPost" onclick="removeLastOption()">Remove Newest Option</p>
+        </div>
+        <hr class="rounded">
+        <div id="pollCreation">
+            <div id="optionAmount"></div>
+            <div>
+                <p><u>Question</u></p>
+                <input type="text" id="pollCreateTitle" class="addPollOption" placeholder="Question">
+            </div>
+            <div id="options">${addOption(1)}${addOption(2)}</div>
+        </div>
+    `;
+
+    document.getElementById("pollCreate").innerHTML = ele;
+}
+
+function checkPollOptionAmount() {
+    const options = document.getElementsByClassName("pollOption");
+    return options.length || 1;
+};
+
+function removeLastOption() {
+    if (debug) console.log("removing option")
+    const currentNum = checkPollOptionAmount();
+    if (currentNum <= 2) return console.log("cant remove more options");
+
+    const option = document.getElementById(`option_${currentNum}`);
+    if (option) option.remove();
+
+    /* restore old values when add */
+    const values=[];
+    for (let i = 0; i < currentNum-1; i++) {
+        const option = getOption(i+1);
+        if (option) values.push({value: option, num: i+1});
+    }
+
+    const questionTitle = document.getElementById('pollCreateTitle')?.value;
+
+    // document.getElementById("options").innerHTML += addOption(currentNum+1)
+    for (let i = 0; i < values.length; i++) {
+        const optionData = values[i];
+        document.getElementById(`poll_option_${optionData.num}`).value = optionData.value;
+    }
+    document.getElementById('pollCreateTitle').value = questionTitle;
+    
+    document.getElementById(`poll_option_${currentNum-1}`).focus();
+    return;
+}
+
+function addExtraOption() {
+    if (debug) console.log("adding option")
+    const currentNum = checkPollOptionAmount();
+    if (currentNum >= 10) {
+        if (document.getElementById("cantAddMoreOptions")) return console.log("cant add more options")
+        return document.getElementById("options").innerHTML += '<p id="cantAddMoreOptions">cant create more than 10 options</p>';
+    }
+
+    /* restore old values when add */
+    const values=[];
+    for (let i = 0; i < currentNum; i++) {
+        const option = getOption(i+1);
+        if (option) values.push({value: option, num: i+1});
+    }
+    const questionTitle = document.getElementById('pollCreateTitle')?.value;
+
+    document.getElementById("options").innerHTML += addOption(currentNum+1)
+    for (let i = 0; i < values.length; i++) {
+        const optionData = values[i];
+        document.getElementById(`poll_option_${optionData.num}`).value = optionData.value;
+    }
+    document.getElementById('pollCreateTitle').value = questionTitle;
+    
+    document.getElementById(`poll_option_${currentNum+1}`).focus();
+    return
+};
+
+function addOption(num) {
+    const amount = num || checkPollOptionAmount()+1;
+    return `
+        <div class="pollOption" id="option_${num}">
+            <p><u>Option ${amount}</u></p>
+            <input type="text" class="addPollOption" id="poll_option_${num}" placeholder="Option ${amount}">
+        </div>
+    `;
+}
+
+function getOption(num) {
+    const foundOption = document.getElementById(`poll_option_${num}`)?.value;
+    if (foundOption) return foundOption;
+    else return false;
 }
 
 /*
@@ -1667,6 +3497,7 @@ async function createPost() {
     `
 }
 */
+
 // PUBLISH WRITTEN POST
 async function createPost(params) {
     if (debug) console.log(params)
@@ -1674,20 +3505,45 @@ async function createPost(params) {
     var input = document.getElementById('newPostTextArea').value
     if (debug) console.log(input)
 
+    var isFromPostPage = false;
+    if (document.getElementById('postPageDiv')) isFromPostPage = true;
+    if (debug) console.log("isFromPostPage: " + isFromPostPage)
+
     var quoted 
     if (params?.quoteID) quoted = params.quoteID
-    else quoted='null'
+    else quoted=undefined
+
+    var replied
+    if (params?.replyID) replied = params.replyID
+    else replied=undefined
+
+    // var 
+    var pollID
+    if (params?.pollID) pollID = params.pollID
+    else {
+        const pollELe = document.getElementById('pollCreateLink')
+        if (pollELe) pollID = pollELe.value
+        else pollID = undefined
+    }
+
+    if (debug) console.log(pollID)
+    // console.log(pollID)
 
     const data = { 
         "userID" : currentUserLogin.userID, 
         "content" : input,
-        "quoteReplyPostID" : quoted
+        "quoteReplyPostID" : quoted,
+        "replyingPostID" : replied,
+        "linkedPollID" : pollID || null
     };
 
-    closeModal()
+    if (isFromPostPage) leavePostPage()
+    else closeModal();
 
     if (debug) console.log(currentUserLogin) 
     if (debug) console.log(data)
+
+    changeHeader('')
 
     const response = await fetch(`${apiURL}/post/createPost`, {
         method: 'POST',
@@ -1698,8 +3554,20 @@ async function createPost(params) {
     const postData = await response.json()
     if (debug) console.log(postData)
 
-    if (response.ok) return showModal(`<h1>Your post was sent!</h1> <p>${postData.content}</p>`)
-    else return showModal(`<h1>something went wrong.</h1> <p>${postData.code}\n${postData.msg}</p>`)
+    if (!response.ok)  return showModal(`<h1>something went wrong.</h1> <p>${postData.code}\n${postData.msg}</p>`)
+    
+    const userData = await getUserDataSimple(postData.userID)
+
+    /* add to top */
+    const newEle = `${postElementCreate({post: postData, user: userData })}`;
+
+    showModal(`<h1>Your post was sent!</h1> <p>${postData.content}</p>`)
+
+    const topEle = document.getElementById("addToTop")
+    if (!topEle || !newEle ) return;
+
+    topEle.innerHTML = newEle + topEle.innerHTML
+
 }
 
 // BLANK FUNCTION FOR LATER BUTTONS TO LIKE / REPLY / REPOST
@@ -1755,7 +3623,7 @@ function getId(url) {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = url.match(regExp);
 
-    return (match && match[2].length === 11) ? match[2] : null;
+    return (match && match[2].length === 11) ? match[2] : undefined;
 }
     
 function checkForImage(content) {
