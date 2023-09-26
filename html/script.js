@@ -373,14 +373,14 @@ async function viewParentPost(postID, parentPostID) {
         return document.getElementById(`openedParent_${postID}`).remove();
     }
 
-    const response = await fetch(`${apiURL}/get/post/${parentPostID}`, {
-        method: 'GET',
-        headers
-        // body: JSON.stringify(body)
-    });
+    const postData = await sendRequest(`/get/post/${parentPostID}`, { method: "GET" });
+    //const response = await fetch(`${apiURL}/get/post/${parentPostID}`, {
+    //    method: 'GET',
+    //    headers
+    //    // body: JSON.stringify(body)
+    //});
     
-    const postData = await response.json();
-    if (debug) console.log(postData);
+    //const postData = await response.json();
 
     if (postData.deleted == true || !postData.userID) {
         //document.getElementById()
@@ -396,14 +396,8 @@ async function viewParentPost(postID, parentPostID) {
         return;
     }
 
-    const userRes = await fetch(`${apiURL}/get/userByID/${postData.userID}`, {
-        method: 'GET',
-        headers
-        // body: JSON.stringify(body)
-    });
+    const userData = await sendRequest(`/get/userByID/${postData.userID}`, { method: 'GET', });
    
-    const userData = await userRes.json();
-
     const postEle = postElementCreate({post: postData, user: userData});
     document.getElementById(`parent_${postID}`).innerHTML = `
         <div class="publicPost areaPost posts-style" id="openedParent_${postID}">${postEle}</div>
@@ -422,12 +416,7 @@ async function viewReplies(postID) {
 
     // if ()
     // http://localhost:5002/v1/get/postReplies/71f9a348-aa28-4443-a39d-4247620e43ce
-    const response = await fetch(`${apiURL}/get/postReplies/${postID}`, {
-        method: 'GET',
-        headers
-        // body: JSON.stringify(body)
-    });
-    const replyData = await response.json();
+    const replyData = await sendRequest(`/get/postReplies/${postID}`, { method: 'GET', });
     if (debug) console.log(replyData)
     if (replyData.code) {
         document.getElementById(`postElement_${postID}`).innerHTML+=`
@@ -445,13 +434,7 @@ async function viewReplies(postID) {
     var ele = ``;
     for (const reply of replyData.replies) {
         // if (reply!=null) {
-            const userRes = await fetch(`${apiURL}/get/userByID/${reply.userID}`, {
-                method: 'GET',
-                headers
-                // body: JSON.stringify(body)
-            });
-            const userData = await userRes.json();
-            if (debug) console.log(userData)
+            const userData = await sendRequest(`${apiURL}/get/userByID/${reply.userID}`, { method: 'GET' });
             ele+=postElementCreate({post: reply, user: userData, hideParent: true });
         // }
     }
@@ -475,27 +458,19 @@ async function saveBookmark(postID, list) {
         postID,
         listname: list ? list : "main"
     }
-    const response = await fetch(`${apiURL}/post/savePost/`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body)
-    });
+    const res = await sendRequest(`/post/savePost/`, { method: 'POST', body });
 
     // if (!response.ok) return document.getElementById(`saveBookmark_${postID}`).innerText = "Error while saving"
-    const res = await response.json();
-    if (debug) console.log(res)
+    //const res = await response.json();
+    //if (debug) console.log(res)
     if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.error}`;
     document.getElementById(`saveBookmark_${postID}`).innerText="Saved"
 }
 
 async function showLikes(postID) {
-    const response = await fetch(`${apiURL}/get/postLikedBy/${postID}`, {
-        method: 'GET',
-        headers,
-    });
-
-    const likedBy = await response.json();
-    if (debug) console.log(likedBy.peopleLiked);
+    const likedBy = await sendRequest(`/get/postLikedBy/${postID}`, { method: 'GET' });
+    //const likedBy = await response.json();
+    //if (debug) console.log(likedBy.peopleLiked);
     if (!response.ok || !likedBy.peopleLiked) return document.getElementById(`likedBy_${postID}`).innerHTML = `Could not find any people who liked the post.`;
 
     var newElement = `<p>Liked By:</p>`;
@@ -507,14 +482,11 @@ async function showLikes(postID) {
 }
 
 async function showEditHistory(postID) {
-    const response = await fetch(`${apiURL}/get/postEditHistory/${postID}`, {
-        method: 'GET',
-        headers,
-    });
+    const editData = await sendRequest(`/get/postEditHistory/${postID}`, { method: 'GET' });
 
-    const editData = await response.json();
-    if (debug) console.log(editData);
-    if (!response.ok || !editData.edits) return document.getElementById(`editHistory_${postID}`).innerHTML = `Could not find any edits.`;
+    //const editData = await response.json();
+    //if (debug) console.log(editData);
+    if (!editData || !editData.edits) return document.getElementById(`editHistory_${postID}`).innerHTML = `Could not find any edits.`;
 
     var newElement = `<p>Edit History:</p>`;
     for (const edit of editData.edits.reverse()) {
@@ -3113,9 +3085,8 @@ async function getFeed(feedType) {
 
     document.getElementById('mainFeed').innerHTML=loadingHTML("Loading feed...");
     listenForLoading();
-
-    const response = await fetch(`${apiURL}/feeds/${feedToUse}`, { method: 'GET', headers})
-    var data = await response.json()
+    const data = await sendRequest(`/feeds/${feedToUse}`, { headers })
+    //const response = await fetch(`${apiURL}/feeds/${feedToUse}`, { method: 'GET', headers})
 
     currentFeedType = feedToUse;
     if (!data || !data[0]) return showModal("<p>There was no data in the feed selected, please load a different feed</p>")
@@ -4121,6 +4092,39 @@ async function renameUsername() {
             <p>Changed username! from ${newData.before.username} to ${newData.new.username}</p>
         `
     }
+}
+
+// For API Use
+async function sendRequest(request, { method, body, extraHeaders }) {
+    var headersEdited = {};
+
+    if (extraHeaders) {
+        var headersEdited = headers;
+        for (const header in extraHeaders) {
+            headersEdited[header] = headers[header];
+        }
+    }
+
+    console.log(headersEdited)
+    console.log(headers)
+    const res = await fetch(`${apiURL}${request}`, {
+        method: method || 'GET',
+        body: body ? JSON.stringify(body) : null,
+        headers : extraHeaders ? headersEdited : headers
+    });
+    
+   try {
+        const data = await res.json();
+        if (debug) console.log(data)
+        if (data.error) {
+            showModal(`<h1>Error</h1><p>${data.code}: ${data.msg}</p>`);
+            return null;
+        }
+        return data;
+   } catch(err) {
+        showModal(`<h1>Error</h1><p>Unknown Error.</p>`);
+        return null;
+   }
 }
 
 function getId(url) {
