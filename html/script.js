@@ -93,12 +93,13 @@ function checkifMobile() {
 }
 
 // good luck
+devMode();
 if (location.protocol !== 'https:' && !((/localhost|(127|192\.168|10)\.(\d{1,3}\.?){2,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.(\d{1,3}\.?){2}/).test(location.hostname))) {
     location.replace(`https:${location.href.substring(location.protocol.length)}`);
 }
 else {
     if (!('fetch' in window)) {
-      if (debug) console.log('Fetch API not found, please upgrade your browser.');
+        if (debug) console.log('Fetch API not found, please upgrade your browser.');
         showModal(`Please upgrade your browser to use Interact!`)
     }
     else checkLogin()
@@ -1008,41 +1009,29 @@ async function userEdit(action) {
 
     if (!actions|| !actions[0]) return showModal(`<p>Error: No actions to perform</p>`)
 
-    var tempHeaders = headers;
+    var tempHeaders = {};
 
     for (const actionData of actions) {
         tempHeaders[`new${actionData.action.toLowerCase()}`] = actionData.value
     }
 
-    const response = await fetch(`${apiURL}/put/userEdit`, {
+    const newUser = await sendRequest(`/put/userEdit`, {
         method: 'PUT',
-        headers
+        extraHeaders: tempHeaders
     });
 
-    const newUser = await response.json()
-    if (!response.ok) return console.log(newUser)
+    if (!newUser || newUser.error) return console.log(newUser)
 
     // return window.location.href = `${document.getElementById('userEdit_username_text').value}`
-    if (debug) console.log(newUser)
     return showModal("<p>Success! You can now close this page.</p>")
 }
 
 async function postHtml(postID) {
-    const postRes = await fetch(`${apiURL}/get/post/${postID}`, {
-        method: 'GET',
-        headers,
-    })
+    const postData = await sendRequest(`/get/post/${postID}`, { method: 'GET' })
+    if (!postData || postData.deleted) return console.log("error with post");
 
-    const postData = await postRes.json()
-
-    if (!postData || !postRes.ok || postData.deleted) return console.log("error with post");
-
-    const userRes = await fetch(`${apiURL}/get/userByID/${postData.userID}`, {
-        method: 'GET',
-        headers,
-    })
+    const userData = await sendRequest(`/get/userByID/${postData.userID}`, { method: 'GET' })
     
-    const userData = await userRes.json();
     const ele = postElementCreate({post: postData, user: userData});
     document.getElementById("mainFeed").innerHTML = ele
 
@@ -1066,14 +1055,9 @@ async function postHtml(postID) {
     */
 }
 async function getFullUserData(userID) {
-    const response = await fetch(`${apiURL}/get/user/${userID}`, {
-        method: 'GET',
-        headers,
-    })
+    const profileData = await sendRequest(`/get/user/${userID}`, { method: 'GET' })
     
-    const profileData = await response.json()
-
-    if (!response.ok) return console.log("error with user");
+    if (!profileData || profileData.error) return console.log("error with user");
     return profileData;
 }
 
@@ -1254,18 +1238,13 @@ async function deleteAccPage() {
 async function requestDeleteAcc() {
     const password = document.getElementById("userEdit_email_pass_delete")?.value;
 
-    const response = await fetch(`${apiURL}/users/reqDelete/`, {
+    const res = await sendRequest(`/users/reqDelete/`, {
         method: 'DELETE',
-        headers,
-        body: JSON.stringify({
-            password: password
-        })
+        body: { password: password }
     });
 
-    const res = await response.json();
-    if (!response.ok || res.error) {
+    if (!res || res.error) {
         document.getElementById("resultDeleteRequest").innerHTML = `<p>Failed ${res.error ? res.msg : "unknown reason"}</p>`
-        showModal(`<p>Failed ${res.error ? res.msg : "unknown reason"}</p>`)
         return false
     } else {
         document.getElementById("resultDeleteRequest").innerHTML = `<p>Success, check your email.</p>`
@@ -1421,7 +1400,7 @@ function unescapeHtml(text) {
 }
 
 async function editThemePanel() {
-    const themeSettings = await getTheme()
+    const themeSettings = await getTheme(null, true)
 
     if (!themeSettings || themeSettings.error) return await createTheme();
 
@@ -1464,7 +1443,7 @@ async function editTheme(themeSettings) {
     if (!themeSettings || themeSettings.error) return await createTheme();
 
     const possibleThemeEdits = await getPossibleThemeEdits();
-    
+
     var ele = `
         <div class="menu menu-style">
         <p><b>Theme Editor</b></p>
@@ -1474,7 +1453,7 @@ async function editTheme(themeSettings) {
         <p>Created: ${checkDate(themeSettings.timestamp)}</p>
         ${themeSettings.timestamp_edited ? `<p>Last Edited: ${checkDate(themeSettings.timestamp_edited)}</p>` : ``}
         <hr class="rounded">
-        <form id="userEdit_themeSettings">
+        <form id="userEdit_themeSettings" onsubmit="${((themeSettings.userID == headers.userid) && (themeSettings.locked !== true)) ? `submitThemeSettings('${themeSettings._id}')` : `forkThemeSettings('${themeSettings._id}')` }">
             <div>
                 <b><label for="themeSetting_name">Name:<br></label></b>
                 <input type="text" id="themeSetting_name" value="${themeSettings.theme_name}"/>
@@ -1613,93 +1592,50 @@ async function createThemeSettings() {
     const privacy =  document.getElementById("userEdit_themeSettings_create_privacy").value;
     const fork =  document.getElementById("userEdit_themeSettings_create_fork").value;
 
-    const response = await fetch(`${apiURL}/users/profile/theme/submit/create`, {
+    const res = await sendRequest(`/users/profile/theme/submit/create`, {
         method: 'POST',
-        headers,
-        body: JSON.stringify({
+        body: {
             name: themeName,
             privacy: privacy,
             fork: fork ? fork : null
-        })
+        }
     });
-
-    const res = await response.json();
-    if (debug) console.log(res)
 
     editTheme(res); // rerender
     return res
 }
 
 async function getPossibleThemeEdits() {
-    const response = await fetch(`${apiURL}/users/profile/theme/possible`, {
-        method: 'GET',
-        headers,
-    });
-
-    const res = await response.json();
-    if (debug) console.log(res)
-
+    const res = await sendRequest(`/users/profile/theme/possible`, { method: 'GET' });
     return res
 }
 
 async function unsetThemeAPI() {
-    const response = await fetch(`${apiURL}/users/profile/theme/unset`, {
-        method: 'DELETE',
-        headers,
-    });
-
-    const res = await response.json();
-    if (debug) console.log(res)
-
+    const res = await sendRequest(`/users/profile/theme/unset`, { method: 'DELETE' });
     return res;
 }
 
 async function setThemeAPI(themeID) {
-    const response = await fetch(`${apiURL}/users/profile/theme/set/${themeID}`, {
-        method: 'POST',
-        headers,
-    });
-
-    const res = await response.json();
-    if (debug) console.log(res)
-
+    const res = await sendRequest(`/users/profile/theme/set/${themeID}`, { method: 'POST' });
     return res;
 }
 
 async function submitDeleteTheme(themeID) {
-    const response = await fetch(`${apiURL}/users/profile/theme/submit/delete/`, {
+    const res = await sendRequest(`/users/profile/theme/submit/delete/`, {
         method: 'DELETE',
-        headers,
-        body: JSON.stringify({themeID})
+        body: {themeID}
     });
-
-    const res = await response.json();
-    if (debug) console.log(res)
 
     return res;
 }
 
-async function getTheme(themeID) {
-    const response = await fetch(`${themeID ? `${apiURL}/users/profile/theme/${themeID}` : `${apiURL}/users/profile/theme/user/`}`, {
-        method: 'GET',
-        headers,
-    });
-
-    const res = await response.json();
-    if (debug) console.log(res);
-
+async function getTheme(themeID, ignoreError) {
+    const res = await sendRequest(`${themeID ? `/users/profile/theme/${themeID}` : `/users/profile/theme/user/`}`, { method: 'GET', ignoreError });
     return res;
 }
 
 async function getThemes(userID) {
-    const response = await fetch(`${apiURL}/users/profile/theme/user/${userID}`, {
-        method: 'GET',
-        headers,
-    });
-
-    const res = await response.json();
-    if (debug) console.log(res);
-
+    const res = await sendRequest(`/users/profile/theme/user/${userID}`, { method: 'GET' });
     return res;
 }
 
@@ -1731,14 +1667,8 @@ async function forkThemeSettings(themeID) {
     const reqBody = getThemeChanges(themeID, possibleThemeEdits, true); // get changes
 
     // forked
-    const response = await fetch(`${apiURL}/users/profile/theme/fork/${themeID}`, {
-        method: 'POST',
-        headers,
-    });
-
-    const res = await response.json();
-    if (debug) console.log(res);
-    if (!response.ok || res.error) return showModal(`<p>Error: ${res.code}, ${res.msg}</p>`);
+    const res = await sendRequest(`/users/profile/theme/fork/${themeID}`, { method: 'POST' });
+    if (!res || res.error) return showModal(`<p>Error: ${res.code}, ${res.msg}</p>`);
 
     const submittedChange = await submitThemeChanges(res._id, reqBody);
     if (!submittedChange || submittedChange.error) return false; // handling done in function
@@ -1757,16 +1687,12 @@ async function submitThemeSettings(themeID) {
 }   
 
 async function submitThemeChanges(themeID, submitBody) {
-    const response = await fetch(`${apiURL}/users/profile/theme/submit/${themeID}`, {
+    const res = await sendRequest(`/users/profile/theme/submit/${themeID}`, { 
         method: 'PUT',
-        headers,
-        body: JSON.stringify(submitBody)
+        body: submitBody
     });
 
-    const res = await response.json();
-    if (debug) console.log(res);
-
-    if (!response.ok) return showModal(`<p>Error: ${res.code}, ${res.msg}</p>`);
+    if (!res) return;
 
     await applyTheme(res);
     editTheme(res); // rerender edit
@@ -4095,36 +4021,35 @@ async function renameUsername() {
 }
 
 // For API Use
-async function sendRequest(request, { method, body, extraHeaders }) {
+async function sendRequest(request, { method, body, extraHeaders, ignoreError=false }) {
     var headersEdited = {};
 
     if (extraHeaders) {
-        var headersEdited = headers;
+        headersEdited = { ...headers };
         for (const header in extraHeaders) {
-            headersEdited[header] = headers[header];
+            headersEdited[header] = extraHeaders[header];
         }
     }
 
-    console.log(headersEdited)
-    console.log(headers)
+    if (debug) console.log(`Sending Request: ${apiURL}${request}`)
     const res = await fetch(`${apiURL}${request}`, {
         method: method || 'GET',
         body: body ? JSON.stringify(body) : null,
         headers : extraHeaders ? headersEdited : headers
     });
     
-   try {
+    try {
         const data = await res.json();
         if (debug) console.log(data)
-        if (data.error) {
+        if (data.error && !ignoreError) {
             showModal(`<h1>Error</h1><p>${data.code}: ${data.msg}</p>`);
             return null;
         }
         return data;
-   } catch(err) {
+    } catch(err) {
         showModal(`<h1>Error</h1><p>Unknown Error.</p>`);
         return null;
-   }
+    }
 }
 
 function getId(url) {

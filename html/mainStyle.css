@@ -171,6 +171,9 @@ p {
         var(--main-shadow-color);
     transition: transform 400ms, border-color 400ms, background-color 400ms;
 }
+.menu-style {
+    background-color:  var(--main-button-color);
+}
 .menuButton {
     background-color:  var(--main-button-color);
     border: 2px solid var(--main-border-color);
