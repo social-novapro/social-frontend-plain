@@ -626,15 +626,12 @@ async function removeVote(pollID, optionID) {
         pollOptionID: optionID
     }
     
-    const response = await fetch(`${apiURL}/polls/removeVote`, {
+    const res = await sendRequest(`/polls/removeVote`, {
         method: 'PUT',
-        headers,
-        body: JSON.stringify(body)
+        body: body
     });
 
-    const res = await response.json();
-    if (debug) console.log(res)
-    if (res.error) return alert(`Error: ${res.msg}`);
+    if (!res || res.error) return null;
     
     removeColorOption(pollID, optionID)
     
@@ -657,15 +654,12 @@ async function voteOption(pollID, optionID) {
         pollOptionID: optionID
     }
     
-    const response = await fetch(`${apiURL}/polls/createVote`, {
+    const res = await sendRequest(`/polls/createVote`, {
         method: 'PUT',
-        headers,
-        body: JSON.stringify(body)
+        body
     });
 
-    const res = await response.json();
-    if (debug) console.log(res)
-    if (res.error) return alert(`Error: ${res.msg}`);
+    if (!res || res.error) return null;
     
     if (res.oldVote) removeColorOption(res.oldVote.pollID, res.oldVote.pollOptionID)
     colorizeOption(pollID, optionID)
@@ -679,16 +673,11 @@ async function voteOption(pollID, optionID) {
 async function userPage(username) {
     searching = true
 
-    const response = await fetch(`${apiURL}/get/username/${username}`, {
-        method: 'GET',
-        headers,
-    })
+    const userData = await sendRequest(`/get/username/${username}`, { method: 'GET' })
     
-    const userData = await response.json() 
-
     userHtml(userData._id)
 
-    return 
+    return null;
 }
 
 /*
@@ -770,17 +759,8 @@ async function findTag(content) {
 
     if (searchUser==''||searchUser=="@") return { found: false };
     if (!searchUser.startsWith("@")) return { found: false };
-    const response = await fetch(`${apiURL}/get/taguserSearch/${searchUser.replace("@", "")}`, {
-        method: 'GET',
-        headers,
-    });
-    
-    if (debug) console.log(response)
-    const res = await response.json();
-    if (debug) console.log(res)
-    if (res.error) return { found: false };
-    if (!res) return { found: false }
-    if (!res[0]) return { found: false }
+    const res = await sendRequest(`/get/taguserSearch/${searchUser.replace("@", "")}`, { method: 'GET' });
+    if (!res || res.error || !res[0]) return { found: false };
     return {found: true, results: res};
 }
 
@@ -878,17 +858,11 @@ async function sendLoginRequest() {
     headers.username = usernameLogin
     headers.password = passwordLogin
     
-    const response = await fetch(`${apiURL}Priv/get/userLogin/`, {
-        method: 'GET',
-        headers,
-    })
+    const userData = await sendRequest(`Priv/get/userLogin/`, { method: 'GET' })
 
     // if (response.status != 200) 
-    if (debug) console.log(response)
-    const userData = await response.json()
-    if (debug) console.log(userData)
    //  currentUserLogin = userData.accessToken
-    if (response.ok) {
+    if (res && !res.error) {
         if (userData.public._id) currentUserLogin.userid = userData.public._id
         saveLoginUser(userData)
         // save user token to cookie
@@ -1883,15 +1857,12 @@ async function requestChangePassword() {
     const password = document.getElementById("userEdit_password_old_text")?.value
     if (!password) return showModal("<p>Please enter your current password</p>");
 
-    const response = await fetch(`${apiURL}/auth/password/change/`, {
+    const res = await sendRequest(`/auth/password/change/`, {
         method: 'POST',
-        headers,
-        body: JSON.stringify({ "password": password })
+        body: { "password": password }
     });
 
-    const res = await response.json();
-    if (debug) console.log(res)
-    if (res.error) return showModal(`<p>Failed ${res.error ? res.msg : "unknown reason"}</p>`)
+    if (res.error) return;
      
     document.getElementById("completed_change_pass").innerHTML = `<p>Success, check your email.</p>`
     return showModal(`<p>Success, check your email.</p>`)
@@ -1899,13 +1870,7 @@ async function requestChangePassword() {
 }
 
 async function fetchClientEmailData() {
-    const response = await fetch(`${apiURL}/emails/userData/`, {
-        method: 'GET',
-        headers
-    });
-
-    const res = await response.json();
-    if (debug) console.log(res)
+    const res = await sendRequest(`/emails/userData/`, { method: 'GET' });
     return res
 }
 
@@ -1942,33 +1907,18 @@ async function changePref(feedName) {
 }
 
 async function getPrefAPI() {
-    try {
-        const response = await fetch(`${apiURL}/feeds/preference`, {
-            method: "GET",
-            headers
-        })
-        var data = await response.json();
-        if (debug) console.log(data)
-        return data; 
-    } catch {
-        return false;
-    }
+    const data = await sendRequest(`/feeds/preference`, { method: "GET" })
+    return data; 
 }
+
 async function changePrefAPI(feedName) {
-    var data;
-    try {
-        const response = await fetch(`${apiURL}/feeds/preference`, {
-            method: "POST",
-            headers,
-            body: JSON.stringify({ setPref: feedName })
-        })
-        var data = await response.json();
-        if (debug) console.log(data)
-        return data; 
-    } catch {
-        return data;
-    }
+    const data = await sendRequest(`/feeds/preference`, {
+        method: "POST",
+        body: { setPref: feedName }
+    });
+    return data; 
 }
+
 async function changeEmailPage() {
     const emailData = await fetchClientEmailData();
 
@@ -2086,30 +2036,17 @@ async function editEmailSettings() {
         reqBody.push({ option: item, value: document.getElementById(`emailSetting_${item}`).checked })
     }
 
-
-    const response = await fetch(`${apiURL}/emails/settings`, {
+    const res = await sendRequest(`/emails/settings`, {
         method: 'PUT',
-        headers,
-        body: JSON.stringify(reqBody),
+        body: reqBody,
     });
-
     
-    const res = await response.json();
-
-    if (debug) console.log(res);
-    if (!response.ok || res.error) return showModal(`<p>${res.msg}</p>`);
-
+    if (!res || res.error) return null;
     createEditEmailSettingsView(res);
 }
 
 async function getPossibleEmailSettings() {
-    const response = await fetch(`${apiURL}/emails/settings`, {
-        method: 'GET',
-        headers,
-    })
-
-    const res = await response.json();
-    if (debug) console.log(res);
+    const res = await sendRequest(`/emails/settings`, { method: 'GET' })
     return res;
 }
 
@@ -2117,22 +2054,20 @@ async function removeEmailRequest(currentEmail) {
     const password = document.getElementById("userEdit_email_pass_remove")?.value;
     if (!password) return showModal("Please enter your password");
 
-    const response = await fetch(`${apiURL}/emails/remove`, {
+    const res = await sendRequest(`/emails/remove`, {
         method: 'DELETE',
-        headers,
-        body: JSON.stringify({
+        body: {
             email: currentEmail,
             password: password
-        })
+        }
     });
 
-    const res = await response.json();
-    if (debug) console.log(res);
-    if (!response.ok) {
+    if (!res || res.error) {
         document.getElementById("resultRemoveRequest").innerHTML = `<p>Failed</p>`
     } else {
         document.getElementById("resultRemoveRequest").innerHTML = `<p>Success</p>`
     }
+
     return res;
 }
 
@@ -2164,13 +2099,7 @@ async function editEmailRequest(hasCurrent) {
 }
 
 async function validateEmail(email) {
-    const response = await fetch(`${apiURL}/emails/requests/validEmail/${email}`, {
-        method: 'GET',
-        headers
-    });
-
-    const res = await response.json();
-    if (debug) console.log(res)
+    const res = await sendRequest(`/emails/requests/validEmail/${email}`, { method: 'GET' });
     return res
 }
 
@@ -2179,15 +2108,12 @@ async function editEmailAccount() {
 }
 
 async function addEmailAccount({ email, password }) {
-    const response = await fetch(`${apiURL}/emails/set/`, {
+    const res = await sendRequest(`/emails/set/`, {
         method: 'POST',
-        headers,
-        body: JSON.stringify({"email" : email, "password" : password})
+        body: {"email" : email, "password" : password}
     });
 
-    const res = await response.json();
-    
-    if (!response.ok || res.error) {
+    if (!res || res.error) {
         document.getElementById("resultAddRequest").innerHTML = `<p>Failed</p>`
         return false
     } else {
@@ -2198,42 +2124,22 @@ async function addEmailAccount({ email, password }) {
 }
 
 async function subNotifi(subUser) {
-    const response = await fetch(`${apiURL}/notifications/sub/${subUser}`, {
-        method: 'POST',
-        headers
-    });
-    const res = await response.json();
-    if (debug) console.log(res)
-    if (!response.ok || res.error) return document.getElementById('notificationSub').innerHTML=`error`
-
+    const res = await sendRequest(`/notifications/sub/${subUser}`, { method: 'POST' });
+    if (!res || res.error) return document.getElementById('notificationSub').innerHTML=`error`
     document.getElementById('notificationSub').innerHTML=`done`
 }
 
 async function unsubUser(userID, username) {
-    const response = await fetch(`${apiURL}/notifications/unsub/${userID}`, {
-        method: 'DELETE',
-        headers
-    });
-    const res = await response.json();
-    if (debug) console.log(res)
-    if (!response.ok || res.error) return document.getElementById(`subList_${userID}`).innerHTML=`error while unsubscribing`
-
+    const res = await sendRequest(`/notifications/unsub/${userID}`, { method: 'DELETE' });
+    if (!res || res.error) return document.getElementById(`subList_${userID}`).innerHTML=`error while unsubscribing`
     document.getElementById(`subList_${userID}`).innerHTML=`Unsubscribed from <a onclick="userHtml('${userID}')">${username}</a>.`
 }
 
-async function unsubAll(userID) {
-    const response = await fetch(`${apiURL}/notifications/unsubAll/`, {
-        method: 'DELETE',
-        headers
-    });
+async function unsubAll() {
+    const res = await sendRequest(`/notifications/unsubAll/`, { method: 'DELETE' });
 
-    try {
-        const res = await response.json();
-        if (!response.ok || res.error) return document.getElementById(`subscriptionsDiv`).innerHTML=`error while unsubscribing`
-        else return document.getElementById(`subscriptionsDiv`).innerHTML=`Unsubscribed from all users.`
-    } catch {
-        return document.getElementById(`subscriptionsDiv`).innerHTML=`error while unsubscribing`
-    }
+    if (!res || res.error) return document.getElementById(`subscriptionsDiv`).innerHTML=`error while unsubscribing`
+    else return document.getElementById(`subscriptionsDiv`).innerHTML=`Unsubscribed from all users.`
 }
 
 function hideBookmarks() {
@@ -2245,14 +2151,9 @@ async function showBookmarks() {
     if (document.getElementById('bookmarksAreShown')) return hideBookmarks()
     document.getElementById('showBookmarksButton').innerHTML="Hide Bookmarks"
 
-    const response = await fetch(`${apiURL}/get/bookmarks/`, {
-        method: 'GET',
-        headers
-    });
+    const res = await sendRequest(`/get/bookmarks/`, { method: 'GET' });
 
     // if (!response.ok) return document.getElementById(`saveBookmark_${postID}`).innerText = "Error while saving"
-    const res = await response.json();
-    if (debug) console.log(res)
     // if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.error}`;
 
     var obj = {} // { list: name, saves: [] }
@@ -2297,14 +2198,11 @@ async function showSubscriptions() {
     if (document.getElementById('subscriptionsAreShown')) return hideSubscriptions()
     document.getElementById('showSubscriptionsButton').innerHTML="Hide Subscriptions"
     
-    const response = await fetch(`${apiURL}/notifications/subscriptions/`, {
-        method: 'GET',
-        headers
-    });
+    const res = await sendRequest(`/notifications/subscriptions/`, { method: 'GET' });
     // console.log(response)
 
     // if (!response.ok) return document.getElementById(`saveBookmark_${postID}`).innerText = "Error while saving"
-    `
+    const test = `
         [
             {
                 _id: "d1f32225-a940-48ed-bff9-22efd5636cbd",
@@ -2328,9 +2226,7 @@ async function showSubscriptions() {
             }
         ]
     `
-    const res = await response.json();
-    if (debug) console.log(res)
-    if (!response.ok) return document.getElementById('showSubscriptionsButton').innerHTML=`error`
+    if (!res || res.error) return document.getElementById('showSubscriptionsButton').innerHTML=`error`
     
 
     var ele = `<hr class="rounded" id="subscriptionsAreShown"><p>${res.length} Subscriptions</p><hr class="rounded">`
@@ -2363,15 +2259,10 @@ async function showNotifications() {
     if (document.getElementById('notificationsAreShown')) return hideNotifications()
     document.getElementById('showNotificationsButton').innerHTML="Hide Notifcations"
 
-    const response = await fetch(`${apiURL}/notifications/getList`, {
-        method: 'GET',
-        headers
-    });
+    const res = await sendRequest(`/notifications/getList`, { method: 'GET' });
 
     // if (!response.ok) return document.getElementById(`saveBookmark_${postID}`).innerText = "Error while saving"
-    const res = await response.json();
-    if (debug) console.log(res)
-    if (!response.ok) return document.getElementById('showNotificationsButton').innerHTML=`error`
+    if (!res || res.error) return document.getElementById('showNotificationsButton').innerHTML=`error`
     
 
     var ele = `<hr class="rounded" id="notificationsAreShown"><p id="amount_notifications">${res.amountFound} Notifications</p><hr class="rounded">`
@@ -2428,14 +2319,9 @@ async function showNotifications() {
 }
 
 async function dismissNotification(notificationID) {
-    const response = await fetch(`${apiURL}/notifications/dismiss/${notificationID}`, {
-        method: 'DELETE',
-        headers
-    });
-    const res = await response.json();
-    if (!response.ok) return ;
+    const res = await sendRequest(`/notifications/dismiss/${notificationID}`, { method: 'DELETE' });
+    if (!res || res.error) return ;
 
-    if (res.success == false) return;
     document.getElementById(`notification_${notificationID}`).remove();
 
     var input = document.getElementById("amount_notifications").innerText
@@ -2448,29 +2334,15 @@ async function dismissNotification(notificationID) {
 };
 
 async function dismissAll() {
-    const response = await fetch(`${apiURL}/notifications/dismissAll/`, {
-        method: 'DELETE',
-        headers
-    });
+    const res = await sendRequest(`/notifications/dismissAll/`, { method: 'DELETE' });
 
-    try {
-        const res = await response.json();
-        if (!response.ok || res.error) return document.getElementById(`notificationsDiv`).innerHTML=`error while dismissing`
-        else return document.getElementById(`notificationsDiv`).innerHTML=`Dismissed all notifications.`
-    } catch {
-        return document.getElementById(`notificationsDiv`).innerHTML=`error while dismissing`
-    }
+    if (!res || res.error) return document.getElementById(`notificationsDiv`).innerHTML=`error while dismissing`
+    else return document.getElementById(`notificationsDiv`).innerHTML=`Dismissed all notifications.`
 }
 
 async function showPost(postID) {
-    const response = await fetch(`${apiURL}/get/post/${postID}`, {
-        method: 'GET',
-        headers
-    });
-
-    const res = await response.json();
-    if (debug) console.log(res)
-    if (!response.ok) return showModal("<p>Post was not found</p>")
+    const res = await sendRequest(`/get/post/${postID}`, { method: 'GET' });
+    if (!res || res.error) return showModal("<p>Post was not found</p>")
 
     const user = await getUserDataSimple(res.userID)
     if (debug) console.log(user)
@@ -2485,14 +2357,8 @@ async function showPost(postID) {
 */
 
 async function getUserDataSimple(userID) {
-    const response = await fetch(`${apiURL}/get/userByID/${userID}`, {
-        method: 'GET',
-        headers
-    });
-
-    const res = await response.json();
-    if (debug) console.log(res)
-    if (!response.ok) return 
+    const res = await sendRequest(`/get/userByID/${userID}`, { method: 'GET' });
+    if (!res || res.error) return 
     else return res
 }
 
@@ -2529,14 +2395,8 @@ async function showDevOptions() {
     if (document.getElementById('showDevAreShown')) return hideDevOptions()
     document.getElementById('showDevOptionsButton').innerHTML="Hide Developer Settings"
 
-    const response = await fetch(`${apiURL}/get/developer/`, {
-        method: 'GET',
-        headers
-    });
-
-    if (!response.ok) return document.getElementById(`showDevDiv`).innerText = "Error while requesting data"
-    const res = await response.json();
-    if (debug) console.log(res)
+    const res = await sendRequest(`/get/developer/`, { method: 'GET' });
+    if (!res || res.error) return document.getElementById(`showDevDiv`).innerText = "Error while requesting data"
 
     var firstEle = `
         <hr class="rounded" id="showDevAreShown">
@@ -2654,15 +2514,12 @@ async function requestAppToken(amount) {
         appname: appName,
         userdevtoken: userDevToken
     }
-    const requestRes = await fetch(`${apiURL}Priv/post/newAppToken`, {
+    const appTokenData = await sendRequest(`Priv/post/newAppToken`, {
         method: 'POST',
-        headers,
-        body: JSON.stringify(data)
+        body: data
     });
 
-    const appTokenData = await requestRes.json();
-    if (debug) console.log(appTokenData)
-    if (!requestRes.ok || requestRes.error) return console.log({error: `${requestRes?.error ? requestRes.error : "an unknown error"}`});
+    if (!appTokenData|| appTokenData.error) return 
 
     const newEle = `
         <div class="menu menu-style">
@@ -2690,13 +2547,8 @@ async function requestAppToken(amount) {
 async function requestDevToken() {
     document.getElementById('devAcc').innerHTML="loading";
 
-    const requestRes = await fetch(`${apiURL}Priv/post/newDev`, {
-        method: 'POST',
-        headers
-    });
-
-    const devData = await requestRes.json();
-    if (!requestRes.ok || devData.error) return console.log({error: `${devData?.error ? devData.error : "an unknown error"}`});
+    const devData = await sendRequest(`Priv/post/newDev`, { method: 'POST' });
+    if (!devData || devData.error) return 
 
     const newEle = `
         ${devData._id ? `<p>devToken: <p onclick="revealDevOptions('devToken')" id="devToken" class="blur">${devData._id}</p>`:``}
@@ -2708,26 +2560,13 @@ async function requestDevToken() {
 };
 
 async function getPostAndProfileData(postID) {
-    const postRes = await fetch(`${apiURL}/get/post/${postID}`, {
-        method: 'GET', 
-        headers
-    });
+    const postData = await sendRequest(`/get/post/${postID}`, { method: 'GET' });
 
-    const postData = await postRes.json();
-
-    if (!postRes.ok || postData.error) return {error: `${postData.error ? postData.error : "an unknown error"}`};
+    if (!postData || postData.error) return {error: `${postData.error ? postData.error : "an unknown error"}`};
     if (debug) console.log(postData);
 
-    const profileRes = await fetch(`${apiURL}/get/userByID/${postData.userID}`, {
-        method: 'GET',
-        headers,
-    });
-
-    const profileData = await profileRes.json();
-    if (debug) console.log(profileData);
-
-    if (!profileRes.ok || profileData.error) return {error: `${profileData.error ? profileData.error : "an unknown error"}`};
-
+    const profileData = await sendRequest(`/get/userByID/${postData.userID}`, { method: 'GET' });
+    if (!profileData || profileData.error) return {error: `${profileData.error ? profileData.error : "an unknown error"}`};
 
     return { "postData" : postData, "profileData": profileData };
 }
@@ -2919,15 +2758,9 @@ function getCookie(cname) {
 }
 
 async function getPossibleFeeds() {
-    try {
-        const response = await fetch(`${apiURL}/feeds/possibleFeeds`, { method: 'GET', headers})
-        var data = await response.json();
-        if (debug) console.log(data);
-        return data
-    } catch (error) {
-        console.log(error)
-        return false;
-    }
+    const data = await sendRequest(`/feeds/possibleFeeds`, { method: 'GET' })
+    if (!data || data.error) return false;
+    return data
 }
 
 /*
@@ -3011,7 +2844,7 @@ async function getFeed(feedType) {
 
     document.getElementById('mainFeed').innerHTML=loadingHTML("Loading feed...");
     listenForLoading();
-    const data = await sendRequest(`/feeds/${feedToUse}`, { headers })
+    const data = await sendRequest(`/feeds/${feedToUse}`, { method: 'GET' })
     //const response = await fetch(`${apiURL}/feeds/${feedToUse}`, { method: 'GET', headers})
 
     currentFeedType = feedToUse;
@@ -3124,17 +2957,15 @@ function buildView(posts) {
 
 async function deletePost(postID) {
     if (debug) console.log(`deleting post ${postID}`)
-    const response = await fetch(`${apiURL}/delete/removePost/${postID}`, { method: 'DELETE', headers})
 
-    if (response.status == 200)  {
-        if (debug) console.log("post deleted")
+    const response = await sendRequest(`/delete/removePost/${postID}`, { method: 'DELETE' })
+    if (!response || response.error) return null;
+    if (debug) console.log("post deleted")
 
-        var elementPopup = document.getElementById(`popupOpen_${postID}`);
-        if (elementPopup) return elementPopup.remove();
+    var elementPopup = document.getElementById(`popupOpen_${postID}`);
+    if (elementPopup) return elementPopup.remove();
 
-        return document.getElementById(`postdiv_${postID}`).remove()
-    }
-    else return showModal("Error", "Something went wrong, please try again later")
+    return document.getElementById(`postdiv_${postID}`).remove()
 }
 //postContent_${post._id}
 
@@ -3162,16 +2993,11 @@ function editPost(postID, edited) {
 async function cancelEdit(postID, content, edited) {
     if (debug) console.log(`cancelling edit of post ${postID}`)
 
-    const postData = await fetch(`${apiURL}/get/post/${postID}`, { method: 'GET', headers})
-    if (!postData.ok) return showModal("Error", "Something went wrong, please try again later")
-    const post = await postData.json()
-    if (debug) console.log(post)
-    const userData = await fetch(`${apiURL}/get/userByID/${post.userID}`, { method: 'GET', headers})
-    if (debug) console.log(userData)
-    if (!userData.ok) return showModal("Error", "Something went wrong, please try again later")
+    const post = await sendRequest(`/get/post/${postID}`, { method: 'GET' })
+    if (!post || post.error) return false;
 
-    const user = await userData.json()
-    if (debug) console.log(user)
+    const user = await sendRequest(`/get/userByID/${post.userID}`, { method: 'GET' })
+    if (!user || user.error) return false;
     return document.getElementById(`postElement_${postID}`).innerHTML = postElementCreate({post, user})
 }
 
@@ -3181,18 +3007,13 @@ async function submitEdit(postID) {
     const newEdit = document.getElementById('editPostInput').value
     const data = {'postID': postID, 'content': newEdit}
 
-    const response = await fetch(`${apiURL}/put/editPost`, {
+    const editData = await sendRequest(`/put/editPost`, {
         method: 'PUT',
-        headers,
-        body: JSON.stringify(data)
+        body: data
     })
     
-    if (debug) console.log(response)
-    if (!response.status == 200) return showModal("Error something went wrong, please try again later")
+    if (!editData || editData.error) return false;
 
-    const editData = await response.json()
-
-    if (debug) console.log(editData)
     const imageContent = checkForImage(editData.new.content)
 
     document.getElementById(`editButton_${postID}`).innerHTML=`<a onclick='editPost("${postID}")'>edit post</a>`
@@ -3208,14 +3029,10 @@ async function submitEdit(postID) {
     `  
 }
 async function quotePost(postID) {
-    const postResponse = await fetch(`${apiURL}/get/post/${postID}`, { method: 'GET', headers})
-    if (!postResponse.ok) return showModal(`<h1 class="h1-style">Error</h1><p>something went wrong</p>`)
-    const post = await postResponse.json()
-    const userResponse = await fetch(`${apiURL}/get/userByID/${post.userID}`, { method: 'GET', headers })
-        
-    if (!userResponse.ok) return showModal(`<h1 class="h1-style">Error</h1><p>something went wrong</p>`)
-    const user = await userResponse.json()
-    if (debug) console.log(user)
+    const post = await sendRequest(`/get/post/${postID}`, { method: 'GET' })
+    if (!post || post.error) return false;
+    const user = await sendRequest(`/get/userByID/${post.userID}`, { method: 'GET' })
+    if (!user || user.error) return false;
 
     await showModal(`
         <h1>Create a new Post</h1>
@@ -3239,14 +3056,12 @@ async function quotePost(postID) {
 }
 
 async function replyPost(postID) {
-    const postResponse = await fetch(`${apiURL}/get/post/${postID}`, { method: 'GET', headers})
-    if (!postResponse.ok) return showModal(`<h1>Error</h1><p>something went wrong</p>`)
-    const post = await postResponse.json()
-    const userResponse = await fetch(`${apiURL}/get/userByID/${post.userID}`, { method: 'GET', headers })
-        
-    if (!userResponse.ok) return showModal(`<h1>Error</h1><p>something went wrong</p>`)
-    const user = await userResponse.json()
-    if (debug) console.log(user)
+    const post = await sendRequest(`/get/post/${postID}`, { method: 'GET', headers})
+    if (!post || post.error) return false;
+
+    const user = await sendRequest(`/get/userByID/${post.userID}`, { method: 'GET', headers })
+    if (!user || user.error) return false;
+
     await showModal(`
         <h1>Create a new Reply</h1>
         <div class="postModalActions">
@@ -3267,6 +3082,7 @@ async function replyPost(postID) {
         <div id="foundTaggings"></div>
     `, "hide")
 }
+
 function checkIfLiked(postID) {
     if (document.getElementById(`likePost_${postID}`).classList.contains("likedColour")) return true
     else return false
@@ -3296,47 +3112,28 @@ async function likePost(postID) {
 
     const postIsLiked = checkIfLiked(postID)
 
-    var data 
     if (postIsLiked) {
         if (debug) console.log("liking post")
-        const response = await fetch(`${apiURL}/delete/unlikePost/${postID}`, { method: 'DELETE', headers})
-        data = await response.json()
+        const data = await sendRequest(`/delete/unlikePost/${postID}`, { method: 'DELETE' })
+        if (!data || data.error)  return false;
 
-        if (!response.ok || data.error) {
-            if (debug) console.log("something went wrong while liking");
-            return false;
-        }
-        
         document.getElementById(`likePost_${postID}`).classList.remove("likedColour");
         document.getElementById(`likePost_${postID}`).innerText = puralDataType('like', data.totalLikes);
-    }
-    else {
+    } else {
         if (debug) console.log("liking post")
-        const response = await fetch(`${apiURL}/put/likePost/${postID}`, { method: 'PUT', headers})
+        const data = await sendRequest(`/put/likePost/${postID}`, { method: 'PUT' })
 
-        data = await response.json()
-
-        if (!response.ok || data.error) {
-            if (debug) console.log("something went wrong while liking");
-            return false;
-        }
+        if (!data || data.error) return false;
 
         document.getElementById(`likePost_${postID}`).classList.add("likedColour");
         document.getElementById(`likePost_${postID}`).innerText = puralDataType('like', data.totalLikes)
     }
-    
-    if (debug) console.log(data)
-
-   
 }
 
 // USER DATA FOR FEED
 async function getUserData(userID) {
-    const response = await fetch(`${apiURL}/get/user/${userID}`, {
-        method: 'GET',
-        headers,
-    });
-    return response.json()
+    const response = await sendRequest(`/get/user/${userID}`, { method: 'GET' });
+    return response;
 }
 
 var currentSearch
@@ -3365,22 +3162,20 @@ async function searchResult(input) {
 
     currentSearch = input
     searching = true
-    headers.lookupkey = input
+    const extraHeaders = {
+        lookupkey: input
+    }
 
     changeHeader(`?search=${input}`)
 
-    const response = await fetch(`${apiURL}/get/search/`, {
+    const data = await sendRequest(`/get/search/`, {
         method: 'GET',
-        headers,
-    });  
-
-    var data = await response.json()
+        extraHeaders
+    }); 
 
     if (debug) console.log("loading search")
-
-    if (debug) console.log(data)
     
-    if (!data.postsFound[0] && !data.usersFound[0]) return document.getElementById("mainFeed").innerHTML= `<div class="publicPost searchUser"><p>no results were found, try to seach something else.</div>`
+    if (!data || data.error || (!data.postsFound[0] && !data.usersFound[0])) return document.getElementById("mainFeed").innerHTML= `<div class="publicPost searchUser"><p>no results were found, try to seach something else.</div>`
     else console.log(data.postsFound)
 
     document.getElementById("mainFeed").innerHTML = `
@@ -3689,22 +3484,12 @@ async function publishPoll() {
 
     if (debug) console.log(body);
 
-    const response = await fetch(`${apiURL}/polls/create`, {
+    const pollData = await sendRequest(`/polls/create`, {
         method: 'POST',
-        headers,
-        body: JSON.stringify(body)
+        body: body
     });
 
-    const pollData = await response.json()
-    if (debug) console.log(pollData)
-
-    if (!response.ok) {
-        if (pollData.msg) showModal(`<h1>Something went wrong.</h1> <p>${pollData.code}\n${pollData.msg}</p>`)
-        else if (pollData.msg) showModal(`<h1>Something went wrong.</h1> <p>${pollData.error.code}\n${pollData.msg}</p>`)
-        else showModal(`<h1>Something went wrong.</h1> <p>${JSON.stringify(pollData)}</p>`)
-        return null;
-    }
-    
+    if (!pollData || pollData.error) return null;
     return pollData.pollData;
 };
 
@@ -3946,16 +3731,12 @@ async function createPost(params) {
 
     changeHeader('')
 
-    const response = await fetch(`${apiURL}/post/createPost`, {
+    const postData = await sendRequest(`/post/createPost`, {
         method: 'POST',
-        headers,
-        body: JSON.stringify(data)
+        body: data
     });
 
-    const postData = await response.json()
-    if (debug) console.log(postData)
-
-    if (!response.ok)  return showModal(`<h1>something went wrong.</h1> <p>${postData.code}\n${postData.msg}</p>`)
+    if (!postData || postData.error) return false;
     
     const userData = await getUserDataSimple(postData.userID)
 
@@ -4006,14 +3787,11 @@ async function renameUsername() {
             newUsername
         }   
     
-        const response = await fetch(`${apiURL}/put/editUsername`, {
+        const newData = await sendRequest(`/put/editUsername`, {
             method: 'PUT',
-            headers,
-            body: JSON.stringify(data)
+            body: data
         });
 
-        const newData = await response.json()
-    
         document.getElementById("resultEditUsername").innerHTML = `
             <p>Changed username! from ${newData.before.username} to ${newData.new.username}</p>
         `
@@ -4031,24 +3809,26 @@ async function sendRequest(request, { method, body, extraHeaders, ignoreError=fa
         }
     }
 
-    if (debug) console.log(`Sending Request: ${apiURL}${request}`)
-    const res = await fetch(`${apiURL}${request}`, {
+    if (debug) console.log(`Sending Request: ${method} ${apiURL}${request}`);
+
+    const response = await fetch(`${apiURL}${request}`, {
         method: method || 'GET',
         body: body ? JSON.stringify(body) : null,
         headers : extraHeaders ? headersEdited : headers
     });
     
     try {
-        const data = await res.json();
-        if (debug) console.log(data)
+        const data = await response.json();
+        if (debug) console.log(data);
         if (data.error && !ignoreError) {
             showModal(`<h1>Error</h1><p>${data.code}: ${data.msg}</p>`);
-            return null;
+            return data;
         }
+
         return data;
     } catch(err) {
         showModal(`<h1>Error</h1><p>Unknown Error.</p>`);
-        return null;
+        return { error : true };
     }
 }
 
