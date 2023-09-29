@@ -10,81 +10,40 @@
 
     check if there are messages to be read
     make a secondary message area
-// function that checks if user is logged in
-if (checkLoginUser()) {
-    // if user is logged in, show the logout button
-    document.getElementById("logoutButton").innerHTML = `
-        <button class="buttonStyled" onclick="logout()">Logout</button>
-    `
-} else {
-    // if user is not logged in, show the login button
-    document.getElementById("logoutButton").innerHTML = `
-        <button class="buttonStyled" onclick="login()">Login</button>
-    `
-}
-
-// if user is logged in, show the post button
-if (checkLoginUser()) {
-    document.getElementById("postButton").innerHTML = `
-        <button class="buttonStyled" onclick="postbar()">Post</button>
-    `
-} else {
-    document.getElementById("postButton").innerHTML = ``
-}
-
-// Ping server to see if user is logged in
-async function checkLoginUser() {
-    const headers = {
-        'Authorization': 'Bearer my-token',
-        'My-Custom-Header': 'foobar'
-    };
-
-    const checkLogin = await axios.get(`${APIv1}/check/login`, { headers })
-    return checkLogin.data
-}
 */
+
+// URL VARIBLES
 var getUrl = window.location;
 var baseUrl = getUrl .protocol + "//" + getUrl.host + "/" + getUrl.pathname.split('/')[1];
 var pathArray = window.location.pathname.split( '/' );
-
 var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
+var params = new URLSearchParams(window.location.search)
 
-// const apiURL = `http://localhost:5002/v1`
-// const apiURL = `https://interact-api.novapro.net/v1`
-
+// API HEADERS
 var headers = {
     'Content-Type': 'application/json',
     "devtoken" : "6292d8ae-8c33-4d46-a617-4ac048bd6f11",
     "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421"
 }
 
+// VARIBLES
 var currentUserLogin = { }
-/*var currentUserLogin = {
-    "accesstoken" : "d023ed40-95ff-42aa-962b-e19475ebd317",
-    "userid" : "d825813d-95d2-46eb-868a-ae2e850eab92"
-}*/
-
 var currentPage
-// need usertoken, and userid for sending
-
 var searching
 var currentFeed 
 var currentFeedType
+var debug = false
+var mobileClient = checkifMobile();
 
+// LOCAL STORAGE
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 var LOCAL_STORAGE_THEME_SETTINGS = 'social.themeSettings'
 var LOCAL_STORAGE_THEME_POSSIBLE = 'social.themePossible'
 
 // let loginUserToken = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
 
-var debug = false
-
-var mobileClient = checkifMobile();
-var params = new URLSearchParams(window.location.search)
-
 function checkifMobile() {
     const width = document.getElementById("html").clientWidth
-        console.log(width)
     if (width < 900) {
         return true;
     } else {
@@ -92,24 +51,26 @@ function checkifMobile() {
     }
 }
 
-// good luck
+// actives dev mode
 devMode();
+
+// makes sure url is as expected
 if (location.protocol !== 'https:' && !((/localhost|(127|192\.168|10)\.(\d{1,3}\.?){2,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.(\d{1,3}\.?){2}/).test(location.hostname))) {
     location.replace(`https:${location.href.substring(location.protocol.length)}`);
-}
-else {
+} else {
     if (!('fetch' in window)) {
         if (debug) console.log('Fetch API not found, please upgrade your browser.');
         showModal(`Please upgrade your browser to use Interact!`)
-    }
-    else checkLogin()
+    } else checkLogin()
 }
+
 // CHANGES URL OF BROWSER
 function changeHeader(newLink) {
     let stateObj = { id: "100" };
     window.history.replaceState(stateObj, "Socket", "/" + newLink);
 }
 
+// parameter checks
 async function checkURLParams() {
     var paramsInfo = {
         paramsFound: false
@@ -118,8 +79,6 @@ async function checkURLParams() {
     const ifUsername = params.has('username')
     const ifPostID = params.has("postID")
     const ifSearch = params.has("search")
-    const ifLoginRequest = params.has("login")
-    const ifNewAccountLogin = params.has("newAccount")
     const ifPostPage = params.has("posting");
     const ifUserEdit = params.has("userEdit");
     const ifSettings = params.has("settings");
@@ -148,18 +107,6 @@ async function checkURLParams() {
         const searchSearching = params.get('search')
         searchResult(searchSearching)
         addWritingToSeachBar(searchSearching)
-    }
-    else if (ifLoginRequest) {
-        paramsFound = true
-        paramsInfo.paramsFound = true
-
-        loginPage()
-    }
-    else if (ifNewAccountLogin) {
-        paramsFound = true
-        paramsInfo.paramsFound = true
-
-        loginSplashScreen()
     }
     else if (ifPostPage) {
         paramsFound = true
@@ -292,44 +239,10 @@ function postElementCreate({ post, user, type, hideParent, hideReplies, pollData
     `
 
     if (post.pollID && !pollData) {
-        createPollElement(post._id, post.pollID)
-        .then(function(ele) { 
-            if (ele) {
-                document.getElementById(`pollContainer_${post._id}`).innerHTML = ele; 
-                checkIfUserVoted(post.pollID)
-                .then(function(data) {
-                    if (data.error) {
-                        if (debug) console.log(data);
-                        return false;
-                    }
-                    if (data.voted && data.foundVote && data.foundVote.pollOptionID && data.foundVote.pollID == post.pollID) {
-                        colorizeOption(post.pollID, data.foundVote.pollOptionID);
-                        changeVoteOption(post.pollID, data.foundVote.pollOptionID);
-                    }
-                    devMode()
-                })
-            }
-        })
+        // handle poll no data
     }
 
     return element;
-}
-
-function changeVoteOption(pollID, optionID) {
-    return false;//doesnt work properly, changed how it works
-
-    const element = document.getElementById(`poll_option_${pollID}_${optionID}`);
-    console.log(element);
-    if (debug) console.log(pollID);
-    if (userVoted == true) {
-        // colo
-        
-        // const myElement = document.getElementById('myElement');
-        element.onclick = `removeVote('${pollID}', '${optionID}')`;
-    } else {
-        // const myElement = document.getElementById('myElement');
-        element.onclick = `voteOption('${pollID}', '${optionID}')`;
-    }
 }
 
 function colorizeOption(pollID, optionID) {
@@ -337,6 +250,7 @@ function colorizeOption(pollID, optionID) {
     if (debug) console.log(elementID);
     document.getElementById(elementID).classList.add("voted");
 }
+
 function removeColorOption(pollID, optionID) {
     const elementID = `poll_option_${pollID}_${optionID}`;
     if (debug) console.log(elementID)
@@ -344,7 +258,6 @@ function removeColorOption(pollID, optionID) {
 }
 
 async function popupActions(postID, hideParent, hideReplies, owner) {
-    // options = JSON.parse(options)
     var elementPopup = document.getElementById(`popupOpen_${postID}`);
     if (elementPopup) return elementPopup.remove();
 
@@ -375,13 +288,6 @@ async function viewParentPost(postID, parentPostID) {
     }
 
     const postData = await sendRequest(`/get/post/${parentPostID}`, { method: "GET" });
-    //const response = await fetch(`${apiURL}/get/post/${parentPostID}`, {
-    //    method: 'GET',
-    //    headers
-    //    // body: JSON.stringify(body)
-    //});
-    
-    //const postData = await response.json();
 
     if (postData.deleted == true || !postData.userID) {
         //document.getElementById()
@@ -415,11 +321,8 @@ async function viewReplies(postID) {
         return document.getElementById(`repliesOpened_${postID}`).remove();
     }
 
-    // if ()
-    // http://localhost:5002/v1/get/postReplies/71f9a348-aa28-4443-a39d-4247620e43ce
     const replyData = await sendRequest(`/get/postReplies/${postID}`, { method: 'GET', });
-    if (debug) console.log(replyData)
-    if (replyData.code) {
+    if (replyData.error) {
         document.getElementById(`postElement_${postID}`).innerHTML+=`
             <div id="repliesOpened_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
                 <p>Replies</p>
@@ -430,14 +333,11 @@ async function viewReplies(postID) {
         if (debug) console.log("no replies")
         return ;
     }
-    // array
 
     var ele = ``;
     for (const reply of replyData.replies) {
-        // if (reply!=null) {
-            const userData = await sendRequest(`${apiURL}/get/userByID/${reply.userID}`, { method: 'GET' });
-            ele+=postElementCreate({post: reply, user: userData, hideParent: true });
-        // }
+        const userData = await sendRequest(`${apiURL}/get/userByID/${reply.userID}`, { method: 'GET' });
+        ele+=postElementCreate({post: reply, user: userData, hideParent: true });
     }
 
     document.getElementById(`postElement_${postID}`).innerHTML+=`
@@ -451,7 +351,6 @@ async function viewReplies(postID) {
     document.getElementById(`replies_${postID}`).innerText = "Close replies";
     // get message
     // postElementCreate
-
 }
 
 async function saveBookmark(postID, list) {
@@ -460,19 +359,13 @@ async function saveBookmark(postID, list) {
         listname: list ? list : "main"
     }
     const res = await sendRequest(`/post/savePost/`, { method: 'POST', body });
-
-    // if (!response.ok) return document.getElementById(`saveBookmark_${postID}`).innerText = "Error while saving"
-    //const res = await response.json();
-    //if (debug) console.log(res)
     if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.error}`;
     document.getElementById(`saveBookmark_${postID}`).innerText="Saved"
 }
 
 async function showLikes(postID) {
     const likedBy = await sendRequest(`/get/postLikedBy/${postID}`, { method: 'GET' });
-    //const likedBy = await response.json();
-    //if (debug) console.log(likedBy.peopleLiked);
-    if (!response.ok || !likedBy.peopleLiked) return document.getElementById(`likedBy_${postID}`).innerHTML = `Could not find any people who liked the post.`;
+    if (!likedBy || !likedBy.peopleLiked) return document.getElementById(`likedBy_${postID}`).innerHTML = `Could not find any people who liked the post.`;
 
     var newElement = `<p>Liked By:</p>`;
     for (const people of likedBy.peopleLiked) {
@@ -484,9 +377,6 @@ async function showLikes(postID) {
 
 async function showEditHistory(postID) {
     const editData = await sendRequest(`/get/postEditHistory/${postID}`, { method: 'GET' });
-
-    //const editData = await response.json();
-    //if (debug) console.log(editData);
     if (!editData || !editData.edits) return document.getElementById(`editHistory_${postID}`).innerHTML = `Could not find any edits.`;
 
     var newElement = `<p>Edit History:</p>`;
@@ -538,19 +428,6 @@ function getTimeSince(time) {
     return finalReturn;
 }
 
-async function createPollElement(postID, pollID) {
-    return getPollData(pollID, {
-        method: 'GET',
-        headers,
-    })
-    .then(function (pollData) {
-        return pollElement(postID, pollID, pollData);
-    })
-    .catch(function (err) {
-        console.log(err);
-    });
-}
-
 function pollElement(postID, pollID, pollData, voteData) {
     if (!pollData || !pollData.pollOptions) return;
     var totalVotes = 0;
@@ -582,40 +459,6 @@ function pollElement(postID, pollID, pollData, voteData) {
             <p>Total votes: ${totalVotes} | ${timesinceData.sinceOrUntil=="current" ? "ended just now" : `${timesinceData.sinceOrUntil=="since" ? ` ended ${timesinceData.value} ago` : `${timesinceData.value} time left`}`} </p>
         </div>
     `;
-}
-
-async function checkIfUserVoted(pollID) {
-    if (debug) console.log("check " + pollID)
-    // ttp://localhost:5002/v1/polls/
-    return fetch(`${apiURL}/polls/userVote/${pollID}`, {
-        method: 'GET',
-        headers,
-    })
-    .then(function (res) {
-        return res.json();
-    })
-    .then(function (data) {
-        return data;
-    })
-    .catch(function (err) {
-        console.log(err);
-    });
-}
-
-async function getPollData(pollID) {
-    return fetch(`${apiURL}/polls/get/${pollID}`, {
-        method: 'GET',
-        headers,
-    })
-    .then(function (res) {
-        return res.json();
-    })
-    .then(function (data) {
-        return data;
-    })
-    .catch(function (err) {
-        console.log(err);
-    });
 }
 
 async function removeVote(pollID, optionID) {
@@ -667,9 +510,6 @@ async function voteOption(pollID, optionID) {
     if (debug) console.log("Voted!")
 }
 
-// async function postPage() {
-
-// }
 async function userPage(username) {
     searching = true
 
@@ -764,35 +604,6 @@ async function findTag(content) {
     return {found: true, results: res};
 }
 
-document.addEventListener('keypress', logKey);
-
-function logKey(e) {
-    if (e.key == '/') {
-        searchBar()
-        document.getElementById('searchBarArea').focus()
-    }
-}
-
-/*
-async function showModal(html, showClose) {
-    document.getElementById('modalContainer').classList.add("showModal");
-    document.getElementById('modal').innerHTML = html
-
-    if (showClose == "hide") return
-    else return showModalClose()
-}
-
-async function showModalClose() {
-    document.getElementById('modal').innerHTML+=`
-        <button class="buttonStyled" onclick="closeModal()">Close</button>
-    `
-}
-
-async function closeModal() {
-    document.getElementById('modalContainer').classList.remove("showModal")    
-}
-*/
-
 // LOGIN INFO 
 async function checkLogin() {
     if (debug) console.log(loginUserToken)
@@ -820,137 +631,8 @@ async function checkLogin() {
 }
 
 // USER LOGIN SPLASH SCREEN 
-async function loginSplashScreen() {
+function loginSplashScreen() {
     return window.location.href='/begin'
-    /*document.getElementById("mainFeed").innerHTML = `
-        <div class="publicPost signInDiv">
-            <h1>Your not signed in!</h1>
-            <p>Please Sign into Interact to Proceed!</p>
-            <button class="buttonStyled" onclick="loginPage()">Log into Your Account</button>
-            <button class="buttonStyled" onclick="createUserPage()">Create an Account</button>
-        </div>
-    `*/
-}
-
-// USER LOGIN PAGE 
-async function loginPage() {
-    document.getElementById("mainFeed").innerHTML = `
-        <h1>Please Login!</h1>
-        <form onsubmit="sendLoginRequest()" id="signInForm">
-            <div>
-                <p>Enter Username:</p>
-                <p><input id="userUsernameLogin" class="menu-style" placeholder="Username" type="text" name="username"></p>
-            </div>
-            <div>
-                <p>Enter Password</p>
-                <p><input id="userPasswordLogin" class="menu-style" placeholder="Password" type="password" name="password"></p>
-            </div>
-            <input class="buttonStyled" type="submit">
-        </form>
-    `
-        document.getElementById("signInForm").addEventListener("submit", function (e) { e.preventDefault()})
-}
-
-async function sendLoginRequest() {
-    var usernameLogin = document.getElementById('userUsernameLogin').value;
-    var passwordLogin = document.getElementById('userPasswordLogin').value;
-
-    headers.username = usernameLogin
-    headers.password = passwordLogin
-    
-    const userData = await sendRequest(`Priv/get/userLogin/`, { method: 'GET' })
-
-    // if (response.status != 200) 
-   //  currentUserLogin = userData.accessToken
-    if (res && !res.error) {
-        if (userData.public._id) currentUserLogin.userid = userData.public._id
-        saveLoginUser(userData)
-        // save user token to cookie
-        // setCookie(currentUser,cvalue,exdays) {}
-        return await getFeed()
-    }
-
-    else return showModal(`<p>Error: ${userData.code}\n${userData.msg}</p>`)
-
-    if (userData.login === true) {
-        return await getFeed()
-    }
-}
-
-/*
-function createUserPage() {
-    document.getElementById("mainFeed").innerHTML = `
-        <h1>Please Create an Account!</h1>
-        <p id="errorMessage"></p>
-        <form onsubmit="createNewUserRequest()" id="createUserForm">
-            <div> 
-                <p>Enter Your New Username:</p>
-                <input type="text" id="usernameCreate" placeholder="Username" type="text" name="username">
-            </div>
-            <div> 
-                <p>Enter Your New Displayname:</p>
-                <input type="text" id="displaynameCreate" placeholder="Displayname">
-            </div>
-            <div> 
-                <p>Enter Your New Password:</p>
-                <input id="passwordCreate" placeholder="Password" type="password" name="password">
-            </div>
-            <div> 
-                <p>Enter Your Description:</p>
-                <input type="text" id="descriptionCreate" placeholder="Description">
-            </div>
-            <div> 
-                <p>Enter Your Pronouns:</p>
-                <input type="text" id="pronounsCreate" placeholder="Pronouns">
-            </div>
-            <input class="buttonStyled" type="submit">
-        </form>
-    `
-    document.getElementById("createUserForm").addEventListener("submit", function (e) { e.preventDefault()})
-}
-
-
-async function createNewUserRequest() {
-    var usernameCreate = document.getElementById('usernameCreate').value;
-    var displaynameCreate = document.getElementById('displaynameCreate').value;
-    var passwordCreate = document.getElementById('passwordCreate').value;
-    var descriptionCreate = document.getElementById('descriptionCreate').value;
-    var pronounsCreate = document.getElementById('pronounsCreate').value;
-
-    const data = { 
-        "username" : usernameCreate, 
-        "displayName" : displaynameCreate,
-        "password" : passwordCreate,
-        "description": descriptionCreate,
-        "pronouns": pronounsCreate
-    };
-
-    if (debug) console.log(currentUserLogin) 
-    if (debug) console.log(data)
-
-    const response = await fetch(`${apiURL}Priv/post/newUser`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(data)
-    });
-    if (debug) console.log(response)
-    const responseParsed = await response.json()
-    if (debug) console.log(responseParsed)
-    if (response.ok) {
-        // save user token to cookie
-        // setCookie(currentUser,cvalue,exdays) {}
-        return await getFeed()
-    }
-    else return document.getElementById('errorMessage').innerHTML=`Error: ${responseParsed.code}, ${responseParsed.msg}`
-}
-*/
-
-// CHANGES MAIN FEED BUTTON TO PROFILE
-function goBackFeedFromProfile() {
-    document.getElementById("page2").innerHTML = `Profile` 
-    searching = false
-
-    return checkLogin()
 }
 
 // USER PROFILE PAGE
@@ -960,7 +642,6 @@ async function profile() {
     searching = true
 
     userHtml(currentUserLogin.userID)
-        // editable after
 
     currentPage = "profile"
 }
@@ -996,7 +677,6 @@ async function userEdit(action) {
 
     if (!newUser || newUser.error) return console.log(newUser)
 
-    // return window.location.href = `${document.getElementById('userEdit_username_text').value}`
     return showModal("<p>Success! You can now close this page.</p>")
 }
 
@@ -1010,14 +690,6 @@ async function postHtml(postID) {
     document.getElementById("mainFeed").innerHTML = ele
 
     return 
-    if (postRes.isReply) {
-
-    } else {
-
-    }
-    // const ele = ``;
-
-
     /*
     | Mother of post  (recursivly)
     |
@@ -1028,6 +700,7 @@ async function postHtml(postID) {
         loads one comment index (most recent)
     */
 }
+
 async function getFullUserData(userID) {
     const profileData = await sendRequest(`/get/user/${userID}`, { method: 'GET' })
     
@@ -1250,7 +923,6 @@ function switchDevMode() {
 
 async function userEditPage() {
     await userEditHtml(currentUserLogin.userID);
-    //alert("ok")
     return true;
 }
 
@@ -1260,11 +932,6 @@ async function userEditHtml(userID) {
 
     if (userID != currentUserLogin.userID) return showModal("<div><p>Sorry, you can't edit this user!</p></div>");
     changeHeader("?userEdit")
-
-    //const stringifiedTheme = `${profileData?.userData.colourTheme ? JSON.stringify(profileData.userData.colourTheme) : null}`
-    //console.log( JSON.stringify(profileData.userData?.colourTheme))
-    //const stringifiedTheme =  JSON.stringify(profileData.userData?.colourTheme)
-    //console.log(stringifiedTheme)
 
     var timesince
     if (profileData.userData.creationTimestamp) timesince = checkDate(profileData.userData.creationTimestamp)
@@ -1345,11 +1012,6 @@ async function userEditHtml(userID) {
                         <button class="menuButton menuButton-style" onclick="requestVerification()">Request</button>
                     </div>
                 `
-                /*
-                <form onsubmit="requestVerification()" id="verifyUserForm">
-                        <input type="text" id="content_request_verification" placeholder="Why do you want to verify?">
-                    </form>
-                */
             }
         </div>
     `
@@ -1375,7 +1037,6 @@ function unescapeHtml(text) {
 
 async function editThemePanel() {
     const themeSettings = await getTheme(null, true)
-
     if (!themeSettings || themeSettings.error) return await createTheme();
 
     await editTheme(themeSettings);
@@ -1415,7 +1076,6 @@ async function createTheme() {
 
 async function editTheme(themeSettings) {
     if (!themeSettings || themeSettings.error) return await createTheme();
-
     const possibleThemeEdits = await getPossibleThemeEdits();
 
     var ele = `
@@ -1485,9 +1145,6 @@ async function editTheme(themeSettings) {
     `;
     
     ele+=`</div>`;
-
-
-    //ele += `</form><button class="userInfo buttonStyled" onclick="submitThemeSettings('${themeSettings._id}')">Submit Theme Edits</button></div>`
 
     document.getElementById("userThemeEditor").innerHTML = ele;
     document.getElementById("userEdit_themeSettings").addEventListener("submit", function (e) { e.preventDefault()})
@@ -1687,7 +1344,6 @@ async function applyTheme(theme) {
    
     const style = document.createElement('style');
     style.id="themeStyle"
-    //style.innerHTML = `\``;
         
     for (const option of findSettings) {
         const optionName = option.option;
@@ -1744,8 +1400,6 @@ async function userHtml(userID) {
     profileData.postData.reverse()
     if (debug) console.log(profileData)
 
-    // profileData.included.post ? profileData.postData.reverse() : profileData.postData = []
-    
     document.getElementById("mainFeed").innerHTML =  `
         ${clientUser ? `
             <div class="menu menu-style">
@@ -1846,10 +1500,8 @@ async function changePasswordPage() {
             <div id="completed_change_pass"></div>
         </div>
     `
-    //await showModal(ele)
 
     document.getElementById("passwordPopup").innerHTML = ele;
-
     document.getElementById("userEdit_change_password").addEventListener("submit", function (e) { e.preventDefault()})
 }
 
@@ -1866,7 +1518,6 @@ async function requestChangePassword() {
      
     document.getElementById("completed_change_pass").innerHTML = `<p>Success, check your email.</p>`
     return showModal(`<p>Success, check your email.</p>`)
-
 }
 
 async function fetchClientEmailData() {
@@ -1984,7 +1635,6 @@ async function changeEmailPage() {
     }
 
     document.getElementById("emailPopup").innerHTML = ele;
-    
     document.getElementById("userEdit_email").addEventListener("submit", function (e) { e.preventDefault()})
     document.getElementById("userEdit_password").addEventListener("submit", function (e) { e.preventDefault()})
     document.getElementById("userEdit_password_remove").addEventListener("submit", function (e) { e.preventDefault()})
@@ -2032,7 +1682,6 @@ async function editEmailSettings() {
     
     var i=0;
     for (item of changedItems) {
-        //[ { option: "notifications", value: true }]
         reqBody.push({ option: item, value: document.getElementById(`emailSetting_${item}`).checked })
     }
 
@@ -2071,19 +1720,6 @@ async function removeEmailRequest(currentEmail) {
     return res;
 }
 
-async function updateEmail() {
-
-}
-
-// change password
-async function changePassword() {
-    // get old password
-    // get new password
-    // get new password confirm
-    // compare passwords
-    // submit api call
-}
-
 // change email
 async function editEmailRequest(hasCurrent) {
     const email = document.getElementById("userEdit_email_text")?.value
@@ -2101,10 +1737,6 @@ async function editEmailRequest(hasCurrent) {
 async function validateEmail(email) {
     const res = await sendRequest(`/emails/requests/validEmail/${email}`, { method: 'GET' });
     return res
-}
-
-async function editEmailAccount() {
-    // change email
 }
 
 async function addEmailAccount({ email, password }) {
@@ -2153,16 +1785,12 @@ async function showBookmarks() {
 
     const res = await sendRequest(`/get/bookmarks/`, { method: 'GET' });
 
-    // if (!response.ok) return document.getElementById(`saveBookmark_${postID}`).innerText = "Error while saving"
-    // if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.error}`;
-
     var obj = {} // { list: name, saves: [] }
     for (const list of res.lists) {
         obj[list.name] = []
     }
 
     for (const save of res.saves) {
-        // console.log(save.listname)
         obj[save.bookmarkList].push(save._id)
     }
 
@@ -2180,7 +1808,6 @@ async function showBookmarks() {
             const newData = await getPostAndProfileData(save)
             if (newData.error) ele+=`<p>error</p>`
             else ele+= postElementCreate({post: newData.postData, user: newData.profileData, type : "basic"})
-            // ele+=
         }
         ele+=`</div>`
     }
@@ -2199,35 +1826,7 @@ async function showSubscriptions() {
     document.getElementById('showSubscriptionsButton').innerHTML="Hide Subscriptions"
     
     const res = await sendRequest(`/notifications/subscriptions/`, { method: 'GET' });
-    // console.log(response)
-
-    // if (!response.ok) return document.getElementById(`saveBookmark_${postID}`).innerText = "Error while saving"
-    const test = `
-        [
-            {
-                _id: "d1f32225-a940-48ed-bff9-22efd5636cbd",
-                __v: 0, 
-                subscribed: [
-                    { 
-                        _id: "d1f32225-a940-48ed-bff9-22efd5636cbd", 
-                        timestamp: 1657607591942
-                    }, {
-                        _id: "d2ac792f-0f5a-443d-8453-f8396e1b6303", 
-                        timestamp: 1658554148695
-                    }
-                ]
-            }, {
-                _id: "6ceae342-2ca2-48ec-8ce3-0e39caebe989",
-                __v: 0,
-                subscribed: [{
-                    _id: "d2ac792f-0f5a-443d-8453-f8396e1b6303", 
-                    timestamp: 1658554289386
-                }]
-            }
-        ]
-    `
     if (!res || res.error) return document.getElementById('showSubscriptionsButton').innerHTML=`error`
-    
 
     var ele = `<hr class="rounded" id="subscriptionsAreShown"><p>${res.length} Subscriptions</p><hr class="rounded">`
     ele = ele+`<div><a id="unsuballbutton" onclick="unsubAll()">unsub from all users.</a><hr class="rounded"></div>`;
@@ -2260,11 +1859,8 @@ async function showNotifications() {
     document.getElementById('showNotificationsButton').innerHTML="Hide Notifcations"
 
     const res = await sendRequest(`/notifications/getList`, { method: 'GET' });
-
-    // if (!response.ok) return document.getElementById(`saveBookmark_${postID}`).innerText = "Error while saving"
     if (!res || res.error) return document.getElementById('showNotificationsButton').innerHTML=`error`
     
-
     var ele = `<hr class="rounded" id="notificationsAreShown"><p id="amount_notifications">${res.amountFound} Notifications</p><hr class="rounded">`
     ele = ele+`<div><a id="dismissAll" onclick="dismissAll()">dismiss all notifications.</a><hr class="rounded"></div>`;
     
@@ -2325,7 +1921,6 @@ async function dismissNotification(notificationID) {
     document.getElementById(`notification_${notificationID}`).remove();
 
     var input = document.getElementById("amount_notifications").innerText
-
     var newInput = input.replace(" Notifications", "")
 
     newInput--
@@ -2349,12 +1944,6 @@ async function showPost(postID) {
     const ele = postElementCreate({post: res, user: user})
     document.getElementById('mainFeed').innerHTML=ele
 }
-/*
-`
-    <button class="buttonStyled" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
-    <div id="notificationsDIv"></div>
-`
-*/
 
 async function getUserDataSimple(userID) {
     const res = await sendRequest(`/get/userByID/${userID}`, { method: 'GET' });
@@ -2578,7 +2167,6 @@ async function requestVerification() {
     const data = { 
         "content" : input,
     };
-    // closeModal()
 
     if (debug) console.log(currentUserLogin) 
     if (debug) console.log(data)
@@ -2590,19 +2178,6 @@ async function requestVerification() {
     }).then(res => {
         console.log(res)
     })
-    /*const response = await fetch(`${apiURL}/post/requestVerify`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(data)
-    });*/
-
-    // const verification = await response.json()
-    // if (debug) console.log(verification)
-}
-
-// MAKES SEARCH BAR APPEAR
-function searchBar() {
-
 }
 
 function activeSearchBar() {
@@ -2619,6 +2194,7 @@ function activeSearchBar() {
 
     `
 }
+
 function unactiveSearchBar() {
     document.getElementById("searchArea").innerHTML = ``
     document.getElementById('navSection5').innerHTML = `
@@ -2628,21 +2204,6 @@ function unactiveSearchBar() {
         </div>
 
     `
-}
-
-function postBar() {
-    document.getElementById("postBar").innerHTML = `
-        <form id="searchBar" class="searchSelect search" onsubmit="createPost()">
-            <input type="text" class="menu-style" id="newPostTextArea" placeholder="Type out your next update...">
-        </form>
-    `
-
-    /* 
-    <div class="searchSelect search">
-        <input type="text" id="postBarArea" placeholder="Type out your next update...">
-        <button class="buttonStyled" onclick="postbarPublish()">Publish Update</button>
-    </div>
-    */
 }
 
 // MAKES SEARCHBAR DISAPPEAR
@@ -2665,15 +2226,6 @@ async function signupSocial() {
             </div>
         </div>
     `
-}
-
-function saveLoginUser(userLoginToken) {
-    localStorage.setItem(LOCAL_STORAGE_LOGIN_USER_TOKEN, JSON.stringify(userLoginToken))
-}
-
-function checkLoginUser() {
-  if (debug) console.log(localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN))
-   //  localStorage.setItem(LOCAL_STORAGE_LOGIN_USER_TOKEN, JSON.stringify(userLoginToken))
 }
 
 // DEBUGGING MODE
@@ -2764,7 +2316,6 @@ async function getPossibleFeeds() {
 }
 
 /*
-
     usage: 
     run listenForLoading() when element is rendered
 */
@@ -2833,9 +2384,6 @@ async function changeFeed(feedType) {
 async function getFeed(feedType) {
     const feedToUse = feedType || 'userFeed'
 
-    searchBar()
-    // postBar()
-
     if (currentFeed && (feedToUse == currentFeedType)) return buildView(currentFeed)
     if (debug) console.log("loading feed")
 
@@ -2845,10 +2393,8 @@ async function getFeed(feedType) {
     document.getElementById('mainFeed').innerHTML=loadingHTML("Loading feed...");
     listenForLoading();
     const data = await sendRequest(`/feeds/${feedToUse}`, { method: 'GET' })
-    //const response = await fetch(`${apiURL}/feeds/${feedToUse}`, { method: 'GET', headers})
-
-    currentFeedType = feedToUse;
     if (!data || !data[0]) return showModal("<p>There was no data in the feed selected, please load a different feed</p>")
+    currentFeedType = feedToUse;
     currentFeed = data.reverse()
 
     if (params.paramsFound == false) {
@@ -2906,13 +2452,6 @@ function buildView(posts) {
     if (debug) console.log("buidlding view")
     if (searching) return
 
-   // const userDiv = document.createElement("div") 
-   // userDiv.innerHTML=`<div id="test"></div>`
-
-   // // document.getElementById("mainFeed").append(userDiv)
-   // document.getElementById('test').innerText=`test`
-
-    //document.getElementById('mainFeed').innerHTML=``
     document.getElementById("mainFeed").innerHTML = `
         <div id="addToTop"></div>
         ${posts.map(function(postArray) {
@@ -2922,34 +2461,6 @@ function buildView(posts) {
                 pollData: postArray.type?.poll=="included" ? postArray.pollData : null,
                 voteData: postArray.type?.vote=="included" ? postArray.voteData : null,
             })
-            /* 
-            return `
-                <div class="postArea">
-                    <div class="subheaderMessage">
-                        <p 
-                            ${user ? ` onclick="userHtml('${post.userID}')" 
-                            class="${user._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}"
-                        >
-                            ${user.displayName} @${user.username}` : '>Unknown User'} | ${timesince ? timesince : ""}</p> 
-                        </p>
-                    </div>
-                    <p class="contentMessage">${post.content}</p>
-                    <p class="debug">${post._id} - from: ${post.userID}</p>
-                </div>
-            `*/
-            
-            /* 
-            return `
-                <div class="publicPost">
-                    <h2 ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'}</h2>
-                    <p>${timesince}</p>
-                    <p>${post.content}</p>
-                    <p class="debug">${post._id} - from (${post.userID})</p>
-                    <button class="buttonStyled" id="${post._id}" onclick="blankFunction('like')">like</button> | <button class="buttonStyled" onclick="blankFunction('repost')">repost</button> | <button class="buttonStyled" onclick="blankFunction('reply')">reply</button>
-                </div>
-            `
-            */
-
         }).join(" ")}
     `
     devMode()
@@ -2967,7 +2478,6 @@ async function deletePost(postID) {
 
     return document.getElementById(`postdiv_${postID}`).remove()
 }
-//postContent_${post._id}
 
 function editPost(postID, edited) {
     if (debug) console.log(`editing post ${postID}`)
@@ -2981,13 +2491,8 @@ function editPost(postID, edited) {
         </form>
     `
     document.getElementById(`editButton_${postID}`).innerHTML=`<p onclick='cancelEdit("${postID}", "${oldMessage}", "${edited}")'>cancel edit</p>`
-   // editButton_${post._id}
-
     document.getElementById(`editPostInput`).focus()
     document.getElementById("editPostForm").addEventListener("submit", function (e) { e.preventDefault()})
-
-    // if (response.status == 200) return document.getElementById(`postdiv_${postID}`).remove()
-    // else return showModal("Error", "Something went wrong, please try again later")
 }
 
 async function cancelEdit(postID, content, edited) {
@@ -3199,7 +2704,6 @@ async function searchResult(input) {
                 pollData: postArray.type?.poll=="included" ? postArray.pollData : null,
                 voteData: postArray.type?.vote=="included" ? postArray.voteData : null,
             })
-            //return postElementCreate({post: postArray.postData, user: postArray.userData})
         }).join(" ")}
     `
 
@@ -3293,7 +2797,7 @@ async function createPostPage() {
         const str = createNewParam(param.paramName, param.paramValue);
         if (str) paramString += str;
     }
-    // if (data.content) changeHeader(`?posting&content=${encodeURIComponent(data.content)}`)
+
     changeHeader(`?posting${paramString}`)
 
     if (debug) console.log("creating post")
@@ -3474,7 +2978,6 @@ async function publishPoll() {
     */
     var body = {
         pollName: document.getElementById('pollCreateTitle')?.value,
-        // timeLive: document.getElementById('timeLive')?.value, add later
         optionAmount: amountOptions,
     };
 
@@ -3511,21 +3014,6 @@ async function publishFromPostPage() {
 
 function changePostPageNavButton(method) {
     return false;
-    if (method == "goto") {
-        document.getElementById('navSection4').innerHTML = `
-            <div id="page4Nav" class="nav-link" onclick="leavePostPage()">
-                <span class="material-symbols-outlined nav-button";>home</span>
-                <span class="link-text pointerCursor" id="page4">Home</span>
-            </div>
-        `
-    } else {
-        document.getElementById('navSection4').innerHTML = `
-            <div id="page4Nav" class="nav-link" onclick="createPostModal()">
-                <span class="material-symbols-outlined nav-button";>post_add</span>
-                <span class="link-text pointerCursor" id="page4">Create Post</span>
-            </div>
-        `
-    };
 };
 
 /*
@@ -3541,7 +3029,6 @@ function changePostPageNavButton(method) {
 async function leavePostPage() {
     if (debug) console.log("leaving post")
     if (getUrl.search=="?posting") changeHeader('')
-    //changePostPageNavButton('leave')
     getFeed()
 }
 
@@ -3658,36 +3145,9 @@ function getOption(num) {
     else return false;
 }
 
-/*
-// BASE FOR CREATING POSTS (posts when you press create post)
-async function createPost() {
-    const data = { 
-        "userID" : currentUserLogin.userid, 
-        "content" : document.getElementById('newPostTextArea').value
-    };
-
-    
-    if (debug) console.log(currentUserLogin) 
-    if (debug) console.log(data)
-
-    const response = await fetch(`${apiURL}/post/createPost`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(data)
-    });
-
-    if (debug) console.log(response.json())
-
-    document.getElementById("mainFeed").innerHTML = `
-        <h1>Your post was sent!</h1>
-    `
-}
-*/
-
 // PUBLISH WRITTEN POST
 async function createPost(params) {
     if (debug) console.log(params)
-  //   var input = document.getElementById('postBarArea').value;
     var input = document.getElementById('newPostTextArea').value
     if (debug) console.log(input)
 
@@ -3713,7 +3173,6 @@ async function createPost(params) {
     }
 
     if (debug) console.log(pollID)
-    // console.log(pollID)
 
     const data = { 
         "userID" : currentUserLogin.userID, 
@@ -3775,7 +3234,6 @@ function editUser() {
 // EDIT DISPLAY NAME
 async function renameUsername() {
     const newUsername = document.getElementById('newUsername').value;
-    // editUsernameFrontend
     if (!newUsername) {
         document.getElementById("resultEditUsername").innerHTML = `
             <p>You did not enter a new username</p>
