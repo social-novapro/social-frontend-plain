@@ -100,8 +100,12 @@ async function loginSplashScreen() {
         <div class="menu menu-style">
             <h1><a onclick="changeYour()" id="badYourGrammer">You're</a> not signed in</h1>
             <p>Please sign into Interact to Proceed!</p>
-            <button class="menuButton menuButton-style" onclick="loginPage()">Log into Your Account</button>
-            <button class="menuButton menuButton-style" onclick="createUserPage()">Create an Account</button>
+            <div>
+                <button class="menuButton menuButton-style" onclick="loginPage()">Log into Your Account</button>
+            </div>
+            <div>
+                <button class="menuButton menuButton-style" onclick="createUserPage()">Create an Account</button>
+            </div>
         </div>
     `
     console.log('--- login splash screen end');
@@ -128,11 +132,11 @@ async function loginPage() {
                     <p>Enter Password</p>
                     <p><input class="contentMessage userEditForm menu-style" id="userPasswordLogin" placeholder="Password" type="password" name="password"></p>
                 </div>
-                <div class="menu menu-style">
+                <div>
                     <button class="menuButton menuButton-style" type="submit">Login</button>
                 </div>
             </form>
-            <div class="menu menu-style">
+            <div>
                 <button class="menuButton menuButton-style" onclick="forgetPassPage()">Forgot Password</button>
             </div>
        </div>
