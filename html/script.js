@@ -607,7 +607,6 @@ async function findTag(content) {
 // LOGIN INFO 
 async function checkLogin() {
     if (debug) console.log(loginUserToken)
-
     var loginUserToken = false
 
     const userStorageLogin = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
@@ -624,7 +623,6 @@ async function checkLogin() {
 
         loginUserToken = true
     }
-
 
     if (!loginUserToken) return loginSplashScreen()
     else await getFeed()

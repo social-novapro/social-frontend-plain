@@ -38,17 +38,13 @@ function sendTokensDebug() {
 }
 
 setDimennsions()
-// document.getElementById("messageTypingForm").addEventListener("submit", function (e) { e.preventDefault()})
+
 function setDimennsions() {
     var height = document.getElementById("html").clientHeight
     var width = document.getElementById("html").clientWidth
 
-    // var width = window.innerWidth;
-    // console.log(width)
     width = width - 201;
     width = width*0.6;
-    // console.log(width)
-    // console.log(document.getElementById('mainGroupArea').style.width)
 
     document.getElementById('currentGroupsArea').style.width="100px"
     document.getElementById('mainGroupArea').style.width=`${width}px`
@@ -67,25 +63,18 @@ function getTime() {
 }
 
 async function checkLogin() {
-    // console.log'running 3')
-
     const userStorageLogin = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
     if (userStorageLogin) {
         currentUserLogin = JSON.parse(userStorageLogin)
         headers.accesstoken = currentUserLogin.accessToken
         headers.usertoken = currentUserLogin.userToken
         headers.userid = currentUserLogin.userID
-        // console.logheaders)
         loginUserToken = true
     }
-    // console.log'running 4')
 
     if (!loginUserToken) return window.location.href = "/begin/?live-chat";
     else return checkWebSocket()
 }
-
-// checkWebSocket()
-// checkRoomID()
 
 function checkRoomID() {
     const paramsData = checkURLParams()
@@ -129,11 +118,10 @@ async function searchUsers() {
         method: 'GET',
         headers,
     });
-    // console.log(response)
 
     const res = await response.json();
-    // if (debug) console.log(res)
     if (res.error) return;
+
     var usersEle=""
     for (const index of res) {
         usersEle+=`
@@ -175,8 +163,6 @@ async function createGroup() {
         });
     
         const res = await response.json();
-        // if (debug) console.log(res)
-        // console.log(res)
         if (res.error) return;
         addingMembers.push(res._id)
     }
@@ -186,15 +172,13 @@ async function createGroup() {
         addUsers: addingMembers,
         groupName
     }
-    // console.log(sendData)
+
     ws.send(JSON.stringify(sendData))
     document.getElementById("mainGroupArea").innerText="<p>Created Group.</p>"
 }
 
 
 function checkWebSocket() {
-    // console.log'running 5')
-
     if ("WebSocket" in window) {
         document.getElementById("actiondescription").innerHTML = `
             WebSocket is supported by your Browser
@@ -203,24 +187,10 @@ function checkWebSocket() {
         ws = new WebSocket(`${wsURL}?userID=${currentUserLogin.userID}`)
 
         ws.onopen = function() {
-           // ws.send({'test': 'test'})
-         //   ws.close()
         }
 
         ws.onmessage = function (evt) { 
             const data = JSON.parse(evt.data)
-            /*
-            const authSend = {
-                "type": 10,
-                "apiVersion": "1.0",
-                "userID": currentUserLogin.userID,
-                "tokens": headers,
-            };
-            console.log(authSend)
-            
-            ws.send(JSON.stringify(authSend));*/
-            // console.log(data)
-            //console.log(data.type)
 
             switch (data.type) {
                 case 10:
@@ -258,24 +228,12 @@ function checkWebSocket() {
                     }
                     break;
                 case 210:
-                    // if (data.message._id == currentGroup) {
-                        addToGroupDM(data)
-                    // }
+                    addToGroupDM(data)
                     break;
                 case 211: 
-                /*
-                    type: 211,
-                    user,
-                    index: responseData.index,
-                    messages: responseData.messages,
-                        user
-                        message
-                    groupData: responseData.groupData
-                */
                     for (const message of data.messages) {
                         addToGroupDM(message)
                     }
-                    // console.log('211')
                     break;
                 case 221: 
                     if (!data.error || !data.data.error) {
@@ -316,23 +274,8 @@ async function createSidebar(userGroupsData) {
     var sidebarEle = `<div id="action"></div>`
 
     for (const group of userGroupsData.userGroups.groups) {
-        // console.log(group)
         const data = await getGroupData({ groupID: group._id })
         if (!data.error) {
-            /*
-                groupData : {
-                    __v: 0
-                    _id: "e4374fc6-8e39-4bc1-ade9-aa87054d1adc"
-                    created: 1659060056257
-                    groupName: "New Group."
-                    owner: "d1f32225-a940-48ed-bff9-22efd5636cbd"
-                    users: [
-                        _id: "d1f32225-a940-48ed-bff9-22efd5636cbd"
-                    ]
-                },
-                success: true
-            */
-
             sidebarEle+=`
                 <div id="sidebarGroup_${data.groupData._id}" onclick="openGroup('${data.groupData._id}')">
                     <p>${data?.groupData?.groupName}</p>
@@ -363,15 +306,6 @@ function clearAction() {
 }
 
 function addToGroupDM(data) {
-    /*
-        var sendNewMessage = {
-            type: 210,
-            user,
-            message: newMessage.messageData,
-            group: newMessage.groupData
-        }
-    */
-
     if (data.message.groupID != currentGroup) {
         document.getElementById("action").innerHTML = `<p onclick="openGroup('${data.message.groupID}')">new message</p><hr />`
         setTimeout(clearAction, 5000);
@@ -390,10 +324,8 @@ function addToGroupDM(data) {
 
     var timesince
     if (timestamp) timesince = checkDate(timestamp)
-    // console.log(data)
     const imageContent = checkForImage(content)
 
-    // console.log(data.message)
     document.getElementById(`messages_${groupID}`).innerHTML+=`
         <div class="message" id="${messageID}">
             <p class="subheaderMessage ${userID == currentUserLogin.userID ? "ownUser" : "otherUser"}">${displayName} @${username} | ${timesince}</p>
@@ -404,30 +336,6 @@ function addToGroupDM(data) {
             </div>
         </div>
     `;
-
-    /*
-    document.getElementById("messages_").innerHTML+=`
-        <div class="message" id="${messageID}">
-            <p class="subheaderMessage ${userID == currentUserLogin.userID ? "ownUser" : "otherUser"}">${displayName} @${username} | ${timesince}</p>
-            <div class="contentMainArea" id="contentMainArea_${messageID}">
-                <p class="contentMessage" id="contentArea_${messageID}">${imageContent.content}</p>
-                ${data.message?.edited ? '<p class="edited contentMessage"><i>(edited)</i></p>' : ''}
-                ${data.message?.replyTo ? `<a class="edited contentMessage" href="#${data.message.replyTo}" onclick="highlightMessage('${data.message.replyTo}')"><i>(replying)</i></a>` : ''}
-            </div>
-            <div class="messageActions">
-                <div id="replyDiv_${data._id}"><p onclick="replyToMessage('${messageID}')">Reply</p></div>
-                ${data.type==2 && user._id == currentUserLogin.userID  ?  `
-                    <p id="deleteButton_${messageID}"><p onclick="deleteMessage('${messageID}')">Delete</p></p>
-                    <div id="editButton_${data._id}"><p onclick="editMessage('${messageID}', '${data.message.edited ? true : false}')">Edit</p></div>
-                ` : `` }
-            </div>
-        </div>
-    `;
-    */
-
-    // var objDiv = document.getElementById("messages");
-
-    // objDiv.scrollTop = objDiv.scrollHeight;
 };
 
 function updateLastOpened(groupID) {
@@ -438,15 +346,6 @@ function updateLastOpened(groupID) {
         method: "change",
         groupID
     }));
-    // ws.onmessage = function (evt) { 
-    //     const data = JSON.parse(evt.data)
-    //     console.log("finding data 2")
-    //     if (data.type==221) {
-    //         if (data.error) return { "success" : false, "error" : data.error }
-    //         else if (!data.data?.error) return { "success" : false, "error" : data.data.error }
-    //         else return {success : true, "data" : data}
-    //     }
-    // };
 
     return { "success" : false };
 };
@@ -478,18 +377,14 @@ async function openGroup(groupID, defaultGroupID) {
     var rightSideBarEle = `
         <p onclick="deleteGroup('${groupID}')">Delete.</p>
     `
-    // <p onclick="addUser()">Add User.</p>
-
     for (const user of data.groupData.users) {
         const userData = await getUserDataSimple(user._id)
         if (!userData.error) {
-            // console.log(userData)
             rightSideBarEle+=`
                 <div>
                     <p>${userData.username}</p>
                 </div>
             `
-              // <p>${userData.displayName}</p>
         }
     }
 
@@ -514,10 +409,8 @@ async function getGroupData({ groupID }) {
         method: 'GET',
         headers,
     });
-    // console.log(response)
 
     const res = await response.json();
-    // if (debug) console.log(res)
     if (res.error) return res;
     else return res
 }
@@ -529,77 +422,15 @@ async function getUserDataSimple(userID) {
     });
 
     const res = await response.json();
-    // if (debug) console.log(res)
     if (!response.ok) return 
     else return res
 }
-// function clientStopTyping(typingTime) {
-//     if (clientTypingAct.typingTime != typingTime) return // console.log'/')
-
-//     const messageSend = {
-//         type: 09,
-//         apiVersion: "1.0",
-//         userID: currentUserLogin.userID,
-//         typing: false,
-//     }
-
-//     ws.send(JSON.stringify(messageSend))
-// }
-
-// function clientUserType() {
-//     const input = document.getElementById('messageBar').value
-//     if (sendTypeStop) clearTimeout(sendTypeStop)
-    
-//     if (!input) {
-//         clientTypingAct.typing = false
-//         clientTypingAct.typingTime = 0
-
-//         const messageSend = {
-//             type: 09,
-//             apiVersion: "1.0",
-//             userID: currentUserLogin.userID,
-//             typing: false,
-//         }
-    
-//         return ws.send(JSON.stringify(messageSend))
-//     }
-    
-//     const messageSend = {
-//         type: 08,
-//         apiVersion: "1.0",
-//         userID: currentUserLogin.userID,
-//         userTyping: true,
-//     }
-
-//     const timeTyping = getTime()
-
-//     clientTypingAct.typing = true
-//     clientTypingAct.typingTime = timeTyping
-
-//     ws.send(JSON.stringify(messageSend))
-
-//     sendTypeStop = setTimeout(function() { clientStopTyping(timeTyping); }, 4000)
-// }
-
-// function userTyping(data) {
-//     if (data.type==08) {
-//         var addUser = `<p id="userTyping-${data.user._id}">${data.user.username}</p>`//<p id="typingMainText"> is typing...</p>
-//         if (document.getElementById(`userTyping-${data.user._id}`)) return // console.log"user is already typing")
-//         else document.getElementById("userTyping").innerHTML += addUser
-//     }
-//     if (data.type==09) {
-//         var removeUser = document.getElementById(`userTyping-${data.user._id}`)
-//         if (removeUser) removeUser.remove()
-//     }
-// }
 
 function addToList(data, content, user, timeStamp, message) {
     var timesince
     if (timeStamp) timesince = checkDate(timeStamp)
-    // console.log(data)
     const imageContent = checkForImage(content)
 
-    // console.log(data.message)
     document.getElementById("messages").innerHTML+=`
         <div class="message" id="${data._id}">
             <p class="subheaderMessage ${user._id == currentUserLogin.userID ? "ownUser" : "otherUser"}">${user.displayName} @${user.username} | ${timesince}</p>
@@ -635,7 +466,6 @@ function highlightMessage(id) {
     setTimeout(function () {
         document.getElementById(`contentArea_${id}`).classList.remove("replyingEle");
     }, 5000);
-    // document.getElementById(`contentArea_${id}`).classList.add("activeHighlight");
 };
 
 function checkIfActiveReply() {
@@ -659,11 +489,8 @@ function checkIfActiveReply() {
 };
 
 function replyToMessage(id) {
-    // const ele = document.getElementById(id);
     const lookForReply = checkIfActiveReply();
-
     if (lookForReply.foundActive) cancelReply(lookForReply.replyID);
-    // if (document.getElementsByClassName(`activeHighlight`)) document.getElementsByClassName.remove
 
     document.getElementById(`contentArea_${id}`).classList.add("replyingEle");
     document.getElementById(`replyDiv_${id}`).innerHTML= `
@@ -687,7 +514,6 @@ function editMessage(id, edited) {
             <input type="text" class="contentMessage" id="editMessageBar_${id}" value="${oldMessage}">
         </form>
     `
-    // <a onclick="cancelEdit('${id}')">Cancel</a>
 
     document.getElementById(`editMessageBar_${id}`).focus()
 }
@@ -746,7 +572,6 @@ function checkDate(time){
     const date = dateFromEpoch(timeNum)
     const timesince = timeSinceEpoch(diff)
     return date
-    // return `${date}, ${timesince}`
 }
 
 function dateFromEpoch(time) {
@@ -803,18 +628,6 @@ function sendmessage() {
 
     document.getElementById('messageBar').value = ''
 }
-
-// function checkURLParams() {
-//     const params = new URLSearchParams(window.location.search)
-//     const ifRoom = params.has('room')
-
-//     if (ifRoom) {
-//         const roomSearch = params.get('room')
-//         return {"param":true, paramTypes: [ {"paramName":"room", "roomID":roomSearch}]}
-//     }
-
-//     return {"param":false}
-// }
 
 function getId(url) {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
