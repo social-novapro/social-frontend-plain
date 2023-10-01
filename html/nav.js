@@ -256,6 +256,8 @@ async function signOut() {
             }
         }
         localStorage.setItem(LOCAL_STORAGE_LOGINS, JSON.stringify(loginsArray));
+
+        if (loginsArray[0]) return switchAccount(loginsArray[0].userID);
     }
 
     redirectBegin()
