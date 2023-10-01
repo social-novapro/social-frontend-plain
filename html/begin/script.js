@@ -1,4 +1,5 @@
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
+var LOCAL_STORAGE_LOGINS='social.loginAccounts'
 
 var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
 //var redirectURL = `${config ? `${config.current == "prod" ? config.prod.hosted_url : config.dev.hosted_url}` : 'https://interact-api.novapro.net/v1' }`
@@ -13,6 +14,12 @@ var headers = {
 var params = new URLSearchParams(window.location.search);
 var foundparams = false;
 
+/* loginACcounts info
+    will be an array, with the usertoken, and userID, and access token, nothing else
+    when user logs in, gets added to the array, and then when the user logs out, gets removed
+    when user logs in, checks if the user is already logged in, if so, then it will log them out, and then log them in
+    if user switchs account or new log in, itll go to .loginUserToken 
+*/
 async function checkURLParams() {
     var paramsInfo = {
         paramsFound: false
