@@ -227,6 +227,14 @@ function saveLoginUser(userID, userToken, accessToken) {
     //setCookie("userid", userID , 365);
 
     localStorage.setItem(LOCAL_STORAGE_LOGIN_USER_TOKEN, JSON.stringify({ userID, userToken, accessToken}))
+    const logins = localStorage.getItem(LOCAL_STORAGE_LOGINS);
+    if (logins) {
+        const loginsArray = JSON.parse(logins);
+        loginsArray.push({ userID, userToken, accessToken });
+        localStorage.setItem(LOCAL_STORAGE_LOGINS, JSON.stringify(loginsArray));
+    } else {
+        localStorage.setItem(LOCAL_STORAGE_LOGINS, JSON.stringify([{ userID, userToken, accessToken }]));
+    }
 }
 
 async function checkLoginUser() {

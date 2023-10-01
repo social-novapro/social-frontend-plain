@@ -72,6 +72,7 @@ var currentFeed
 var currentFeedType
 
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
+var LOCAL_STORAGE_LOGINS='social.loginAccounts'
 var LOCAL_STORAGE_THEME_SETTINGS = 'social.themeSettings'
 var LOCAL_STORAGE_THEME_POSSIBLE = 'social.themePossible'
 
@@ -1091,6 +1092,15 @@ function settingsPage() {
                     </div>
                     <div id="passwordPopup"></div>
                     <div class="menu menu-style">
+                        <p><b>User Login</b></p>
+                        <p>Sign into another account.</p>
+                        <button class="menuButton menuButton-style" onclick="redirectBegin()">Login</button>
+                        <hr class="rounded">
+                        <p><b>Switch Login</b></p>
+                        <p>Switch to another account.</p>
+                        <button class="menuButton menuButton-style" onclick="switchAccountPage()">View Accounts</button>
+                        <hr class="rounded">
+                        <p><b>Sign Out</b></p>
                         <p>Sign out of your account.</p>
                         <button class="menuButton menuButton-style" onclick="signOutPage()">Sign Out</button>
                         <div id="signOutConfirm"></div>
@@ -1176,6 +1186,7 @@ function signOutPage() {
             <p><b>Sign Out</b></p>
             <p>Are you sure you want to sign out?</p>
             <button class="menuButton menuButton-style"onclick="signOut()">Sign Out</p>
+            <button class="menuButton menuButton-style"onclick="signOutAll()">Sign Out of All Accounts</p>
             <button class="menuButton menuButton-style" onclick="removeSignOutConfirm()">Cancel</button></div>
         </div>
     `;
@@ -1184,6 +1195,40 @@ function signOutPage() {
     document.getElementById("signOutPage").classList.add("menu");
     document.getElementById("signOutPage").classList.add("menu-style");
     return true;
+}
+
+async function switchAccountPage() {
+    const logins = localStorage.getItem(LOCAL_STORAGE_LOGINS)
+    if (!logins) return showModal("<p>No other accounts found</p>")
+    const loginsParsed = JSON.parse(logins)
+    if (!loginsParsed) return showModal("<p>No other accounts found</p>")
+    if (!loginsParsed[0]) return showModal("<p>No other accounts found</p>")
+
+    var ele = `
+        <div class="menu menu-style" id="switchAccountPage">
+            <p><b>Switch Account</b></p>
+            <p>Choose an account to switch to</p>
+            <div class="inline">
+    `;
+
+    for (const login of loginsParsed) {
+        const preview = await miniPreviewUser(login.userID)
+        ele+=`
+            <button class="menuButton menuButton-style" onclick="switchAccount('${login.userID}')">${preview}</button>
+        `;
+    }
+    ele += `</div>`;
+
+    document.getElementById("signOutConfirm").innerHTML = ele;
+    document.getElementById("signOutPage").classList.add("menu");
+    document.getElementById("signOutPage").classList.add("menu-style");
+}
+
+async function miniPreviewUser(userID) {
+    const userData = await sendRequest(`/get/userByID/${userID}`, { method: 'GET' })
+    if (!userData || userData.error) return console.log("error with user");
+    const ele = `<p>${userData.displayName}@${userData.username}</p>`;
+    return ele;
 }
 
 async function deleteAccPage() {
