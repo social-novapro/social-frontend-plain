@@ -75,7 +75,6 @@ function getThemeSettings() {
 function setThemeSettings(newData) {
     if (!newData) return removeThemeSettings();
     localStorage.setItem(LOCAL_STORAGE_THEME_SETTINGS, JSON.stringify(newData))
-    //if (newData && !newData.error) localStorage.setItem(LOCAL_STORAGE_THEME_SETTINGS, JSON.stringify(newData))
 }
 
 function removeThemeSettings() {
@@ -95,7 +94,6 @@ async function applyThemeNav(theme) {
    
     const style = document.createElement('style');
     style.id="themeStyle"
-    //style.innerHTML = `\``;
     
     if (!findSettings || findSettings.error || findSettings[0]) return;
     for (const option of findSettings) {
@@ -105,7 +103,6 @@ async function applyThemeNav(theme) {
         else style.innerHTML += setTheme(optionName, null, option.styles)
     }
 
-    // applies new theme
     document.head.appendChild(style);
 
     return true;
@@ -192,26 +189,8 @@ async function getPossibleThemeEdits() {
     return res;
 }
 
-// console.log(hostedURL)
-// console.log(baseUrl)
-// console.log(pathArray)
-
-/*if ("WebSocket" in window) {
-    ws = new WebSocket(`${wsURL}stats`)
-}*/
-
 function addNavigation() {
     return newNavigation();
-    document.getElementById('navArea').innerHTML = `
-        <div class="nav"id="nav">
-            <div id="page1Nav">${pathArray[1] != "" ? `<button class="buttonStyled"  onclick="switchNav(5)" id="page1">Feed</button>` : `<button class="buttonStyled"  onclick="switchNav(1)" id="page1">Live Chat</button>`}</div>
-            <div id="page2Nav"><button class="buttonStyled"  onclick="switchNav(2)" id="page2">Profile</button></div>
-            <div id="page3Nav"><button class="buttonStyled"  onclick="switchNav(3)" id="page3">DevMode</button></div>
-            <div id="page4Nav"><button class="buttonStyled"  onclick="createPostModal()" id="page4">Create Post</button></div>
-            <div id="page5Nav"><button class="buttonStyled"  onclick="signOut()" id="page5">Sign Out</button></div>
-            <div id="searchBar"><button class="buttonStyled" onclick="activeSearchBar()" id="page6">Search</button></div>
-        </div>
-    `
 }
 
 function newNavigation() {
@@ -360,24 +339,6 @@ async function checkLogin() {
     if (!userData.login) return redirectPage()
     return
 }
-
-/* // GET REQUESTED COOKIE
-function getCookie(cname) {
-    var name = cname + "=";
-    var decodedCookie = decodeURIComponent(document.cookie);
-    var ca = decodedCookie.split(';');
-
-    for(var i = 0; i < ca.length; i++) {
-        var c = ca[i];
-        while (c.charAt(0) == ' ') {
-            c = c.substring(1);
-        } if (c.indexOf(name) == 0) {
-            return c.substring(name.length, c.length);
-        }
-    }
-
-    return "";
-}*/
 
 async function switchNav(pageVal) {
     switch (pageVal) {
