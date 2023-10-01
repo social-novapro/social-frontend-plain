@@ -95,31 +95,3 @@ input {
 .userTyping {
     display:inline-flex
 }
-/* SMALL SCREEN
-@media only screen and (max-width: 600px) {
-    .allMessages {
-        overflow-wrap: break-word;
-        height: 50vh; 
-        width: 100vw;     
-        overflow-y: scroll;
-    }
-}
-    BIG SCREENS 
-@media only screen and (min-width: 601px) {
-    .allMessages {
-        justify-content: center;
-        height: 50vh; 
-        width: 40vw;     
-        overflow-y: scroll;
-        display:inline-block;
-
-    }
-    .onlinePeople {
-        overflow-wrap: break-word;
-        height: 50vh; 
-        width: 40vw;     
-        overflow-y: scroll;
-        display:inline-block;
-    }
-}
-*/

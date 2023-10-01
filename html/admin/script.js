@@ -26,8 +26,6 @@ function checkURLParams() {
     return paramsInfo
 }
 
-// console.log(config.dev.websocket_url)
-document.getElementById('mainFeed').innerHTML = 'eijj';
 var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
 
 if (location.protocol !== 'https:' && !((/localhost|(127|192\.168|10)\.(\d{1,3}\.?){2,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.(\d{1,3}\.?){2}/).test(location.hostname))) {
@@ -46,8 +44,6 @@ async function checkLogin() {
     if (!loginUserToken) return window.location.href = "/begin/?live-chat";
     else return setupUI()
 }
-
-
 
 function setupUI() {
     document.getElementById('mainFeed').innerHTML = `
@@ -135,7 +131,6 @@ async function previewUser(userID) {
     const userRes = await fetch(`${apiURL}/get/userByID/${userID}`, {
         method: 'GET',
         headers
-        // body: JSON.stringify(body)
     });
    
     const userData = await userRes.json();
@@ -156,7 +151,6 @@ function createErrorElement(issueError) {
     if (issueError.reviewTimestamp) timestampReview = checkDateV2(issueError.reviewTimestamp);
     if (issueError.resolvedTimestamp) timesinceResolved = checkDateV2(issueError.resolvedTimestamp);
     if (issueError.timestamp) timestamp = checkDateV2(issueError.timestamp);
-
     
     return `
         <div class="menu menu-style">
@@ -213,7 +207,6 @@ async function markInReview(errorID) {
     })
 
     if (!response.ok) return console.log(response);
-
     const result = await response.json(); 
 
     document.getElementById(`errorEle_${result._id}`).innerHTML=createErrorElement(result);
@@ -255,7 +248,6 @@ async function listVerifications() {
     if (!response.ok) return console.log(response);
 
     const requests = await response.json();
-    // console.log(requests);
 
     const users = {};
     for (const request of requests) {
@@ -288,7 +280,6 @@ async function verifyRequests() {
     if (!response.ok) return console.log(response);
 
     const requests = await response.json();
-    // console.log(requests);
 
     const users = {};
     for (const request of requests) {
@@ -299,7 +290,6 @@ async function verifyRequests() {
             });
         
             const userData = await getUser.json();
-            // console.log(userData);
             users[request._id] = userData;
         }
     }
@@ -335,7 +325,6 @@ async function acceptVerification(id) {
 
     if (!response.ok) return console.log(response);
     
-    // const data = await response.json();
     document.getElementById(`userver_${id}`).remove();
 }
 
@@ -359,7 +348,6 @@ async function adminRequests() {
         headers: headers
     })
     if (!response.ok) return console.log(response);
-
     const requests = await response.json();
 
     const users = {};
@@ -408,7 +396,6 @@ async function acceptAdmin(id) {
 
     if (!response.ok) return console.log(response);
     
-    // const data = await response.json();
     document.getElementById(`adminR_userver_${id}`).remove();
 }
 
@@ -429,7 +416,6 @@ function checkDateV2(time){
     const date = dateFromEpochv2(timeNum)
     const timesince = timeSinceEpoch(diff)
     return date
-    // return `${date}, ${timesince}`
 }
 function getTime() {
     const d = new Date();

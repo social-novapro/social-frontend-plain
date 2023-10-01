@@ -15,9 +15,6 @@
     margin-left: 10%;
     margin-right: 10%;
     margin-top: 20px;
-    /*
-        display: inline-block;
-    */
     text-decoration: none;
     color: var(--main-a-color);
     text-align: center;
@@ -34,11 +31,7 @@
     word-wrap: break-word;
     margin-left: 10%;
     margin-right: 10%;
-    
     margin-top: 20px;
-    /*
-        display: inline-block;
-    */
     text-decoration: none;
     color: var(--main-a-color);
     text-align: center;
@@ -67,9 +60,6 @@
     margin-left: 10%;
     margin-right: 10%;
     margin-top: 20px;
-    /*
-    display: inline-block;
-    */
     text-decoration: none;
     color: var(--main-a-color);
     text-align: center;
@@ -89,7 +79,6 @@
     color: var(--main-a-color);
 }
 .userEditForm {
-    /*background-color:  var(--main-button-color);*/
     color: var(--main-p-color)
 }
 .debug p {
@@ -146,9 +135,6 @@
     margin-left: 20%;
     margin-right: 20%;
     margin-top: 20px;
-    /*
-    display: inline-block;
-    */
     text-decoration: none;
     color: var(--main-a-color);
     text-align: center;
@@ -165,9 +151,6 @@
     margin-left: 20%;
     margin-right: 20%;
     margin-top: 20px;
-    /*
-    display: inline-block;
-    */
     text-decoration: none;
     color: var(--main-a-color);
     text-align: center;
@@ -206,15 +189,6 @@
         var(--main-shadow-color);
     transition: transform 400ms, border-color 400ms, background-color 400ms;
 }
-/* without box
-.postContent {
-    overflow-wrap: break-word;
-    text-decoration: none;
-    color: var(--main-a-color);
-    text-align: left;
-    transition: transform 400ms, border-color 400ms, background-color 400ms;
-}
-*/
 .PostAttachments {
     display: block;
 }
@@ -265,8 +239,6 @@
     text-align: center;
     padding: 15px;
     border-radius: 15px;
-    /* box-shadow: 
-        var(--main-shadow-color); */
     transition: transform 400ms, border-color 400ms, background-color 400ms;
 }
 
@@ -368,11 +340,4 @@
     box-shadow: 
         var(--main-shadow-color);
     transition: transform 400ms, border-color 400ms, background-color 400ms;
-}
-
-.inline {
-    /*display: flex;
-    align-items: center;
-    text-align: center;*/
-    /*word-wrap: inline;*/
 }
