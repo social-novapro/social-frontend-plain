@@ -19,13 +19,6 @@ var headers = {
     when user logs in, checks if the user is already logged in, if so, then it will log them out, and then log them in
     if user switchs account or new log in, itll go to .loginUserToken 
 */
-
-/* loginACcounts info
-    will be an array, with the usertoken, and userID, and access token, nothing else
-    when user logs in, gets added to the array, and then when the user logs out, gets removed
-    when user logs in, checks if the user is already logged in, if so, then it will log them out, and then log them in
-    if user switchs account or new log in, itll go to .loginUserToken 
-*/
 async function checkURLParams() {
     var paramsInfo = {
         paramsFound: false
