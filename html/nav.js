@@ -6,6 +6,7 @@ var baseUrl = getUrl .protocol + "//" + getUrl.host + "/" + getUrl.pathname.spli
 var pathArray = window.location.pathname.split( '/' );
 
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
+var LOCAL_STORAGE_LOGINS='social.loginAccounts'
 var LOCAL_STORAGE_THEME_SETTINGS = 'social.themeSettings'
 var LOCAL_STORAGE_THEME_POSSIBLE = 'social.themePossible'
 
@@ -72,7 +73,12 @@ function getThemeSettings() {
 }
 
 function setThemeSettings(newData) {
+    if (!newData) return removeThemeSettings();
     localStorage.setItem(LOCAL_STORAGE_THEME_SETTINGS, JSON.stringify(newData))
+}
+
+function removeThemeSettings() {
+    localStorage.removeItem(LOCAL_STORAGE_THEME_SETTINGS)
 }
 
 async function applyThemeNav(theme) {
@@ -89,6 +95,7 @@ async function applyThemeNav(theme) {
     const style = document.createElement('style');
     style.id="themeStyle"
     
+    if (!findSettings || findSettings.error || findSettings[0]) return;
     for (const option of findSettings) {
         const optionName = option.option;
         if (optionName == "_id") continue;
@@ -238,7 +245,57 @@ function addTitle() {
 
 async function signOut() {
     localStorage.removeItem(LOCAL_STORAGE_LOGIN_USER_TOKEN);
-    
+
+    const logins = localStorage.getItem(LOCAL_STORAGE_LOGINS);
+    if (logins) {
+        const loginsArray = JSON.parse(logins);
+
+        for (const login of loginsArray) {
+            if (login.accessToken == currentUserLogin.accessToken) {
+                loginsArray.splice(loginsArray.indexOf(login), 1);
+            }
+        }
+        localStorage.setItem(LOCAL_STORAGE_LOGINS, JSON.stringify(loginsArray));
+
+        if (loginsArray[0]) return switchAccount(loginsArray[0].userID);
+    }
+
+    redirectBegin()
+}
+
+async function signOutAll() {
+    localStorage.removeItem(LOCAL_STORAGE_LOGIN_USER_TOKEN);
+    localStorage.removeItem(LOCAL_STORAGE_LOGINS);
+
+    redirectBegin()
+}
+
+async function switchAccount(userID) {
+    const logins = localStorage.getItem(LOCAL_STORAGE_LOGINS);
+    if (logins) {
+        const loginsArray = JSON.parse(logins);
+
+        for (const login of loginsArray) {
+            if (login.userID == userID) {
+                localStorage.setItem(LOCAL_STORAGE_LOGIN_USER_TOKEN, JSON.stringify(login));
+                await checkLogin();
+                const currentTheme = await getTheme(null, true);
+                if (!currentTheme || !currentTheme.colourTheme) {
+                    // sets empty theme
+                    await applyThemeNav({});
+                    return false;
+                };
+            
+                await applyThemeNav(currentTheme);
+                location.reload()
+            }
+        }   
+    }
+}
+
+// location.reload(true); 
+// USE THIS 
+function redirectBegin() {
     if (pathArray[1] == "" || "begin") window.location.href = `/begin`
     else window.location.href = `/begin?redirect=${pathArray[1]}`
 }

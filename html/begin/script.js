@@ -1,5 +1,6 @@
 // VARIBLES
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
+var LOCAL_STORAGE_LOGINS='social.loginAccounts'
 var params = new URLSearchParams(window.location.search);
 var foundparams = false;
 
@@ -12,6 +13,12 @@ var headers = {
     "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421"
 }
 
+/* loginACcounts info
+    will be an array, with the usertoken, and userID, and access token, nothing else
+    when user logs in, gets added to the array, and then when the user logs out, gets removed
+    when user logs in, checks if the user is already logged in, if so, then it will log them out, and then log them in
+    if user switchs account or new log in, itll go to .loginUserToken 
+*/
 async function checkURLParams() {
     var paramsInfo = {
         paramsFound: false
@@ -192,6 +199,20 @@ async function sendForgetRequest() {
 
 function saveLoginUser(userID, userToken, accessToken) {
     localStorage.setItem(LOCAL_STORAGE_LOGIN_USER_TOKEN, JSON.stringify({ userID, userToken, accessToken}))
+    const logins = localStorage.getItem(LOCAL_STORAGE_LOGINS);
+
+    if (logins) {
+        const loginsArray = JSON.parse(logins);
+        for (const login of loginsArray) {
+            if (login.userID == userID) {
+                loginsArray.splice(loginsArray.indexOf(login), 1);
+            }
+        }
+        loginsArray.push({ userID, userToken, accessToken });
+        localStorage.setItem(LOCAL_STORAGE_LOGINS, JSON.stringify(loginsArray));
+    } else {
+        localStorage.setItem(LOCAL_STORAGE_LOGINS, JSON.stringify([{ userID, userToken, accessToken }]));
+    }
 }
 
 function createUserPage() {
