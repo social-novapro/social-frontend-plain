@@ -288,7 +288,7 @@ async function viewParentPost(postID, parentPostID) {
         return document.getElementById(`openedParent_${postID}`).remove();
     }
 
-    const postData = await sendRequest(`/get/post/${parentPostID}`, { method: "GET" });
+    const postData = await sendRequest(`/post/get/${parentPostID}`, { method: "GET" });
 
     if (postData.deleted == true || !postData.userID) {
         //document.getElementById()
@@ -359,7 +359,7 @@ async function saveBookmark(postID, list) {
         postID,
         listname: list ? list : "main"
     }
-    const res = await sendRequest(`/post/savePost/`, { method: 'POST', body });
+    const res = await sendRequest(`/posts/save/`, { method: 'POST', body });
     if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.error}`;
     document.getElementById(`saveBookmark_${postID}`).innerText="Saved"
 }
@@ -680,7 +680,7 @@ async function userEdit(action) {
 }
 
 async function postHtml(postID) {
-    const postData = await sendRequest(`/get/post/${postID}`, { method: 'GET' })
+    const postData = await sendRequest(`/posts/get/${postID}`, { method: 'GET' })
     if (!postData || postData.deleted) return console.log("error with post");
 
     const userData = await sendRequest(`/get/userByID/${postData.userID}`, { method: 'GET' })
@@ -1826,7 +1826,7 @@ async function showBookmarks() {
     if (document.getElementById('bookmarksAreShown')) return hideBookmarks()
     document.getElementById('showBookmarksButton').innerHTML="Hide Bookmarks"
 
-    const res = await sendRequest(`/get/bookmarks/`, { method: 'GET' });
+    const res = await sendRequest(`/posts/bookmarks/`, { method: 'GET' });
 
     var obj = {} // { list: name, saves: [] }
     for (const list of res.lists) {
@@ -1979,7 +1979,7 @@ async function dismissAll() {
 }
 
 async function showPost(postID) {
-    const res = await sendRequest(`/get/post/${postID}`, { method: 'GET' });
+    const res = await sendRequest(`/posts/get/${postID}`, { method: 'GET' });
     if (!res || res.error) return showModal("<p>Post was not found</p>")
 
     const user = await getUserDataSimple(res.userID)
@@ -2192,7 +2192,7 @@ async function requestDevToken() {
 };
 
 async function getPostAndProfileData(postID) {
-    const postData = await sendRequest(`/get/post/${postID}`, { method: 'GET' });
+    const postData = await sendRequest(`/posts/get/${postID}`, { method: 'GET' });
 
     if (!postData || postData.error) return {error: `${postData.error ? postData.error : "an unknown error"}`};
     if (debug) console.log(postData);
@@ -2512,7 +2512,7 @@ function buildView(posts) {
 async function deletePost(postID) {
     if (debug) console.log(`deleting post ${postID}`)
 
-    const response = await sendRequest(`/delete/removePost/${postID}`, { method: 'DELETE' })
+    const response = await sendRequest(`/posts/remove/${postID}`, { method: 'DELETE' })
     if (!response || response.error) return null;
     if (debug) console.log("post deleted")
 
@@ -2541,7 +2541,7 @@ function editPost(postID, edited) {
 async function cancelEdit(postID, content, edited) {
     if (debug) console.log(`cancelling edit of post ${postID}`)
 
-    const post = await sendRequest(`/get/post/${postID}`, { method: 'GET' })
+    const post = await sendRequest(`/posts/get/${postID}`, { method: 'GET' })
     if (!post || post.error) return false;
 
     const user = await sendRequest(`/get/userByID/${post.userID}`, { method: 'GET' })
@@ -2577,7 +2577,7 @@ async function submitEdit(postID) {
     `  
 }
 async function quotePost(postID) {
-    const post = await sendRequest(`/get/post/${postID}`, { method: 'GET' })
+    const post = await sendRequest(`/posts/get/${postID}`, { method: 'GET' })
     if (!post || post.error) return false;
     const user = await sendRequest(`/get/userByID/${post.userID}`, { method: 'GET' })
     if (!user || user.error) return false;
@@ -2604,7 +2604,7 @@ async function quotePost(postID) {
 }
 
 async function replyPost(postID) {
-    const post = await sendRequest(`/get/post/${postID}`, { method: 'GET', headers})
+    const post = await sendRequest(`/posts/get/${postID}`, { method: 'GET', headers})
     if (!post || post.error) return false;
 
     const user = await sendRequest(`/get/userByID/${post.userID}`, { method: 'GET', headers })
@@ -3233,7 +3233,7 @@ async function createPost(params) {
 
     changeHeader('')
 
-    const postData = await sendRequest(`/post/createPost`, {
+    const postData = await sendRequest(`/posts/create`, {
         method: 'POST',
         body: data
     });
