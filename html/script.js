@@ -233,7 +233,7 @@ function postElementCreate({ post, user, type, hideParent, hideReplies, pollData
                         ` : ''}
                     ` : ''}
                     </p>
-                    <p id="popupactions_${post._id}" onclick="popupActions('${post._id}', '${options.hideParent}', '${options.hideReplies}', ${options.owner})">more</p>
+                    <p id="popupactions_${post._id}" onclick="popupActions('${post._id}', '${options.hideParent}', '${options.hideReplies}', '${options.owner}', ${post.pinned})">more</p>
                 </div>
             </div>
         </div>
@@ -258,7 +258,7 @@ function removeColorOption(pollID, optionID) {
     document.getElementById(elementID).classList.remove("voted");
 }
 
-async function popupActions(postID, hideParent, hideReplies, owner) {
+async function popupActions(postID, hideParent, hideReplies, owner, pinned) {
     var elementPopup = document.getElementById(`popupOpen_${postID}`);
     if (elementPopup) return elementPopup.remove();
 
@@ -274,6 +274,7 @@ async function popupActions(postID, hideParent, hideReplies, owner) {
             ` : ``}
             <p>Menu Actions</p>
             <p>---</p>
+            <p class="pointerCursor" onclick="${pinned===true ? `unpinPost('${postID}')` : `pinPost('${postID}')` }" id="pin_post_${postID}">${pinned===true ? `Unpin from Profile` : `Pin to Profile` }</p>
             <p class="pointerCursor" onclick="saveBookmark('${postID}')" id="saveBookmark_${postID}">Save to Bookmarks</p>
             <p class="pointerCursor" onclick="showEditHistory('${postID}')" id="editHistory_${postID}">Check Edit History</p>
             <p class="pointerCursor" onclick="showLikes('${postID}')" id="likedBy_${postID}">Check Who Liked</p>
@@ -281,6 +282,28 @@ async function popupActions(postID, hideParent, hideReplies, owner) {
         </div>
     `;
 };
+
+async function pinPost(postID) {
+    const req = await sendRequest(`/users/edit/pins/${postID}`, { method: 'POST' });
+    if (req.error) return
+
+    showModal(`<p>Success!</p>`)
+    
+}
+
+async function unpinPost(postID) {
+    const req = await sendRequest(`/users/edit/pins/${postID}`, { method: 'DELETE' });
+    if (req.error) return
+
+    showModal(`<p>Success!</p>`)
+}
+
+async function unpinAllPosts() {
+    const req = await sendRequest(`/users/edit/pins/removeAll`, { method: 'DELETE' });
+    if (req.error) return
+
+    showModal(`<p>Success!</p>`)
+}
 
 async function viewParentPost(postID, parentPostID) {
     if (document.getElementById(`openedParent_${postID}`)) {
@@ -1514,6 +1537,22 @@ async function userHtml(userID) {
             <button class="menuButton menuButton-style" onclick='viewThemes("${profileData.userData._id}")'>View Themes</button>
         </div>
         <div id="userThemeEditor"></div>
+        ${profileData.included.pins ? `
+            <div class="menu menu-style">
+                <p><b>Pins</b></p>
+                <p>${profileData.userData.pins.length}</p>
+                ${clientUser ? `<button class="menuButton menuButton-style" onclick="unpinAllPosts()">Remove All</button>` : ``}
+            </div>
+            <hr class="rounded">
+            ${profileData.pinData.map(function(pin) {
+                return postElementCreate({
+                    post: pin.postData,
+                    user: pin.userData, 
+                    pollData: pin.type?.poll=="included" ? pin.pollData : null,
+                    voteData: pin.type?.vote=="included" ? pin.voteData : null,
+                })
+            }).join(" ")}
+        ` : ``}
         ${profileData.included.posts ? `
             <div class="menu menu-style">
                 <p><b>Posts</b></p>
