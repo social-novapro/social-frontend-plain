@@ -143,8 +143,20 @@ async function checkURLParams() {
     return paramsInfo
 }
 
-function postElementCreate({ post, user, type, hideParent, hideReplies, pollData, voteData }) {
+function postElementCreate({ post, user, type, hideParent, hideReplies, pollData, voteData, quoteData }) {
     if (!post) return;
+    if (post.deleted) {
+        const ele = `
+            <div class="postContent posts-style" id="postContentArea_${post._id}">
+                <div class="textAreaPost posts_content-style">
+                    <p id="postContent_${post._id}">Post was deleted.</p>
+                </div>
+            </div>
+        `;
+
+        return ele;
+    }
+
     var timesince
     if (post.timePosted) timesince = checkDate(post.timePosted)
     const imageContent = checkForImage(post.content)
@@ -161,10 +173,13 @@ function postElementCreate({ post, user, type, hideParent, hideReplies, pollData
     const postIsLiked = post.liked ? true : false;
 
     // imageContent.attachments
-    if (imageContent.imageFound)if (debug) console.log(imageContent.attachments)
+    if (imageContent.imageFound) if (debug) console.log(imageContent.attachments)
+
     if (type=="basic"){
         return `
+            ${user ? `
             <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'} | ${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
+            `:''}
             <div class="postContent posts-style" id="postContentArea_${post._id}">
                 <div class="textAreaPost posts_content-style">
                     <p id="postContent_${post._id}">${imageContent.content}</p>
@@ -185,14 +200,16 @@ function postElementCreate({ post, user, type, hideParent, hideReplies, pollData
                         <p onclick="viewParentPost('${post._id}', '${post.replyData.postID}')" id="parentViewing_${post._id}">This was a reply, click here to see.</p>
                     ` : ``}
                 `: ``}
+                ${user ? `
                 <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'}<br class="spacer_2px">${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
+                `:''}
                 <div class="postContent" id="postContentArea_${post._id}">
                     <div class="textAreaPost posts_content-style">
                         <p id="postContent_${post._id}">${imageContent.content}</p>
                         ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
                     </div>
                     ${post.replyingPostID ? `<a class="replyingPost" href="#postElement_${post.replyingPostID}">Press here</a>` : ``}
-                    ${post.quoteReplyPostID && post.quotedPost && post.quotedUser ? `<hr><div>${postElementCreate({post: post.quotedPost, user: post.quotedUser, type: "basic"})}</div>` : ''}
+                    ${quoteData && quoteData.quotePost ? `<hr><div>${postElementCreate({post: quoteData.quotePost, user: quoteData.quoteUser, type: "basic"})}</div>` : ''}
                     <div class="PostAttachments">
                         ${imageContent.image ? `<div>${imageContent.attachments.map(function(attachment) {return `${attachment}`}).join(" ")}</div>`:''}
                     </div>
@@ -279,6 +296,7 @@ async function popupActions(postID, hideParent, hideReplies, owner, pinned) {
             <p class="pointerCursor" onclick="showEditHistory('${postID}')" id="editHistory_${postID}">Check Edit History</p>
             <p class="pointerCursor" onclick="showLikes('${postID}')" id="likedBy_${postID}">Check Who Liked</p>
             ${hideReplies != true ? `<p class="pointerCursor" onclick="viewReplies('${postID}')" id="replies_${postID}">Check Replies</p>` : ``}
+            ${hideReplies != true ? `<p class="pointerCursor" onclick="viewQuotes('${postID}')" id="quotes_${postID}">Check Quotes</p>` : ``}
         </div>
     `;
 };
@@ -335,6 +353,42 @@ async function viewParentPost(postID, parentPostID) {
     `;
     document.getElementById(`parentViewing_${postID}`).innerText = "Close parent post.";
 
+}
+
+async function viewQuotes(postID) {
+    if (document.getElementById(`quotesOpened_${postID}`)) {
+        document.getElementById(`quotes_${postID}`).innerText = "Check Quotes";
+        return document.getElementById(`quotesOpened_${postID}`).remove();
+    }
+
+    const quoteData = await sendRequest(`/posts/quotes/${postID}`, { method: 'GET', });
+    if (quoteData.error) {
+        document.getElementById(`postElement_${postID}`).innerHTML+=`
+            <div id="quotesOpened_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
+                <p>Quotes</p>
+                <p>---</p>
+                There are no quotes yet on this post.
+            </div>
+        `;
+        if (debug) console.log("no quotes")
+        return ;
+    }
+
+    var ele = ``;
+    for (const quote of quoteData.quotes) {
+        const userData = await sendRequest(`/get/userByID/${quote.userID}`, { method: 'GET' });
+        ele+=postElementCreate({post: quote, user: userData, hideParent: true });
+    }
+
+    document.getElementById(`postElement_${postID}`).innerHTML+=`
+        <div id="quotesOpened_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
+            <p>Quotes</p>
+            <p>---</p>
+            ${ele}
+        </div>
+    `;
+
+    document.getElementById(`quotes_${postID}`).innerText = "Close Quotes";
 }
 
 // async function 
@@ -1550,6 +1604,7 @@ async function userHtml(userID) {
                     user: pin.userData, 
                     pollData: pin.type?.poll=="included" ? pin.pollData : null,
                     voteData: pin.type?.vote=="included" ? pin.voteData : null,
+                    quoteData: pin.type?.quote=="included" ? pin.quoteData : null,
                 })
             }).join(" ")}
         ` : ``}
@@ -2542,6 +2597,7 @@ function buildView(posts) {
                 user: postArray.userData, 
                 pollData: postArray.type?.poll=="included" ? postArray.pollData : null,
                 voteData: postArray.type?.vote=="included" ? postArray.voteData : null,
+                quoteData: postArray.type?.quote=="included" ? postArray.quoteData : null,
             })
         }).join(" ")}
     `
@@ -3383,6 +3439,7 @@ function checkForImage(content) {
     const imageFormats = ['.jpg', '.png','.jpeg', '.svg', '.gif']
     const videoFormats = [{'urlEnd': '.mp4', "type": 'mp4'}, {'urlEnd':'.mov','type':'mp4'}, {'urlEnd':'.ogg', 'type': 'ogg'}]
 
+    if (!content) return '';
     const contentArgs = content.split(/[ ]+/)
     var foundImage = false
 
