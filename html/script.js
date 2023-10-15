@@ -442,7 +442,7 @@ async function saveBookmark(postID, list) {
 }
 
 async function showLikes(postID) {
-    const likedBy = await sendRequest(`/get/postLikedBy/${postID}`, { method: 'GET' });
+    const likedBy = await sendRequest(`/posts/likes/${postID}`, { method: 'GET' });
     if (!likedBy || !likedBy.peopleLiked) return document.getElementById(`likedBy_${postID}`).innerHTML = `Could not find any people who liked the post.`;
 
     var newElement = `<p>Liked By:</p>`;
