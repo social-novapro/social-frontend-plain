@@ -143,7 +143,7 @@ async function checkURLParams() {
     return paramsInfo
 }
 
-function postElementCreate({ post, user, type, hideParent, hideReplies, pollData, voteData, quoteData }) {
+function postElementCreate({ post, user, type, hideParent, hideReplies, pollData, voteData, quoteData, extraData }) {
     if (!post) return;
     if (post.deleted) {
         const ele = `
@@ -157,6 +157,7 @@ function postElementCreate({ post, user, type, hideParent, hideReplies, pollData
         return ele;
     }
 
+    if (!extraData) extraData = { }
     var timesince
     if (post.timePosted) timesince = checkDate(post.timePosted)
     const imageContent = checkForImage(post.content)
@@ -169,8 +170,6 @@ function postElementCreate({ post, user, type, hideParent, hideReplies, pollData
     }
     
     const timeSinceData = getTimeSince(post.timePosted);
-
-    const postIsLiked = post.liked ? true : false;
 
     // imageContent.attachments
     if (imageContent.imageFound) if (debug) console.log(imageContent.attachments)
@@ -228,7 +227,7 @@ function postElementCreate({ post, user, type, hideParent, hideReplies, pollData
                 </div>
                 <div class="actionOptions pointerCursor posts_action-style"> 
                     ${post.totalLikes ? 
-                        `<p onclick="likePost('${post._id}')" ${postIsLiked == true ? 'class="likedColour"':''} id="likePost_${post._id}">${puralDataType('like', post.totalLikes)}</p>` :
+                        `<p onclick="likePost('${post._id}')" ${extraData.liked == true ? 'class="likedColour"':''} id="likePost_${post._id}">${puralDataType('like', post.totalLikes)}</p>` :
                         `<p onclick="likePost('${post._id}')" id="likePost_${post._id}">like</p>`
                     }
                     ${post.totalReplies ? 
@@ -250,7 +249,7 @@ function postElementCreate({ post, user, type, hideParent, hideReplies, pollData
                         ` : ''}
                     ` : ''}
                     </p>
-                    <p id="popupactions_${post._id}" onclick="popupActions('${post._id}', '${options.hideParent}', '${options.hideReplies}', '${options.owner}', ${post.pinned})">more</p>
+                    <p id="popupactions_${post._id}" onclick="popupActions('${post._id}', '${options.hideParent}', '${options.hideReplies}', '${options.owner}', ${extraData.pinned}, ${extraData.saved})">more</p>
                 </div>
             </div>
         </div>
@@ -275,7 +274,7 @@ function removeColorOption(pollID, optionID) {
     document.getElementById(elementID).classList.remove("voted");
 }
 
-async function popupActions(postID, hideParent, hideReplies, owner, pinned) {
+async function popupActions(postID, hideParent, hideReplies, owner, pinned=false, saved=false) {
     var elementPopup = document.getElementById(`popupOpen_${postID}`);
     if (elementPopup) return elementPopup.remove();
 
@@ -292,7 +291,7 @@ async function popupActions(postID, hideParent, hideReplies, owner, pinned) {
             <p>Menu Actions</p>
             <p>---</p>
             <p class="pointerCursor" onclick="${pinned===true ? `unpinPost('${postID}')` : `pinPost('${postID}')` }" id="pin_post_${postID}">${pinned===true ? `Unpin from Profile` : `Pin to Profile` }</p>
-            <p class="pointerCursor" onclick="saveBookmark('${postID}')" id="saveBookmark_${postID}">Save to Bookmarks</p>
+            <p class="pointerCursor" onclick="${saved===true ? `unsaveBookmark('${postID}')` : `saveBookmark('${postID}')`}" id="saveBookmark_${postID}">${saved===true ? `Remove from Bookmarks`:`Save to Bookmarks`}</p>
             <p class="pointerCursor" onclick="showEditHistory('${postID}')" id="editHistory_${postID}">Check Edit History</p>
             <p class="pointerCursor" onclick="showLikes('${postID}')" id="likedBy_${postID}">Check Who Liked</p>
             ${hideReplies != true ? `<p class="pointerCursor" onclick="viewReplies('${postID}')" id="replies_${postID}">Check Replies</p>` : ``}
@@ -439,6 +438,17 @@ async function saveBookmark(postID, list) {
     const res = await sendRequest(`/posts/save/`, { method: 'POST', body });
     if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.error}`;
     document.getElementById(`saveBookmark_${postID}`).innerText="Saved"
+}
+
+async function unsaveBookmark(postID, list, where) {
+    const body = {
+        postID,
+        listname: list ? list : "main"
+    }
+    const res = await sendRequest(`/posts/unsave/`, { method: 'DELETE', body });
+    if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.error}`;
+    if (!where) document.getElementById(`saveBookmark_${postID}`).innerText="Unsaved"
+    if (where == "bookmarks") document.getElementById(`bookmarkView_${postID}`).remove()
 }
 
 async function showLikes(postID) {
@@ -1605,6 +1615,7 @@ async function userHtml(userID) {
                     pollData: pin.type?.poll=="included" ? pin.pollData : null,
                     voteData: pin.type?.vote=="included" ? pin.voteData : null,
                     quoteData: pin.type?.quote=="included" ? pin.quoteData : null,
+                    extraData: pin.type?.extra=="included" ? pin.extraData : {},
                 })
             }).join(" ")}
         ` : ``}
@@ -1927,7 +1938,7 @@ async function showBookmarks() {
         obj[list.name] = []
     }
 
-    for (const save of res.saves) {
+    for (const save of res.saves.reverse()) {
         obj[save.bookmarkList].push(save._id)
     }
 
@@ -1940,11 +1951,23 @@ async function showBookmarks() {
                 <p>${listname}</p>
                 <hr class="rounded">
         `
-        for (const save of list) {
+        for (const save of list) {``
             if (debug) console.log(save)
             const newData = await getPostAndProfileData(save)
-            if (newData.error) ele+=`<p>error</p>`
-            else ele+= postElementCreate({post: newData.postData, user: newData.profileData, type : "basic"})
+            ele+= `
+                <div class="menu menu-style" id="bookmarkView_${save}">
+                    ${newData.error ? `
+                        <p>Deleted Post or Otherwise</p>
+                    ` : `
+                        ${postElementCreate({
+                            post: newData.postData,
+                            user: newData.profileData,
+                            type : "basic"
+                        })}
+                    `}
+                    <button class="menuButton menuButton-style" onclick="unsaveBookmark('${save}', null, 'bookmarks')">Remove ${newData.error ? `Broken` : ''} Bookmark</button>
+                </div>
+            `;
         }
         ele+=`</div>`
     }
@@ -2286,12 +2309,12 @@ async function requestDevToken() {
 };
 
 async function getPostAndProfileData(postID) {
-    const postData = await sendRequest(`/posts/get/${postID}`, { method: 'GET' });
+    const postData = await sendRequest(`/posts/get/${postID}`, { method: 'GET', ignoreError: true});
 
     if (!postData || postData.error) return {error: `${postData.error ? postData.error : "an unknown error"}`};
     if (debug) console.log(postData);
 
-    const profileData = await sendRequest(`/get/userByID/${postData.userID}`, { method: 'GET' });
+    const profileData = await sendRequest(`/get/userByID/${postData.userID}`, { method: 'GET', ignoreError: true});
     if (!profileData || profileData.error) return {error: `${profileData.error ? profileData.error : "an unknown error"}`};
 
     return { "postData" : postData, "profileData": profileData };
@@ -2598,6 +2621,7 @@ function buildView(posts) {
                 pollData: postArray.type?.poll=="included" ? postArray.pollData : null,
                 voteData: postArray.type?.vote=="included" ? postArray.voteData : null,
                 quoteData: postArray.type?.quote=="included" ? postArray.quoteData : null,
+                extraData: postArray.type?.extra=="included" ? postArray.extraData : null,
             })
         }).join(" ")}
     `
@@ -2841,6 +2865,7 @@ async function searchResult(input) {
                 user: postArray.userData, 
                 pollData: postArray.type?.poll=="included" ? postArray.pollData : null,
                 voteData: postArray.type?.vote=="included" ? postArray.voteData : null,
+                extraDta: postArray.type?.extra=="included" ? postArray.extraData : null,
             })
         }).join(" ")}
     `
