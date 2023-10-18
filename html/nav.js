@@ -9,8 +9,9 @@ var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 var LOCAL_STORAGE_LOGINS='social.loginAccounts'
 var LOCAL_STORAGE_THEME_SETTINGS = 'social.themeSettings'
 var LOCAL_STORAGE_THEME_POSSIBLE = 'social.themePossible'
-
-// console.log(config)
+var adminUser = false; /* EDIT THIS LATER */
+var devMode;
+// console.log(config) 
 var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
 var hostedURL = `${config ? `${config.current == "prod" ? config.prod.hosted_url : config.dev.hosted_url}` : 'https://interact-api.novapro.net/v1' }`
 var wsURL = `${config ? `${config.current == "prod" ? config.prod.websocket_url : config.dev.websocket_url}` : 'wss://interact-api.novapro.net/' }`
@@ -31,19 +32,65 @@ if (location.protocol !== 'https:' && !((/localhost|(127|192\.168|10)\.(\d{1,3}\
 else {
    startup()
 }
+
+/* STARTUP */
 async function startup(){
-    addAlertPopup()
     addNavigation()
     checkNavCookie()
     addTitle() 
     checkLogin()
     loadTheme();
+    addAlertPopup()
 }
 
+/* ALERTS */
 async function addAlertPopup() {
     // fetch newest one
+    const alertBar = document.getElementById('alertBar');
+    if (!alertBar) return;
+
+    const response = await fetch(`${apiURL}/alert/get/latest`, {
+        method: 'GET',
+        headers: headers
+    })
+    
+    const alertFetch = await response.json();
+    if (!response.ok) return console.log(response);
+
+    document.getElementById('alertBar').innerHTML = alertEle(alertFetch.alert, "latest");
 }
 
+function alertEle(alert, subname) {
+    const { _id: alertID, title, content, isArchived } = alert;
+    return `
+        <div class="menu menu-style" id="alert_${alertID}${subname ? `_${subname}` : ""}">
+            ${title ? 
+                `
+                    <h1>${title}</h1>
+                ` : ``
+            }
+            <p>${content}</p>
+            ${isArchived == true ?
+                `
+                    <p>Archived</p>
+                ` : `
+                ${adminUser == true && alert.isArchived !== true ? 
+                    `
+                    <p onclick="archiveAlert('${alertID}')">Archive</p>
+                    ` : `
+                    not an admin or is already archived
+                    `
+                }`
+            }
+                ${devMode ? 
+                `
+                    <p>${alertID}</p>
+                ` : ` `
+            }
+        </div>
+    `;
+}
+/* THEMES */
 async function loadTheme() {
     const prevSettings = getThemeSettings(); // and loads 
     
@@ -194,6 +241,7 @@ async function getPossibleThemeEdits() {
     return res;
 }
 
+/* NAVIGATION */
 function addNavigation() {
     return newNavigation();
 }
@@ -248,6 +296,7 @@ function addTitle() {
     document.title = 'Interact'
 }
 
+/* ACCOUNT MANAGEMENT */
 async function signOut() {
     localStorage.removeItem(LOCAL_STORAGE_LOGIN_USER_TOKEN);
 
@@ -314,6 +363,7 @@ async function sendLoginRequest() {
     return response
 }
 
+/* NAVIGATION */
 async function redirectPage() {
     if (pathArray[1]=="begin") return
     if (pathArray[1]=="emails") return
@@ -377,6 +427,7 @@ async function switchNav(pageVal) {
     }
 }
 
+/* MODAL */
 function showModal(html, showClose) {
     document.getElementById('modalContainer').classList.add("showModal");
     document.getElementById('modalContainer').innerHTML = `
@@ -410,7 +461,7 @@ function closeModal() {
     return true;
 }
 
-
+/* SIDEBAR */
 var openedSidebar = false
 var mainContentSideBarOpenClosed = false
 
