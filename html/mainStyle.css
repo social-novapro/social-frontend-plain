@@ -77,6 +77,10 @@ body {
     background-color: var(--main-body-color);
     padding-bottom: 20px;
 }
+.debug p {
+    font-size: smaller;
+    color: rgb(112, 112, 112);
+}
 .main-header {
     -webkit-user-select: none;
     user-select: none;
@@ -301,7 +305,7 @@ p {
     min-width: 40%;
     text-align: center;
     position: fixed;
-    margin-top: 20px;*/
+    margin-top: 20px;
     text-decoration: none;
     color: var(--main-a-color);
     box-shadow:
@@ -313,7 +317,7 @@ p {
     border: 2px solid var(--main-border-color);
     overflow-wrap: break-word;
     margin-right: 10%;
-    margin-top: 20px;*/
+    margin-top: 20px;
     text-decoration: none;
     color: var(--main-a-color);
     text-align: center;

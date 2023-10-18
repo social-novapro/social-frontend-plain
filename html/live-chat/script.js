@@ -250,8 +250,13 @@ function addToList(data, content, user, timeStamp, message) {
                     <div id="editButton_${data._id}"><p onclick="editMessage('${data._id}', '${data.message.edited ? true : false}')">Edit</p></div>
                 ` : `` }
             </div>
+            <div class="debug">
+                <p onclick="copyToClipboard('${data._id}')">messageID: ${data._id}</p>
+                <p onclick="copyToClipboard('${data.user._id}')">userID: ${data.user._id}</p>
+            </div>
         </div>
     `;
+    devMode()
 
     var objDiv = document.getElementById("messages");
     objDiv.scrollTop = objDiv.scrollHeight;

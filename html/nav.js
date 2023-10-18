@@ -21,6 +21,7 @@ var headers = {
 }
 var openedSidebar = false
 var mainContentSideBarOpenClosed = false
+var debug = false;
 
 var sideBarOpenClosed = document.getElementById("expandingNavBar")
 var mainContentSideBarOpenClosed = document.getElementById("expandingMainContent")
@@ -31,12 +32,57 @@ if (location.protocol !== 'https:' && !((/localhost|(127|192\.168|10)\.(\d{1,3}\
 else {
    startup()
 }
+
 async function startup(){
+    devMode();
     addNavigation()
     checkNavCookie()
     addTitle() 
     checkLogin()
     loadTheme();
+}
+
+// DEBUGGING MODE
+function devMode() {
+    const debugStr = getCookie("debugMode");
+    if (debugStr == "true") {
+        debug = true;
+        addDebug();
+    } else {
+        debug=false;
+        removeDebug();
+    }
+}
+
+// ADDING DEBUG INFO TO EVERYTHING
+function addDebug() {
+    for (debugging of document.getElementsByClassName("debug")) {
+        debugging.classList.add("debug-shown"); 
+    }
+}
+
+// REMOVES DEBUG INFO FROM EVERYTHING
+function removeDebug() {
+    for (debugging of document.getElementsByClassName("debug")) {
+        debugging.classList.remove("debug-shown"); 
+    }
+}
+
+// SWITCHING DEBUGGING MODE
+function debugModeSwitch() {
+    if(!debug) {
+        setCookie("debugMode", true, 365);
+        addDebug()
+        debug = true
+    } else {
+        setCookie("debugMode", false, 365);
+        removeDebug()
+        debug = false
+    }
+}
+
+function copyToClipboard(data) {
+    navigator.clipboard.writeText(data);
 }
 
 async function loadTheme() {
