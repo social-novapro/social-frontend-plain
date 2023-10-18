@@ -32,7 +32,6 @@ var currentPage
 var searching
 var currentFeed 
 var currentFeedType
-var debug = false
 var mobileClient = checkifMobile();
 
 // LOCAL STORAGE
@@ -52,8 +51,6 @@ function checkifMobile() {
     }
 }
 
-// actives dev mode
-devMode();
 
 // makes sure url is as expected
 if (location.protocol !== 'https:' && !((/localhost|(127|192\.168|10)\.(\d{1,3}\.?){2,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.(\d{1,3}\.?){2}/).test(location.hostname))) {
@@ -199,9 +196,7 @@ function postElementCreate({ post, user, type, hideParent, hideReplies, pollData
                         <p onclick="viewParentPost('${post._id}', '${post.replyData.postID}')" id="parentViewing_${post._id}">This was a reply, click here to see.</p>
                     ` : ``}
                 `: ``}
-                ${user ? `
-                <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'}<br class="spacer_2px">${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
-                `:''}
+                <p class="pointerCursor ${ user && (post.userID == currentUserLogin.userID )? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'}<br class="spacer_2px">${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
                 <div class="postContent" id="postContentArea_${post._id}">
                     <div class="textAreaPost posts_content-style">
                         <p id="postContent_${post._id}">${imageContent.content}</p>
@@ -221,9 +216,9 @@ function postElementCreate({ post, user, type, hideParent, hideReplies, pollData
                     </div>
                 ` : `` }
                 <div class="debug">
-                    <p>postID: ${post._id}</p>
-                    <p>userID: ${post.userID}</p>
-                    ${post.pollID ? `<p>pollID: ${post.pollID}</p>` : `` }
+                    <p onclick="copyToClipboard('${post._id}')">postID: ${post._id}</p>
+                    <p onclick="copyToClipboard('${post.userID}')">userID: ${post.userID}</p>
+                    ${post.pollID ? `<p onclick="copyToClipboard('${post.pollID}')">pollID: ${post.pollID}</p>` : `` }
                 </div>
                 <div class="actionOptions pointerCursor posts_action-style"> 
                     ${post.totalLikes ? 
@@ -535,10 +530,10 @@ function pollElement(postID, pollID, pollData, voteData) {
                         <div id="pollOption_${postID}_${option._id}" class="pollOption posts-style">
                             <div id="poll_option_${pollData._id}_${option._id}" class="poll_option ${voteData?.pollOptionID == option._id ? "voted" : ""}" onclick="voteOption('${pollID}', '${option._id}')">
                                 <p>${option.optionTitle}</p>
-                                <div class="debug">
-                                    <p>optionID: ${option._id}</p>
-                                    <p>indexID: ${option.currentIndexID || "unknown"}</p>
-                                </div>
+                            </div>
+                            <div class="debug">
+                                <p onclick="copyToClipboard('${option._id}')">optionID: ${option._id}</p>
+                                <p onclick="copyToClipboard('${option.currentIndexID}')">indexID: ${option.currentIndexID || "unknown"}</p>
                             </div>
                         </div>
                     `;
@@ -876,7 +871,9 @@ function settingsPage() {
                     </div>
                     <div class="menu menu-style">
                         <p><b>DevMode</b></p>
-                        <p>Enable / Disable dev mode. This will allow you to see more information about the different elements of Interact.</p>
+                        <p>Enable / Disable dev mode. This will allow you to see more information about the different elements of Interact.<br><br>
+                        To view change live, open inspect element, and run <b>switchNav(3)</b><br><br>
+                        You can quickly copy values by pressing the IDs. This will copy the ID to your clipboard.</p>
                         <button class="menuButton menuButton-style" onclick="devModePage()">Dev Mode Settings</button>
                         <div id="devModeConfirm"></div>
                     </div>
@@ -2240,9 +2237,6 @@ async function showDevOptions() {
     return;
 };
 
-function copyToClipboard(data) {
-    navigator.clipboard.writeText(data);
-}
 
 async function requestAppToken(amount) {
     const newAmount = amount+1;
@@ -2388,44 +2382,6 @@ async function signupSocial() {
     `
 }
 
-// DEBUGGING MODE
-function devMode() {
-    const debugStr = getCookie("debugMode");
-    if (debugStr == "true") {
-        debug = true;
-        addDebug();
-    } else {
-        debug=false;
-        removeDebug();
-    }
-}
-
-// ADDING DEBUG INFO TO EVERYTHING
-function addDebug() {
-    for (debugging of document.getElementsByClassName("debug")) {
-        debugging.classList.add("debug-shown"); 
-    }
-}
-
-// REMOVES DEBUG INFO FROM EVERYTHING
-function removeDebug() {
-    for (debugging of document.getElementsByClassName("debug")) {
-        debugging.classList.remove("debug-shown"); 
-    }
-}
-
-// SWITCHING DEBUGGING MODE
-function debugModeSwitch() {
-    if(!debug) {
-        setCookie("debugMode", true, 365);
-        addDebug()
-        debug = true
-    } else {
-        setCookie("debugMode", false, 365);
-        removeDebug()
-        debug = false
-    }
-}
 
 // CHECK DEBUG COOKIE
 function checkCookie() {
@@ -2855,7 +2811,7 @@ async function searchResult(input) {
                     <p class="${user._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" onclick="userHtml('${user._id}')"> ${user.displayName} @${user.username} | ${user.creationTimestamp ? timesince : '' }</p>
                     <p>${user.description ? user.description : "no description"}</p>
                     <p>Following: ${user.followingCount} | Followers: ${user.followerCount}</p>
-                    <p class="debug">${user._id}</p>
+                    <p class="debug" onclick="copyToClipboard('${user._id}')">${user._id}</p>
                 </div>
             `
         }).join(" ")}
