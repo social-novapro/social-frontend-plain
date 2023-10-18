@@ -1,4 +1,5 @@
-// var websocketenabled
+
+// VARIBLES
 var ws
 var roomID
 var defaultRoomID = "0001"
@@ -8,21 +9,22 @@ var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 var sendTypeStop
 var amountTyping
 var baseURL
+var verifiedConnection = false
+var loadingMessages = [];
+
+// HEADERS
 var headers = {
     "devtoken" : "6292d8ae-8c33-4d46-a617-4ac048bd6f11",
     "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421"
 }
-var verifiedConnection = false
-var loadingMessages = [];
-// console.log(config.dev.websocket_url)
+
+// API URLS
 var wsURL = `${config ? `${config.current == "prod" ? config.prod.websocket_url : config.dev.websocket_url}` : 'https://interact-api.novapro.net/v1' }`
 
 if (location.protocol !== 'https:' && !((/localhost|(127|192\.168|10)\.(\d{1,3}\.?){2,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.(\d{1,3}\.?){2}/).test(location.hostname))) {
     location.replace(`https:${location.href.substring(location.protocol.length)}`);
 }
-else {
-    checkLogin()
-}
+else checkLogin()
 
 function sendTokensDebug() {
     const authSend = {
@@ -49,25 +51,18 @@ function getTime() {
 }
 
 async function checkLogin() {
-    // console.log'running 3')
-
     const userStorageLogin = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
     if (userStorageLogin) {
         currentUserLogin = JSON.parse(userStorageLogin)
         headers.accesstoken = currentUserLogin.accessToken
         headers.usertoken = currentUserLogin.userToken
         headers.userid = currentUserLogin.userID
-        // console.logheaders)
         loginUserToken = true
     }
-    // console.log'running 4')
 
     if (!loginUserToken) return window.location.href = "/begin/?redirect=live-chat";
     else return checkWebSocket()
 }
-
-// checkWebSocket()
-// checkRoomID()
 
 function checkRoomID() {
     const paramsData = checkURLParams()
@@ -82,33 +77,16 @@ function checkRoomID() {
 
 
 function checkWebSocket() {
-    // console.log'running 5')
-
     if ("WebSocket" in window) {
         document.getElementById("actiondescription").innerHTML = `
             WebSocket is supported by your Browser
         `
 
         ws = new WebSocket(`${wsURL}?userID=${currentUserLogin.userID}`)
-        ws.onopen = function() {
-           // ws.send({'test': 'test'})
-         //   ws.close()
-        }
+        ws.onopen = function() { }
 
         ws.onmessage = function (evt) { 
             const data = JSON.parse(evt.data)
-            /*
-            const authSend = {
-                "type": 10,
-                "apiVersion": "1.0",
-                "userID": currentUserLogin.userID,
-                "tokens": headers,
-            };
-            console.log(authSend)
-            
-            ws.send(JSON.stringify(authSend));*/
-            // console.log(data)
-            //console.log(data.type)
 
             switch (data.type) {
                 case 01:
@@ -159,12 +137,6 @@ function checkWebSocket() {
                     }
                     else if (data.mesType==2) {
                         verifiedConnection = true
-                        // const oldmessages = {
-                        //     type: 11,
-                        //     apiVersion: "1.0",
-                        //     userID: currentUserLogin.userID,
-                        // }
-                        // ws.send(JSON.stringify(oldmessages))
                     }
                     else if (data.mesType==4) {
                         loadMessages();
@@ -259,21 +231,19 @@ function userTyping(data) {
 function addToList(data, content, user, timeStamp, message) {
     var timesince
     if (timeStamp) timesince = checkDate(timeStamp)
-    // console.log(data)
     const imageContent = checkForImage(content)
 
-    // console.log(data.message)
     document.getElementById("messages").innerHTML+=`
-        <div class="message" id="${data._id}">
+        <div class="message posts-style" id="${data._id}">
             ${data.message?.replyTo ? `
                 <p style="font-size: 8;" class="edited contentMessage replyToMessage replyTo_${data.message.replyTo}" onclick="highlightMessage('${data.message.replyTo}')" id="replyContent_${data._id}"><i>${getContent(data.message.replyTo)}</i></p>
             `: ""}
-            <p class="subheaderMessage ${user._id == currentUserLogin.userID ? "ownUser" : "otherUser"}">${user.displayName} @${user.username} | ${timesince}</p>
+            <p class="subheaderMessage ${user._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}">${user.displayName} @${user.username} | ${timesince}</p>
             <div class="contentMainArea" id="contentMainArea_${data._id}">
-                <p class="contentMessage" id="contentArea_${data._id}">${imageContent.content}</p>
+                <p class="contentMessage posts_content-style" id="contentArea_${data._id}">${imageContent.content}</p>
                 ${data.message?.edited ? '<p class="edited contentMessage"><i>(edited)</i></p>' : ''}
             </div>
-            <div class="messageActions">
+            <div class="messageActions posts_action-style">
                 <div id="replyDiv_${data._id}"><p onclick="replyToMessage('${data._id}')">Reply</p></div>
                 ${data.type==2 && user._id == currentUserLogin.userID  ?  `
                     <p id="deleteButton_${data._id}"><p onclick="deleteMessage('${data._id}')">Delete</p></p>
@@ -284,7 +254,6 @@ function addToList(data, content, user, timeStamp, message) {
     `;
 
     var objDiv = document.getElementById("messages");
-
     objDiv.scrollTop = objDiv.scrollHeight;
 };
 
@@ -296,6 +265,7 @@ function getContent(messageID) {
         return "loading..."
     };
 }
+
 function loadMessages() {
     if (loadingMessages.length == 0) return
 
@@ -323,7 +293,6 @@ function highlightMessage(id) {
     setTimeout(function () {
         document.getElementById(`contentArea_${id}`).classList.remove("replyingEle");
     }, 5000);
-    // document.getElementById(`contentArea_${id}`).classList.add("activeHighlight");
 };
 
 function checkIfActiveReply() {
@@ -347,11 +316,8 @@ function checkIfActiveReply() {
 };
 
 function replyToMessage(id) {
-    // const ele = document.getElementById(id);
     const lookForReply = checkIfActiveReply();
-
     if (lookForReply.foundActive) cancelReply(lookForReply.replyID);
-    // if (document.getElementsByClassName(`activeHighlight`)) document.getElementsByClassName.remove
 
     document.getElementById(`contentArea_${id}`).classList.add("replyingEle");
     document.getElementById(`replyDiv_${id}`).innerHTML= `
@@ -375,7 +341,6 @@ function editMessage(id, edited) {
             <input type="text" class="contentMessage" id="editMessageBar_${id}" value="${oldMessage}">
         </form>
     `
-    // <a onclick="cancelEdit('${id}')">Cancel</a>
 
     document.getElementById(`editMessageBar_${id}`).focus()
 }
@@ -450,7 +415,6 @@ function checkDate(time){
     const date = dateFromEpoch(timeNum)
     const timesince = timeSinceEpoch(diff)
     return date
-    // return `${date}, ${timesince}`
 }
 
 function dateFromEpoch(time) {
@@ -498,7 +462,6 @@ function sendmessage() {
     const messageSend = {
         type: 02,
         apiVersion: "1.0",
-    //    roomID,
         message: {
             userID: currentUserLogin.userID,
             content: input,

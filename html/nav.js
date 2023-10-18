@@ -6,6 +6,9 @@ var baseUrl = getUrl .protocol + "//" + getUrl.host + "/" + getUrl.pathname.spli
 var pathArray = window.location.pathname.split( '/' );
 
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
+var LOCAL_STORAGE_LOGINS='social.loginAccounts'
+var LOCAL_STORAGE_THEME_SETTINGS = 'social.themeSettings'
+var LOCAL_STORAGE_THEME_POSSIBLE = 'social.themePossible'
 
 // console.log(config)
 var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
@@ -34,37 +37,170 @@ async function startup(){
     checkNavCookie()
     addTitle() 
     checkLogin()
+    loadTheme();
 }
 
 async function addAlertPopup() {
     // fetch newest one
 }
 
-// console.log(hostedURL)
-// console.log(baseUrl)
-// console.log(pathArray)
+async function loadTheme() {
+    const prevSettings = getThemeSettings(); // and loads 
+    
+    const currentTheme = await getTheme();
+    if (!currentTheme || !currentTheme.colourTheme) {
+        // sets empty theme
+        await applyThemeNav({});
+        return false;
+    };
+    if (
+        prevSettings &&
+        prevSettings._id == currentTheme._id && 
+        prevSettings.timestamp_edited == currentTheme.timestamp_edited
+    ) return true;
+    else setThemeSettings(currentTheme);
 
-/*if ("WebSocket" in window) {
-    ws = new WebSocket(`${wsURL}stats`)
-}*/
+    await applyThemeNav(currentTheme);
+
+    return true;
+}
+
+function getThemeSettings() {
+    const themeSettings = localStorage.getItem(LOCAL_STORAGE_THEME_SETTINGS)
+    if (!themeSettings) return false;
+    else {
+        currentThemeSettings = JSON.parse(themeSettings);
+        if (!currentThemeSettings || !currentThemeSettings.colourTheme) return false;
+        quickApplyThemeNav(currentThemeSettings.colourTheme);
+
+        return currentThemeSettings;
+    }
+}
+
+function setThemeSettings(newData) {
+    if (!newData) return removeThemeSettings();
+    localStorage.setItem(LOCAL_STORAGE_THEME_SETTINGS, JSON.stringify(newData))
+}
+
+function removeThemeSettings() {
+    localStorage.removeItem(LOCAL_STORAGE_THEME_SETTINGS)
+}
+
+async function applyThemeNav(theme) {
+    const themeSettings = theme.colourTheme;
+
+    setThemeSettings(theme);
+
+    const findSettings = await getPossibleThemeEdits();
+    if (findSettings && !findSettings.error) localStorage.setItem(LOCAL_STORAGE_THEME_POSSIBLE, JSON.stringify(findSettings))
+
+    // removes current theme
+    unsetTheme()
+   
+    const style = document.createElement('style');
+    style.id="themeStyle"
+    
+    if (!findSettings || findSettings.error || findSettings[0]) return;
+    for (const option of findSettings) {
+        const optionName = option.option;
+        if (optionName == "_id") continue;
+        if (themeSettings && themeSettings[optionName]) style.innerHTML += setTheme(optionName, themeSettings[optionName], option.styles)
+        else style.innerHTML += setTheme(optionName, null, option.styles)
+    }
+
+    document.head.appendChild(style);
+
+    return true;
+}
+
+function unsetTheme() {
+    const rmStyle = document.getElementById('themeStyle');
+    if (rmStyle) document.head.removeChild(rmStyle);
+    return true;
+}
+
+function quickApplyThemeNav(themeSettings) {
+    const style = document.createElement('style');
+    style.id="themeStyle"
+    const possible = JSON.parse(localStorage.getItem(LOCAL_STORAGE_THEME_POSSIBLE))
+
+    if (possible && possible[0]) {
+        for (const option of possible) {
+            const optionName = option.option;
+            if (optionName == "_id") continue;
+            if (themeSettings && themeSettings[optionName]) style.innerHTML += setTheme(optionName, themeSettings[optionName], option.styles)
+            else style.innerHTML += setTheme(optionName, null)
+        }
+    } else {
+        for (const option in themeSettings) {
+            if (option == "_id") continue;
+            style.innerHTML += setTheme(option, themeSettings[option] ? themeSettings[option] : null);
+        }
+    }
+
+    // applies new theme
+    document.head.appendChild(style);
+
+    return true;
+}
+
+function getStyles(name) {
+    const possible = JSON.parse(localStorage.getItem(LOCAL_STORAGE_THEME_POSSIBLE))
+    
+    if (possible && possible[0]) {
+        for (const option of possible) {
+            if (option.option == name) return option.styles;
+        }
+    }
+}
+
+function setTheme(name, value, styles) {
+    if (name.includes("font")) {
+        var newName = name.replace("font_", "");
+        newName+= "-style";
+        var styling = `.${newName}`;
+        
+        if (styles) {
+            for (const style of styles) {
+                styling += `, .${newName} ${style} `
+            }
+        }
+
+        return `${styling} { color: ${value}; } \n`;
+    }
+    
+    return `.${name}-style { background-color: ${value}; } \n`;
+}
+
+async function getTheme(themeID) {
+    const response = await fetch(`${themeID ? `${apiURL}/users/profile/theme/${themeID}` : `${apiURL}/users/profile/theme/user/`}`, {
+        method: 'GET',
+        headers,
+    });
+
+    const res = await response.json();
+
+    return res;
+}
+
+async function getPossibleThemeEdits() {
+    const response = await fetch(`${apiURL}/users/profile/theme/possible`, {
+        method: 'GET',
+        headers,
+    });
+
+    const res = await response.json();
+
+    return res;
+}
 
 function addNavigation() {
     return newNavigation();
-    document.getElementById('navArea').innerHTML = `
-        <div class="nav"id="nav">
-            <div id="page1Nav">${pathArray[1] != "" ? `<button class="buttonStyled"  onclick="switchNav(5)" id="page1">Feed</button>` : `<button class="buttonStyled"  onclick="switchNav(1)" id="page1">Live Chat</button>`}</div>
-            <div id="page2Nav"><button class="buttonStyled"  onclick="switchNav(2)" id="page2">Profile</button></div>
-            <div id="page3Nav"><button class="buttonStyled"  onclick="switchNav(3)" id="page3">DevMode</button></div>
-            <div id="page4Nav"><button class="buttonStyled"  onclick="createPostModal()" id="page4">Create Post</button></div>
-            <div id="page5Nav"><button class="buttonStyled"  onclick="signOut()" id="page5">Sign Out</button></div>
-            <div id="searchBar"><button class="buttonStyled" onclick="activeSearchBar()" id="page6">Search</button></div>
-        </div>
-    `
 }
 
 function newNavigation() {
     document.getElementById('expandingNavBar').innerHTML = `
-        <ul class="navbar-nav">
+        <ul class="navbar-nav navigation-style">
             <li class="nav-item pointerCursor" id="navSection0">
                 <div id="page2Nav" class="nav-link" onclick="switchNav(5)">
                     <span class="material-symbols-outlined nav-button";>home</span>
@@ -114,7 +250,57 @@ function addTitle() {
 
 async function signOut() {
     localStorage.removeItem(LOCAL_STORAGE_LOGIN_USER_TOKEN);
-    
+
+    const logins = localStorage.getItem(LOCAL_STORAGE_LOGINS);
+    if (logins) {
+        const loginsArray = JSON.parse(logins);
+
+        for (const login of loginsArray) {
+            if (login.accessToken == currentUserLogin.accessToken) {
+                loginsArray.splice(loginsArray.indexOf(login), 1);
+            }
+        }
+        localStorage.setItem(LOCAL_STORAGE_LOGINS, JSON.stringify(loginsArray));
+
+        if (loginsArray[0]) return switchAccount(loginsArray[0].userID);
+    }
+
+    redirectBegin()
+}
+
+async function signOutAll() {
+    localStorage.removeItem(LOCAL_STORAGE_LOGIN_USER_TOKEN);
+    localStorage.removeItem(LOCAL_STORAGE_LOGINS);
+
+    redirectBegin()
+}
+
+async function switchAccount(userID) {
+    const logins = localStorage.getItem(LOCAL_STORAGE_LOGINS);
+    if (logins) {
+        const loginsArray = JSON.parse(logins);
+
+        for (const login of loginsArray) {
+            if (login.userID == userID) {
+                localStorage.setItem(LOCAL_STORAGE_LOGIN_USER_TOKEN, JSON.stringify(login));
+                await checkLogin();
+                const currentTheme = await getTheme(null, true);
+                if (!currentTheme || !currentTheme.colourTheme) {
+                    // sets empty theme
+                    await applyThemeNav({});
+                    return false;
+                };
+            
+                await applyThemeNav(currentTheme);
+                location.reload()
+            }
+        }   
+    }
+}
+
+// location.reload(true); 
+// USE THIS 
+function redirectBegin() {
     if (pathArray[1] == "" || "begin") window.location.href = `/begin`
     else window.location.href = `/begin?redirect=${pathArray[1]}`
 }
@@ -161,24 +347,6 @@ async function checkLogin() {
     return
 }
 
-/* // GET REQUESTED COOKIE
-function getCookie(cname) {
-    var name = cname + "=";
-    var decodedCookie = decodeURIComponent(document.cookie);
-    var ca = decodedCookie.split(';');
-
-    for(var i = 0; i < ca.length; i++) {
-        var c = ca[i];
-        while (c.charAt(0) == ' ') {
-            c = c.substring(1);
-        } if (c.indexOf(name) == 0) {
-            return c.substring(name.length, c.length);
-        }
-    }
-
-    return "";
-}*/
-
 async function switchNav(pageVal) {
     switch (pageVal) {
         // SEARCH
@@ -211,21 +379,34 @@ async function switchNav(pageVal) {
 
 function showModal(html, showClose) {
     document.getElementById('modalContainer').classList.add("showModal");
-    document.getElementById('modal').innerHTML = html;
+    document.getElementById('modalContainer').innerHTML = `
+        <div class="modal menu-style" id="modal">${html}</div>
+    `;
+
+    listenerContainer();
 
     if (showClose == "hide") return true;
     else return showModalClose();
 }
 
+function listenerContainer() {
+    document.getElementById('modalContainer').addEventListener('click', function(event) {
+        if (event.target === modalContainer) {
+            return closeModal();
+        }
+    });
+}
+
 function showModalClose() {
     document.getElementById('modal').innerHTML+=`
-        <button class="buttonStyled" onclick="closeModal()">Close</button>
+        <button class="menuButton menuButton-style" onclick="closeModal()">Close</button>
     `;
 }
 
 function closeModal() {
     document.getElementById('modalContainer')?.classList.remove("showModal");
-    document.getElementById('modal').innerHTML = "";
+    document.getElementById('modalContainer').innerHTML = "";
+
     return true;
 }
 

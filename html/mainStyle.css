@@ -97,13 +97,11 @@ body {
     position: relative;
     text-align: center;
     z-index: 20px;
-    /*padding: 20px;*/
     padding-top: 1rem;
     height: 3rem;
     font-size: 1rem;
     padding-bottom: 1rem;
     background-color: rgb(44, 44, 46, 0.95);
-    /*width: 100%;*/
     border-bottom: 2px solid var(--main-border-color);
 }
 .possibleFeeds .buttonStyled {
@@ -116,7 +114,6 @@ body {
     text-align: center;
     padding: 14px 16px;
     height: 1rem;
-    /*padding-top: 20px;*/
     text-decoration: none;  
 }
 
@@ -147,6 +144,49 @@ p {
 }
 .debug-shown {
     display:block;
+}
+.ownUser-style {
+    color: rgb(81, 144, 251);
+}
+.otherUser-style {
+    color: rgb(146, 146, 146)
+}
+.menu {
+    background-color:  var(--main-button-color);
+    border: 2px solid var(--main-border-color);
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    margin-left: 10%;
+    margin-right: 10%;
+    margin-top: 20px;
+    text-decoration: none;
+    color: var(--main-a-color);
+    text-align: center;
+    padding: 15px;
+    border-radius: 15px;
+    box-shadow: 
+        var(--main-shadow-color);
+    transition: transform 400ms, border-color 400ms, background-color 400ms;
+}
+.menu-style {
+    background-color:  var(--main-button-color);
+}
+.menuButton {
+    background-color:  var(--main-button-color);
+    border: 2px solid var(--main-border-color);
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    margin-left: 10%;
+    margin-right: 10%;
+    margin-top: 20px;
+    text-decoration: none;
+    color: var(--main-a-color);
+    text-align: center;
+    padding: 15px;
+    border-radius: 15px;
+    box-shadow: 
+        var(--main-shadow-color);
+    transition: transform 400ms, border-color 400ms, background-color 400ms;
 }
 .nav { 
     background-color: rgb(44, 44, 46, 0.95);
@@ -180,18 +220,7 @@ p {
     box-shadow: 
        var(--navbar-box-shadow);
 }
-.nav-link {
-    display: flex;
-    align-items: center;
-    height: 5rem;
-    color: var(--main-a-color);
-    text-decoration: none;
-}
-.nav-link:hover { 
-    background-color: var(--hover-nav-color);
-    color: var(--hover-box-text-color);
-    box-shadow: var(--nav-link-shadow)
-}
+
 .navbar-nav {
     z-index: 100;
     list-style: none;
@@ -222,22 +251,87 @@ p {
 .navbar-expanded .nav-item:last-child .nav-button{
     transform: rotate(-180deg);
 }
+.navigation-style {
+    color: var(--main-a-color);
+}
+.navigation-style.nav-link:hover {
+    color: var(--hover-box-text-color);
+}
 .nav-link {
     display: flex;
     align-items: center;
     height: 5rem;
-    color: var(--main-a-color);
     text-decoration: none;
 }
 .nav-link:hover { 
     background-color: var(--hover-nav-color);
-    color: var(--hover-box-text-color);
     box-shadow: var(--nav-link-shadow)
 }
 .nav-link .nav-button {
     font-size: 2rem;
     margin: 0 1.5rem;
 }
+/* modal styling */ 
+.modalContainer {
+    background-color: rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    transition: opacity 0.3s ease;
+}
+.modalContainer.showModal {
+    pointer-events: auto;
+    opacity: 1;
+}
+.modal {
+    background-color: var(--main-button-color);
+    border-radius: 15px;
+    border: 2px solid rgba(39, 113, 240, 0.9);
+    box-shadow: var(--main-shadow-color);
+    padding: 20px;
+    width: 60%;
+    max-width: 100%;
+    min-width: 40%;
+    text-align: center;
+    position: fixed;
+    margin-top: 20px;*/
+    text-decoration: none;
+    color: var(--main-a-color);
+    box-shadow:
+        var(--main-shadow-color);
+    transition: transform 400ms, border-color 400ms, background-color 400ms;
+}
+.modal .buttonStyled {
+    background-color:  var(--main-button-color);
+    border: 2px solid var(--main-border-color);
+    overflow-wrap: break-word;
+    margin-right: 10%;
+    margin-top: 20px;*/
+    text-decoration: none;
+    color: var(--main-a-color);
+    text-align: center;
+    border-radius: 15px;
+    box-shadow: 
+        var(--main-shadow-color);
+    transition: transform 400ms, border-color 400ms, background-color 400ms;    
+}
+.modalContainer .buttonStyled:hover {
+    border-color:rgba(39, 113, 240, 0.9);
+}
+.modal h1 {
+    font-size: 30px;
+}
+.modal p {
+    font-size: 15px;
+}
+
 /* SMALL SCREEN*/
 @media only screen and (max-width: 600px) {
     .navbar {
@@ -294,9 +388,6 @@ p {
     .possibleFeeds {
         margin-left: 0rem;
     }
-    /*.possibleFeeds .buttonStyled:first-child {
-        margin-left: 5rem;
-    }*/
     .main-content-expanded .main-header {
         margin-left: 0rem;
     }
@@ -350,60 +441,6 @@ p {
 }
 .top-page-padding {
     padding-top: 30px;
-}
-.modalContainer {
-    background-color: rgba(0,0,0,0.3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: fixed;
-    opacity: 0;
-    pointer-events: none;
-    top: 0;
-    left: 0;
-    height: 100vh;
-    width: 100vw;
-    transition: opacity 0.3s ease;
-}
-.modalContainer.showModal {
-    pointer-events: auto;
-    opacity: 1;
-}
-.modal {
-    background-color: var(--main-button-color);
-    border-radius: 15px;
-    border: 2px solid rgba(39, 113, 240, 0.9);
-    box-shadow: var(--main-shadow-color);
-    padding: 20px;
-    width: 700px;
-    max-height: 50%;
-    max-width: 100%;
-    text-align: center;
-}
-.modal .buttonStyled {
-    background-color:  var(--main-button-color);
-    border: 2px solid var(--main-border-color);
-    overflow-wrap: break-word;
-    margin-left: 10%;
-    margin-right: 10%;
-    margin-top: 20px;
-    text-decoration: none;
-    color: var(--main-a-color);
-    text-align: center;
-    padding: 15px;
-    border-radius: 15px;
-    box-shadow: 
-        var(--main-shadow-color);
-    transition: transform 400ms, border-color 400ms, background-color 400ms;    
-}
-.modalContainer .buttonStyled:hover {
-    border-color:rgba(39, 113, 240, 0.9);
-}
-.modal h1 {
-    font-size: 30px;
-}
-.modal p {
-    font-size: 15px;
 }
 button {
     all: unset;

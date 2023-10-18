@@ -4,7 +4,6 @@
 .search input {
     color: var(--main-a-color);
     width: 90%;
-    background-color:  var(--main-button-color);
     outline: none;
     border: none;
 }
@@ -16,9 +15,6 @@
     margin-left: 10%;
     margin-right: 10%;
     margin-top: 20px;
-    /*
-        display: inline-block;
-    */
     text-decoration: none;
     color: var(--main-a-color);
     text-align: center;
@@ -35,11 +31,7 @@
     word-wrap: break-word;
     margin-left: 10%;
     margin-right: 10%;
-    
     margin-top: 20px;
-    /*
-        display: inline-block;
-    */
     text-decoration: none;
     color: var(--main-a-color);
     text-align: center;
@@ -68,9 +60,6 @@
     margin-left: 10%;
     margin-right: 10%;
     margin-top: 20px;
-    /*
-    display: inline-block;
-    */
     text-decoration: none;
     color: var(--main-a-color);
     text-align: center;
@@ -90,9 +79,7 @@
     color: var(--main-a-color);
 }
 .userEditForm {
-    background-color:  var(--main-button-color);
     color: var(--main-p-color)
-
 }
 .debug p {
     font-size: smaller;
@@ -100,12 +87,6 @@
 }
 .easteregg {
     padding: 15px;
-}
-.ownUser {
-    color: rgb(81, 144, 251);
-}
-.otherUser {
-    color: rgb(146, 146, 146)
 }
 .subheaderMessage {
     font-size: smaller;
@@ -154,9 +135,6 @@
     margin-left: 20%;
     margin-right: 20%;
     margin-top: 20px;
-    /*
-    display: inline-block;
-    */
     text-decoration: none;
     color: var(--main-a-color);
     text-align: center;
@@ -173,9 +151,6 @@
     margin-left: 20%;
     margin-right: 20%;
     margin-top: 20px;
-    /*
-    display: inline-block;
-    */
     text-decoration: none;
     color: var(--main-a-color);
     text-align: center;
@@ -214,15 +189,6 @@
         var(--main-shadow-color);
     transition: transform 400ms, border-color 400ms, background-color 400ms;
 }
-/* without box
-.postContent {
-    overflow-wrap: break-word;
-    text-decoration: none;
-    color: var(--main-a-color);
-    text-align: left;
-    transition: transform 400ms, border-color 400ms, background-color 400ms;
-}
-*/
 .PostAttachments {
     display: block;
 }
@@ -273,8 +239,6 @@
     text-align: center;
     padding: 15px;
     border-radius: 15px;
-    /* box-shadow: 
-        var(--main-shadow-color); */
     transition: transform 400ms, border-color 400ms, background-color 400ms;
 }
 
@@ -376,11 +340,4 @@
     box-shadow: 
         var(--main-shadow-color);
     transition: transform 400ms, border-color 400ms, background-color 400ms;
-}
-
-.inline {
-    /*display: flex;
-    align-items: center;
-    text-align: center;*/
-    /*word-wrap: inline;*/
 }
