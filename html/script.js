@@ -950,7 +950,7 @@ function signOutPage() {
             <p><b>Sign Out</b></p>
             <p>Are you sure you want to sign out?</p>
             <button class="menuButton menuButton-style"onclick="signOut()">Sign Out</p>
-            <button class="menuButton menuButton-style"onclick="signOutAll()">Sign Out of All Accounts</p>
+            <button class="menuButton menuButton-style"onclick="signOutAll()">Open sign out options</p>
             <button class="menuButton menuButton-style" onclick="removeSignOutConfirm()">Cancel</button></div>
         </div>
     `;
