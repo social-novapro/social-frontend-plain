@@ -26,8 +26,6 @@ function checkURLParams() {
     return paramsInfo
 }
 
-// console.log(config.dev.websocket_url)
-document.getElementById('mainFeed').innerHTML = 'eijj';
 var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
 
 if (location.protocol !== 'https:' && !((/localhost|(127|192\.168|10)\.(\d{1,3}\.?){2,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.(\d{1,3}\.?){2}/).test(location.hostname))) {
@@ -47,32 +45,30 @@ async function checkLogin() {
     else return setupUI()
 }
 
-
-
 function setupUI() {
     document.getElementById('mainFeed').innerHTML = `
-        <div class="userInfo">
+        <div class="menu menu-style">
             <p><b>Verifications</b></p>
             <div id="verifyRequests">
-                <button class="userInfo buttonStyled" onclick="verifyRequests()" class="buttonStyled">Check Verification Requests</button>
+                <button class="menuButton menuButton-style" onclick="verifyRequests()" class="buttonStyled">Check Verification Requests</button>
             </div>
             <div id="listVerifications">
-                <button class="userInfo buttonStyled" onclick="listVerifications()" class="buttonStyled">Check Verification List</button>
+                <button class="menuButton menuButton-style" onclick="listVerifications()" class="buttonStyled">Check Verification List</button>
             </div>
         </div>
-        <div class="userInfo">
+        <div class="menu menu-style">
             <p><b>Admins</b></p>
             <div id="adminRequests">
-                <button class="userInfo buttonStyled" onclick="adminRequests()" class="buttonStyled">Check Admin Requests</button>
+                <button class="menuButton menuButton-style" onclick="adminRequests()" class="buttonStyled">Check Admin Requests</button>
             </div>
             <div id="listAdmins">
-                <button class="userInfo buttonStyled" onclick="listAdmins()" class="buttonStyled">Check Admin List</button>
+                <button class="menuButton menuButton-style" onclick="listAdmins()" class="buttonStyled">Check Admin List</button>
             </div>
         </div>
-        <div class="userInfo">
+        <div class="menu menu-style">
             <p><b>Errors</b></p>
             <div id="listErrors">
-                <button class="userInfo buttonStyled" onclick="listErrors()">Check Errors List</button>
+                <button class="menuButton menuButton-style" onclick="listErrors()">Check Errors List</button>
                 <div id="errorIndex1"></div>
             </div>
         </div>
@@ -106,10 +102,10 @@ async function listErrors(listID) {
 
     var ele = ``;
     const indexEle = `
-        <div class="userInfo">
+        <div class="menu menu-style">
             <p>${res.amount} found errors</p>
-            ${res.prevIndexID ? `<button class="userInfo buttonStyled" onclick="listErrors('${res.prevIndexID}')">Load previous set</button>` : ''}
-            ${res.nextIndexID ? `<button class="userInfo buttonStyled" onclick="listErrors('${res.nextIndexID}')">Load next set</button>` : '' }
+            ${res.prevIndexID ? `<button class="menuButton menuButton-style" onclick="listErrors('${res.prevIndexID}')">Load previous set</button>` : ''}
+            ${res.nextIndexID ? `<button class="menuButton menuButton-style" onclick="listErrors('${res.nextIndexID}')">Load next set</button>` : '' }
         </div>
     `
 
@@ -120,7 +116,7 @@ async function listErrors(listID) {
     for (const issueError of res.foundIssues.reverse()) {
         i++;
         ele+=`
-            <div class="userInfo" id="errorEle_${issueError._id}">
+            <div class="menu menu-style" id="errorEle_${issueError._id}">
             <p>Error Listing #${i}</p>
 
             ${createErrorElement(issueError)}
@@ -135,7 +131,6 @@ async function previewUser(userID) {
     const userRes = await fetch(`${apiURL}/get/userByID/${userID}`, {
         method: 'GET',
         headers
-        // body: JSON.stringify(body)
     });
    
     const userData = await userRes.json();
@@ -156,31 +151,30 @@ function createErrorElement(issueError) {
     if (issueError.reviewTimestamp) timestampReview = checkDateV2(issueError.reviewTimestamp);
     if (issueError.resolvedTimestamp) timesinceResolved = checkDateV2(issueError.resolvedTimestamp);
     if (issueError.timestamp) timestamp = checkDateV2(issueError.timestamp);
-
     
     return `
-        <div class="userInfo">
+        <div class="menu menu-style">
             <p><b>${issueError.errorCode}:</b> ${issueError.errorMsg}</p>
             <p>${timestamp}</p>
         </div>
         ${issueError.errorVersion == 2 ? `
-            <button class="userInfo buttonStyled" onclick="previewUser('${issueError.userID}')">View User</button>
+            <button class="menuButton menuButton-style" onclick="previewUser('${issueError.userID}')">View User</button>
         `: ``}
         ${issueError.reviewedBy ? `
-            <button class="userInfo buttonStyled" onclick="previewUser('${issueError.reviewedBy}')">Reviewer</button>
+            <button class="menuButton menuButton-style" onclick="previewUser('${issueError.reviewedBy}')">Reviewer</button>
         `: ``}
         ${ issueError.inReview ? `
             ${ issueError.reviewedBy != headers.userid || issueError.resolved ? `
-                <button class="userInfo buttonStyled" onclick="overrideReview('${issueError._id}')">Take over review</button>
+                <button class="menuButton menuButton-style" onclick="overrideReview('${issueError._id}')">Take over review</button>
             ` : `
-                <button class="userInfo buttonStyled" onclick="markResolved('${issueError._id}')">Mark as resolved</button>
+                <button class="menuButton menuButton-style" onclick="markResolved('${issueError._id}')">Mark as resolved</button>
             ` }
         ` : issueError.resolved ? `
-            <button class="userInfo buttonStyled" onclick="overrideReview('${issueError._id}')">Mark as unresolved+in review</button>
+            <button class="menuButton menuButton-style" onclick="overrideReview('${issueError._id}')">Mark as unresolved+in review</button>
         `:`
-            <button class="userInfo buttonStyled" onclick="markInReview('${issueError._id}')">Mark in review</button>
+            <button class="menuButton menuButton-style" onclick="markInReview('${issueError._id}')">Mark in review</button>
         ` }
-        <div class="userInfo">
+        <div class="menu menu-style">
             ${issueError.inReview ? `
                 <p>In review: ${issueError.inReview}</p>
                 <p>${timestampReview}</p>
@@ -188,7 +182,7 @@ function createErrorElement(issueError) {
                 <p>Not Under Review</p>
             `}
         </div>
-        <div class="userInfo">
+        <div class="menu menu-style">
             ${issueError.resolved ? `
                 <p>Resolved: ${issueError.resolved}</p>
                 <p>${timesinceResolved}</p>
@@ -196,7 +190,7 @@ function createErrorElement(issueError) {
                 <p>Unresolved</p>
             `}
         </div>
-        <div class="userInfo">
+        <div class="menu menu-style">
             <p>UserID: ${issueError.userID}</p>
             <p>Reviewer: ${issueError.reviewedBy}</p>
             <p>Issue Version: ${issueError.errorVersion}</p>
@@ -213,7 +207,6 @@ async function markInReview(errorID) {
     })
 
     if (!response.ok) return console.log(response);
-
     const result = await response.json(); 
 
     document.getElementById(`errorEle_${result._id}`).innerHTML=createErrorElement(result);
@@ -255,7 +248,6 @@ async function listVerifications() {
     if (!response.ok) return console.log(response);
 
     const requests = await response.json();
-    // console.log(requests);
 
     const users = {};
     for (const request of requests) {
@@ -288,7 +280,6 @@ async function verifyRequests() {
     if (!response.ok) return console.log(response);
 
     const requests = await response.json();
-    // console.log(requests);
 
     const users = {};
     for (const request of requests) {
@@ -299,7 +290,6 @@ async function verifyRequests() {
             });
         
             const userData = await getUser.json();
-            // console.log(userData);
             users[request._id] = userData;
         }
     }
@@ -318,11 +308,11 @@ async function verifyRequests() {
 
 function verificationRequestEle(request, userData) {
     return `
-        <div id="userver_${userData._id}" class="userInfo">
+        <div id="userver_${userData._id}" class="menu menu-style">
             <p>${userData.displayName} @${userData.username}</p>
             <p>${checkDate(request.timestamp)}</p>
             <p>${request.content}</p>
-            <a onclick="acceptVerification('${userData._id}')" class="buttonStyled">Accept</a>
+            <a onclick="acceptVerification('${userData._id}')" class="menuButton menuButton-style">Accept</a>
         </div>
     `
 }
@@ -335,7 +325,6 @@ async function acceptVerification(id) {
 
     if (!response.ok) return console.log(response);
     
-    // const data = await response.json();
     document.getElementById(`userver_${id}`).remove();
 }
 
@@ -349,7 +338,7 @@ function putData(userData) {
 
 async function closeVerificationTab() {
     document.getElementById('verifyRequests').innerHTML = `
-        <a onclick="verifyRequests()" class="buttonStyled">Check Verification Requests</a>
+        <a onclick="verifyRequests()" class="menuButton menuButton-style">Check Verification Requests</a>
     `;
 }
 
@@ -359,7 +348,6 @@ async function adminRequests() {
         headers: headers
     })
     if (!response.ok) return console.log(response);
-
     const requests = await response.json();
 
     const users = {};
@@ -377,7 +365,7 @@ async function adminRequests() {
     }
 
     document.getElementById('adminRequests').innerHTML = `
-        <a onclick="closeAdminTab()" class="buttonStyled">Close Admin Requests</a>
+        <a onclick="closeAdminTab()" class="menuButton menuButton-style">Close Admin Requests</a>
         <div>
             ${requests.map((request) => {
                 console.log(users[request._id]);
@@ -390,12 +378,12 @@ async function adminRequests() {
 
 function adminRequestEle(request, userData) {
     return `
-        <div id="adminR_userver_${userData._id}" class="userInfo">
+        <div id="adminR_userver_${userData._id}" class="menu menu-style">
             <p>${userData.displayName} @${userData.username}</p>
             <p>Date Requested: ${checkDate(request.timestamp)}</p>
             <p>Content: ${request.content}</p>
             <p>Type: ${request.adminType ? request.adminType : "Unknown"}</p>
-            <a onclick="acceptAdmin('${userData._id}')" class="buttonStyled">Accept</a>
+            <a onclick="acceptAdmin('${userData._id}')" class="menuButton menuButton-style">Accept</a>
         </div>
     `
 }
@@ -408,13 +396,12 @@ async function acceptAdmin(id) {
 
     if (!response.ok) return console.log(response);
     
-    // const data = await response.json();
     document.getElementById(`adminR_userver_${id}`).remove();
 }
 
 async function closeAdminTab() {
     document.getElementById('adminRequests').innerHTML = `
-        <a onclick="adminRequests()" class="buttonStyled">Check Admin Requests</a>
+        <a onclick="adminRequests()" class="menuButton menuButton-style">Check Admin Requests</a>
     `;
 }
 
@@ -429,7 +416,6 @@ function checkDateV2(time){
     const date = dateFromEpochv2(timeNum)
     const timesince = timeSinceEpoch(diff)
     return date
-    // return `${date}, ${timesince}`
 }
 function getTime() {
     const d = new Date();
