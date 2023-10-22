@@ -41,6 +41,12 @@
         var(--main-shadow-color);
     transition: transform 400ms, border-color 400ms, background-color 400ms;
 }
+.colour-theme-box {
+    width: 20px;
+    height: 20px;
+    display: inline-block;
+    margin: 2px;
+}
 .searchBar {
     text-align: left;
 }

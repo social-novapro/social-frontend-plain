@@ -82,6 +82,7 @@ async function checkURLParams() {
     const ifSettings = params.has("settings");
     const ifEmailSettings = params.has("emailSettings");
     const ifThemeSettings = params.has("themeEditor");
+    const ifThemeDiscovery = params.has("themeDiscovery")
 
     if (ifUsername) {
         paramsFound = true
@@ -135,6 +136,13 @@ async function checkURLParams() {
         settingsPage();
         editThemePanel(headers.userid);
         document.getElementById("themeEditor").scrollIntoView();
+    } else if (ifThemeDiscovery) {
+        paramsFound = true
+        paramsInfo.paramsFound = true
+
+        settingsPage();
+        await viewThemesDiscovery()
+        document.getElementById("themeDiscovery").scrollIntoView();
     }
    
     return paramsInfo
@@ -832,6 +840,7 @@ function settingsPage() {
                         <button class="menuButton menuButton-style" onclick='createTheme()'>Create Theme</button>
                         <button class="menuButton menuButton-style" onclick='viewThemes("${headers.userid}")'>Existing Themes</button>
                         <button class="menuButton menuButton-style" onclick='unsetThemeFrontend()'>Unset Theme</button>
+                        <button class="menuButton menuButton-style" onclick='viewThemesDiscovery()'>Discover Themes</button>
                     </div> 
                     <div id="userThemeEditor"></div>
                     <div id="emailSettings" class="menu menu-style">
@@ -1214,7 +1223,7 @@ async function editTheme(themeSettings) {
         <p>Created: ${checkDate(themeSettings.timestamp)}</p>
         ${themeSettings.timestamp_edited ? `<p>Last Edited: ${checkDate(themeSettings.timestamp_edited)}</p>` : ``}
         <hr class="rounded">
-        <form id="userEdit_themeSettings" onsubmit="${((themeSettings.userID == headers.userid) && (themeSettings.locked !== true)) ? `submitThemeSettings('${themeSettings._id}')` : `forkThemeSettings('${themeSettings._id}')` }">
+        <form id="userEdit_themeSettings">
             <div>
                 <b><label for="themeSetting_name">Name:<br></label></b>
                 <input type="text" id="themeSetting_name" value="${themeSettings.theme_name}"/>
@@ -1280,9 +1289,48 @@ async function editTheme(themeSettings) {
     return true;
 }
 
+async function viewThemesDiscovery() {
+    const themes = await getDiscoveryThemes();
+    if (!themes) return
+
+    var ele = `
+        <div class="menu menu-style">
+        <h1 id="themeDiscovery">Theme Discovery</h1>
+        <p>Discovery and set themes created by other users.</p>
+    `;
+
+    for (const theme of themes.themes) {
+        if (!theme || !theme.colourTheme) continue;
+
+        ele += `
+            <div class="menu menu-style">
+                <p>Theme: <b>${theme.theme_name}</b></p>
+                <p>Created: ${checkDate(theme.timestamp)}</p>
+                <p>By: ${themes.users[theme.userID].username}</p>
+        `
+        for (const option in theme.colourTheme) {
+            ele += `
+                <div class="menu menu-style colour-theme-box" style="background: ${theme.colourTheme[option]};"></div>
+            `
+        }
+        ele +=`
+                <button class="menuButton menuButton-style" onclick="selectThemeWithID('${theme._id}')">Set Theme</button>
+            </div>
+        `;
+        
+    }
+
+    ele += `</div>`;
+    document.getElementById("userThemeEditor").innerHTML = ele;
+}
+
 async function viewThemes(userID) {
     const themes = await getThemes(userID);
     if (!themes || themes.error) return showModal(`<p>Error: ${themes.code}, ${themes.msg}</p>`)
+
+    const currentTheme = localStorage.getItem(LOCAL_STORAGE_THEME_SETTINGS)
+    const currentThemeParsed = currentTheme ? JSON.parse(currentTheme) : null
+    const currentThemeID = currentThemeParsed ? currentThemeParsed._id : null
 
     var ele = `
         <div class="menu menu-style">
@@ -1294,7 +1342,7 @@ async function viewThemes(userID) {
 
     var amount=0;
     for (const theme of themes) {
-        ele += `<option value="${theme._id}"${amount==0 ? "selected" : ''}>${theme.theme_name}</option>`
+        ele += `<option value="${theme._id}"${theme._id==currentThemeID ? "selected" : ''}>${theme.theme_name}</option>`
         amount++;
     }
 
@@ -1319,13 +1367,23 @@ async function unsetThemeFrontend() {
     showModal(`<p>Success! Your current theme has been unset.</p>`)
 }
 
+
 async function selectTheme(toEdit) {
     const themeID = document.getElementById("viewThemeSelect").value;
 
     const theme = await setThemeAPI(themeID);
-    if (!theme || theme.error) return showModal(`<p>Error: ${theme.code}, ${theme.msg}</p>`)
+    if (!theme || theme.error) return;
 
     if (toEdit) await editTheme(theme);
+    await applyTheme(theme);
+
+    return true;
+}
+
+async function selectThemeWithID(themeID) {
+    const theme = await setThemeAPI(themeID);
+    if (!theme || theme.error) return;
+
     await applyTheme(theme);
 
     return true;
@@ -1394,6 +1452,11 @@ async function getTheme(themeID, ignoreError) {
 
 async function getThemes(userID) {
     const res = await sendRequest(`/users/profile/theme/user/${userID}`, { method: 'GET' });
+    return res;
+}
+
+async function getDiscoveryThemes() {
+    const res = await sendRequest(`/users/profile/theme/themes/`, { method: 'GET' });
     return res;
 }
 
