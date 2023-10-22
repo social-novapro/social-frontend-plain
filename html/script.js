@@ -863,7 +863,7 @@ function settingsPage() {
                         <button class="menuButton menuButton-style" onclick="switchAccountPage()">View Accounts</button>
                         <hr class="rounded">
                         <p><b>Sign Out</b></p>
-                        <p>Sign out of your account.</p>
+                        <p>Open your sign out options.</p>
                         <button class="menuButton menuButton-style" onclick="signOutPage()">Sign Out</button>
                         <div id="signOutConfirm"></div>
                     </div>
@@ -950,7 +950,7 @@ function signOutPage() {
             <p><b>Sign Out</b></p>
             <p>Are you sure you want to sign out?</p>
             <button class="menuButton menuButton-style"onclick="signOut()">Sign Out</p>
-            <button class="menuButton menuButton-style"onclick="signOutAll()">Open sign out options</p>
+            <button class="menuButton menuButton-style"onclick="signOutAll()">Sign Out of All Accounts</p>
             <button class="menuButton menuButton-style" onclick="removeSignOutConfirm()">Cancel</button></div>
         </div>
     `;
