@@ -228,31 +228,31 @@ function postElementCreate({ post, user, type, hideParent, hideReplies, pollData
                     <p onclick="copyToClipboard('${post.userID}')">userID: ${post.userID}</p>
                     ${post.pollID ? `<p onclick="copyToClipboard('${post.pollID}')">pollID: ${post.pollID}</p>` : `` }
                 </div>
-                <div class="actionOptions pointerCursor posts_action-style"> 
+                <div class="actionOptions pointerCursor"> 
                     ${post.totalLikes ? 
-                        `<p onclick="likePost('${post._id}')" ${extraData.liked == true ? 'class="likedColour"':''} id="likePost_${post._id}">${puralDataType('like', post.totalLikes)}</p>` :
-                        `<p onclick="likePost('${post._id}')" id="likePost_${post._id}">like</p>`
+                        `<p onclick="likePost('${post._id}')" class="${extraData.liked == true ? 'ownUser-style likedColour':'posts_action-style'}" id="likePost_${post._id}">${puralDataType('like', post.totalLikes)}</p>` :
+                        `<p onclick="likePost('${post._id}')" class="posts_action-style" id="likePost_${post._id}">like</p>`
                     }
                     ${post.totalReplies ? 
-                        `<p onclick="replyPost('${post._id}')">${puralDataType('reply', post.totalReplies)}</p>` : 
-                        `<p onclick="replyPost('${post._id}')">reply</p>`
+                        `<p onclick="replyPost('${post._id}')" class="posts_action-style" >${puralDataType('reply', post.totalReplies)}</p>` : 
+                        `<p onclick="replyPost('${post._id}')" class="posts_action-style" >reply</p>`
                     }
                     ${post.totalQuotes ? 
-                        `<p onclick="quotePost('${post._id}')">${puralDataType('quote', post.totalQuotes)}</p>` : 
+                        `<p onclick="quotePost('${post._id}')" class="posts_action-style" >${puralDataType('quote', post.totalQuotes)}</p>` : 
                         `<p id="quoteButton_${post._id}">
-                            <p onclick="quotePost('${post._id}')">quote</p>
+                            <p onclick="quotePost('${post._id}')" class="posts_action-style" >quote</p>
                         </p>`
                     }
                     ${!mobileClient ? `
                         ${post.userID == currentUserLogin.userID ? `
-                            <p onclick="deletePost('${post._id}')">delete post</p>
+                            <p onclick="deletePost('${post._id}')" class="posts_action-style">delete post</p>
                             <p id='editButton_${post._id}'>
-                                <p onclick="editPost('${post._id}', '${post.edited}')">edit post</p>
+                                <p onclick="editPost('${post._id}', '${post.edited}')" class="posts_action-style">edit post</p>
                             </p>
                         ` : ''}
                     ` : ''}
                     </p>
-                    <p id="popupactions_${post._id}" onclick="popupActions('${post._id}', '${options.hideParent}', '${options.hideReplies}', '${options.owner}', ${extraData.pinned}, ${extraData.saved})">more</p>
+                    <p id="popupactions_${post._id}" class="posts_action-style" onclick="popupActions('${post._id}', '${options.hideParent}', '${options.hideReplies}', '${options.owner}', ${extraData.pinned}, ${extraData.saved})">more</p>
                 </div>
             </div>
         </div>
@@ -2804,6 +2804,9 @@ async function likePost(postID) {
         if (!data || data.error)  return false;
 
         document.getElementById(`likePost_${postID}`).classList.remove("likedColour");
+        document.getElementById(`likePost_${postID}`).classList.remove("ownUser-style");
+        document.getElementById(`likePost_${postID}`).classList.add("posts_action-style");
+
         document.getElementById(`likePost_${postID}`).innerText = puralDataType('like', data.totalLikes);
     } else {
         if (debug) console.log("liking post")
@@ -2812,6 +2815,9 @@ async function likePost(postID) {
         if (!data || data.error) return false;
 
         document.getElementById(`likePost_${postID}`).classList.add("likedColour");
+        document.getElementById(`likePost_${postID}`).classList.add("ownUser-style");
+        document.getElementById(`likePost_${postID}`).classList.remove("posts_action-style");
+
         document.getElementById(`likePost_${postID}`).innerText = puralDataType('like', data.totalLikes)
     }
 }
