@@ -148,7 +148,17 @@ async function checkURLParams() {
     return paramsInfo
 }
 
-function postElementCreate({ post, user, type, hideParent, hideReplies, pollData, voteData, quoteData, extraData }) {
+function postElementCreate({
+    post,
+    user,
+    type, hideParent,
+    hideReplies,
+    pollData,
+    voteData,
+    quoteData,
+    coposterData,
+    extraData
+}) {
     if (!post) return;
     if (post.deleted) {
         const ele = `
@@ -204,7 +214,14 @@ function postElementCreate({ post, user, type, hideParent, hideReplies, pollData
                         <p onclick="viewParentPost('${post._id}', '${post.replyData.postID}')" id="parentViewing_${post._id}">This was a reply, click here to see.</p>
                     ` : ``}
                 `: ``}
-                <p class="pointerCursor ${ user && (post.userID == currentUserLogin.userID )? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'}<br class="spacer_2px">${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
+                <div>
+                    <p><span class="pointerCursor ${ user && (post.userID == currentUserLogin.userID )? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️' : ''}` : '>Unknown User'}</span>
+                    ${coposterData && coposterData[0] ? `${coposterData.map(function(coposter) {
+                        return `, <span class="spacer_2px pointerCursor ${ coposter._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${coposter ? ` onclick="userHtml('${coposter._id}')"> ${coposter.displayName} @${coposter.username}${coposter.verified ? ' ✔️ ' : ''}` : '>Unknown User'}</span>`
+                    }).join(" ")}`:``}
+                    </p>
+                    <p class="spacer_2px pointerCursor ${ user && (post.userID == currentUserLogin.userID )? "ownUser-style" : "otherUser-style"}">${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
+                </div>
                 <div class="postContent" id="postContentArea_${post._id}">
                     <div class="textAreaPost posts_content-style">
                         <p id="postContent_${post._id}">${imageContent.content}</p>
@@ -226,6 +243,9 @@ function postElementCreate({ post, user, type, hideParent, hideReplies, pollData
                 <div class="debug">
                     <p onclick="copyToClipboard('${post._id}')">postID: ${post._id}</p>
                     <p onclick="copyToClipboard('${post.userID}')">userID: ${post.userID}</p>
+                    ${coposterData && coposterData[0] ? `${coposterData.map(function(coposter) {
+                        return ` <p onclick="copyToClipboard('${coposter._id}')">coposter ${coposter.username}: ${coposter._id}</p>`
+                    }).join(" ")}`:``}
                     ${post.pollID ? `<p onclick="copyToClipboard('${post.pollID}')">pollID: ${post.pollID}</p>` : `` }
                 </div>
                 <div class="actionOptions pointerCursor"> 
@@ -641,10 +661,10 @@ async function createPostModal() {
     `, "hide")
 }
 
-async function socialTypePost() {
+async function socialTypePost(customInputID, forCoposter=false) {
     // return false; // remove once feature is done
     if (debug) console.log("socialTypePost")
-    const content = document.getElementById('newPostTextArea').value
+    const content = document.getElementById(customInputID ? customInputID : 'newPostTextArea').value
     const foundTags = await findTag(content)
     if (foundTags.found == false) {
         if (document.getElementById('taggingsOpened')) {
@@ -657,7 +677,7 @@ async function socialTypePost() {
     if (debug) console.log("!!")
     for (const index of foundTags.results) {
         taggings+=`
-            <div class=""onclick="autoCompleteUser('${index.user.username}')">
+            <div class=""onclick="${forCoposter ? `autoCompleteCoposter('${index.user.username}', '${index.user._id}')`: `autoCompleteUser('${index.user.username}')`}">
                 <p>${index.user.username}</p>
                 ${index.user.description ? `<p>${index.user.description}</p>` : ``}
                 <p>${index.possiblity}% match</p>
@@ -669,6 +689,41 @@ async function socialTypePost() {
         <div id="taggingsOpened"></div>
         ${taggings}
     `
+}
+
+async function autoCompleteCoposter(username, userID) {
+    const content = document.getElementById('coPostersInput').value
+    const contentArgs = content.split(" ")
+
+    // replaces with new value
+    contentArgs[contentArgs.length-1] = `@${username} `;
+    document.getElementById('foundTaggings').innerHTML=""
+
+    document.getElementById('coPostersInput').value = contentArgs.join(" ")
+    document.getElementById('coPostersInput').focus()
+
+    document.getElementById('coPostersDiv').innerHTML+=`
+        <div class="menu menu-style" id="coposter_${userID}">
+            <p>${username}</p>
+            <p style="display:none" class="addCoPosterID">${userID}</p>
+            <p onclick="removeCoposter('${userID}', '${username}')">Remove</p>
+        </div>
+    `
+}
+
+async function removeCoposter(userID, username) {
+    document.getElementById(`coposter_${userID}`).remove()
+
+    const content = document.getElementById('coPostersInput').value
+    const contentArgs = content.split(" ")
+    const newContentArgs = []
+
+    for (const arg of contentArgs) {
+        if (arg != `@${username}`) newContentArgs.push(arg)
+    }
+
+    document.getElementById('coPostersInput').value = newContentArgs.join(" ")
+    document.getElementById('coPostersInput').focus()
 }
 
 async function autoCompleteUser(username) {
@@ -1675,6 +1730,7 @@ async function userHtml(userID) {
                     pollData: pin.type?.poll=="included" ? pin.pollData : null,
                     voteData: pin.type?.vote=="included" ? pin.voteData : null,
                     quoteData: pin.type?.quote=="included" ? pin.quoteData : null,
+                    coposterData: pin.type?.coposter=="included" ? pin.coposterData : null,
                     extraData: pin.type?.extra=="included" ? pin.extraData : {},
                 })
             }).join(" ")}
@@ -1686,7 +1742,15 @@ async function userHtml(userID) {
             </div>
             <hr class="rounded">
             ${profileData.postData.map(function(post) {
-                return postElementCreate({post: post, user: profileData.userData})                
+                return postElementCreate({
+                    post: post.postData, 
+                    user: post.userData,
+                    pollData: post.type?.poll=="included" ? post.pollData : null,
+                    voteData: post.type?.vote=="included" ? post.voteData : null,
+                    quoteData: post.type?.quote=="included" ? post.quoteData : null,
+                    coposterData: post.type?.copost=="included" ? post.coposterData : null,
+                    extraData: post.type?.extra=="included" ? post.extraData : {},
+                })                
             }).join(" ")}
         ` : ``}
     `
@@ -2571,6 +2635,7 @@ async function getFeed(feedType) {
 
     document.getElementById('mainFeed').innerHTML=loadingHTML("Loading feed...");
     listenForLoading();
+    buildCopostRequests()
     const data = await sendRequest(`/feeds/${feedToUse}`, { method: 'GET' })
     if (!data || !data[0]) return showModal("<p>There was no data in the feed selected, please load a different feed</p>")
     currentFeedType = feedToUse;
@@ -2582,6 +2647,55 @@ async function getFeed(feedType) {
         return;
     }
     else return
+}
+
+function setupCopostRequests() {
+
+}
+
+async function buildCopostRequests() {
+    const data = await sendRequest('/posts/coposts/requests', { method: 'GET', ignoreError: true})
+    if (!data || data.error) return false;
+    if (debug) console.log(data)
+
+    var ele = `
+        <div class="menu menu-style">
+            <p>CoPost Requests</p>
+            <p>Requests: ${data.length}</p>
+        </div>
+    `;
+
+    for (const request of data) {
+        ele += copostRequestElement(request);
+    }
+
+    document.getElementById("copostRequests").innerHTML = ele;
+
+}
+
+function copostRequestElement({request, post, user}) {
+    return `
+        <div id="copostRequest_${request._id}" class="menu menu-style">
+            <p>Request from: ${user.username}</p>
+            <p>Post: ${post.content}</p>
+            <button class="menuButton menuButton-style" onclick="acceptCopostRequest('${request._id}')">Accept</button>
+            <button class="menuButton menuButton-style" onclick="declineCopostRequest('${request._id}')">Decline</button>
+        </div>
+    `
+}
+
+async function acceptCopostRequest(requestID) {
+    const data = await sendRequest(`/posts/coposts/approve/${requestID}`, { method: 'POST' })
+    if (!data || data.error) return false;
+
+    return document.getElementById(`copostRequest_${requestID}`).remove()
+}
+
+async function declineCopostRequest(requestID) {
+    const data = await sendRequest(`/posts/coposts/decline/${requestID}`, { method: 'DELETE' })
+    if (!data || data.error) return false;
+
+    return document.getElementById(`copostRequest_${requestID}`).remove()
 }
 
 // EASTER EGG
@@ -2640,6 +2754,7 @@ function buildView(posts) {
                 pollData: postArray.type?.poll=="included" ? postArray.pollData : null,
                 voteData: postArray.type?.vote=="included" ? postArray.voteData : null,
                 quoteData: postArray.type?.quote=="included" ? postArray.quoteData : null,
+                coposterData: postArray.type?.copost=="included" ? postArray.coposterData : null,
                 extraData: postArray.type?.extra=="included" ? postArray.extraData : null,
             })
         }).join(" ")}
@@ -2890,6 +3005,8 @@ async function searchResult(input) {
                 user: postArray.userData, 
                 pollData: postArray.type?.poll=="included" ? postArray.pollData : null,
                 voteData: postArray.type?.vote=="included" ? postArray.voteData : null,
+                quoteData: postArray.type?.quote=="included" ? postArray.quoteData : null,
+                coposterData: postArray.type?.copost=="included" ? postArray.coposterData : null,
                 extraDta: postArray.type?.extra=="included" ? postArray.extraData : null,
             })
         }).join(" ")}
@@ -3000,6 +3117,7 @@ async function createPostPage() {
                 <p class="publicPost menuButton menuButton-style" onclick="leavePostPage()">Back</p>
                 <p class="publicPost menuButton menuButton-style" onclick="publishFromPostPage()">Upload Post</p>
                 <p class="publicPost menuButton menuButton-style" id="pollCreationButton" onclick="showPollCreation()">Add Poll</p>
+                <p class="publicPost menuButton menuButton-style" id="pollCreationButton" onclick="showCoPostersCreation()">Add Co-Posters</p>
                 <div class="publicPost menuButton menuButton-style">
                     <p onclick="exportPostHeaderURL()">Create Post Template</p>
                     <p id="postURL_preview"></p>
@@ -3007,6 +3125,7 @@ async function createPostPage() {
                 </div>
             </div>
             <div>
+                <iv id="addCoPoster"></div>
                 <input type="text" id="pollCreateLink" class="addPollOption menu-style" placeholder="Link Poll via ID" ${data.pollID ? `value="${data.pollID}"` : ""}></input>
             </div>
             <div id="pollCreate"></div>
@@ -3036,6 +3155,30 @@ async function createPostPage() {
         }
     }
 };
+
+function showCoPostersCreation() {
+    const ele = `
+        <div class="menu menu-style">
+            <p>Co-Posters</p>
+            <input type="text" onkeyup="socialTypePost('coPostersInput', true)" id="coPostersInput" class="addPollOption menu-style" placeholder="Add Co-Poster"></input>
+            <div id="coPostersDiv"></div>
+        </div>
+    `;
+
+    document.getElementById("addCoPoster").innerHTML = ele;
+}
+
+async function onTypeCoPosters() {
+    const input = document.getElementById('co-posters-input').value;
+    if (input == "") return document.getElementById('co-posters-div').innerHTML = "";
+    const foundTags = await findTag(content)
+    if (foundTags.found == false) {
+        if (document.getElementById('taggingsOpened')) {
+            document.getElementById('foundTaggings').innerHTML=""
+        }
+        return false;
+    };
+}
 
 function createPostPageHeaders() {
     const content = document.getElementById('newPostTextArea')?.value
@@ -3196,8 +3339,24 @@ async function publishFromPostPage() {
         else return null;
     }
 
+    var coposters = null
+    const copostersDiv = document.getElementById('coPostersDiv');
+    if (copostersDiv) {
+        const copostersFound = document.getElementsByClassName('addCoPosterID');
+        console.log(copostersFound)
+        if (copostersFound) {
+            coposters = [];
+            for (const coposter of copostersFound) {
+                console.log(coposter)
+                coposters.push(coposter.innerHTML);
+            }
+
+        }
+    }
+
+
     /* if poll then publish poll first */
-    return createPost({ pollID: pollID ? pollID : null });
+    return createPost({ pollID: pollID ? pollID : null, coposters: coposters ? coposters : null });
 };
 
 function changePostPageNavButton(method) {
@@ -3362,12 +3521,17 @@ async function createPost(params) {
 
     if (debug) console.log(pollID)
 
+    var coposters
+    if (params?.coposters) coposters = params.coposters
+    else coposters = undefined
+
     const data = { 
         "userID" : currentUserLogin.userID, 
         "content" : input,
         "quoteReplyPostID" : quoted,
         "replyingPostID" : replied,
-        "linkedPollID" : pollID || null
+        "linkedPollID" : pollID || null,
+        "coposters" : coposters
     };
 
     if (isFromPostPage) leavePostPage()
