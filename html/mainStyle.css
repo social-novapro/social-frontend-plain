@@ -81,6 +81,10 @@ body {
     font-size: smaller;
     color: rgb(112, 112, 112);
 }
+.no-select {
+    -webkit-user-select: none;
+    user-select: none;
+}
 .main-header {
     -webkit-user-select: none;
     user-select: none;

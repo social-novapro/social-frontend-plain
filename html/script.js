@@ -248,31 +248,19 @@ function postElementCreate({
                     }).join(" ")}`:``}
                     ${post.pollID ? `<p onclick="copyToClipboard('${post.pollID}')">pollID: ${post.pollID}</p>` : `` }
                 </div>
-                <div class="actionOptions pointerCursor"> 
-                    ${post.totalLikes ? 
-                        `<p onclick="likePost('${post._id}')" class="${extraData.liked == true ? 'ownUser-style likedColour':'posts_action-style'}" id="likePost_${post._id}">${puralDataType('like', post.totalLikes)}</p>` :
-                        `<p onclick="likePost('${post._id}')" class="posts_action-style" id="likePost_${post._id}">like</p>`
-                    }
-                    ${post.totalReplies ? 
-                        `<p onclick="replyPost('${post._id}')" class="posts_action-style" >${puralDataType('reply', post.totalReplies)}</p>` : 
-                        `<p onclick="replyPost('${post._id}')" class="posts_action-style" >reply</p>`
-                    }
-                    ${post.totalQuotes ? 
-                        `<p onclick="quotePost('${post._id}')" class="posts_action-style" >${puralDataType('quote', post.totalQuotes)}</p>` : 
-                        `<p id="quoteButton_${post._id}">
-                            <p onclick="quotePost('${post._id}')" class="posts_action-style" >quote</p>
-                        </p>`
-                    }
+                <div class="actionOptions pointerCursor no-select"> 
+                    <p onclick="likePost('${post._id}')" class="${extraData.liked == true ? 'ownUser-style likedColour':'posts_action-style'}" id="likePost_${post._id}">${styleLikedButton(extraData.liked, post.totalLikes ?? 0)}</p>
+                    <p onclick="replyPost('${post._id}')" class="posts_action-style">${styleReplyButton(post.totalReplies)}</p>
+                    <p onclick="quotePost('${post._id}')" class="posts_action-style">${styleQuoteButton(post.totalQuotes)}</p>
                     ${!mobileClient ? `
                         ${post.userID == currentUserLogin.userID ? `
-                            <p onclick="deletePost('${post._id}')" class="posts_action-style">delete post</p>
+                            <p onclick="deletePost('${post._id}')" class="posts_action-style">${styleDeleteButton()}</p>
                             <p id='editButton_${post._id}'>
-                                <p onclick="editPost('${post._id}', '${post.edited}')" class="posts_action-style">edit post</p>
+                                <span onclick="editPost('${post._id}', '${post.edited}')" class="posts_action-style">${styleEditButton()}</span>
                             </p>
                         ` : ''}
                     ` : ''}
-                    </p>
-                    <p id="popupactions_${post._id}" class="posts_action-style" onclick="popupActions('${post._id}', '${options.hideParent}', '${options.hideReplies}', '${options.owner}', ${extraData.pinned}, ${extraData.saved})">more</p>
+                    <p id="popupactions_${post._id}" class="posts_action-style" onclick="popupActions('${post._id}', '${options.hideParent}', '${options.hideReplies}', '${options.owner}', ${extraData.pinned}, ${extraData.saved})">${styleActionButton()}</p>
                 </div>
             </div>
         </div>
@@ -283,6 +271,44 @@ function postElementCreate({
     }
 
     return element;
+}
+
+function styleLikedButton(liked, totalLikes) {
+    var returnElement = `<span>`;
+    if (totalLikes) returnElement+=`<span>${totalLikes}</span>`
+
+    if (!liked) returnElement+=`<span class="material-symbols-outlined">heart_plus</span>`
+    else returnElement+=`<span class="material-symbols-outlined">heart_minus</span>`
+
+    return returnElement + `</span>`
+}
+
+function styleReplyButton(totalReplies) {
+    var returnElement = `<span>`;
+    if (totalReplies) returnElement+=`<span>${totalReplies}</span>`
+    returnElement+=`<span class="material-symbols-outlined">reply</span>`
+    return returnElement + `</span>`
+}
+
+function styleQuoteButton(totalQuotes) {
+    var returnElement = `<span>`;
+    if (totalQuotes) returnElement+=`<span>${totalQuotes}</span>`
+    returnElement+=`<span class="material-symbols-outlined">format_quote</span>`
+    return returnElement + `</span>`
+}
+
+function styleEditButton(cancel) {
+    if (!cancel) return `<span class="material-symbols-outlined">edit</span>`
+    else return `<span class="material-symbols-outlined">close</span>`
+}
+
+function styleActionButton(active) {
+    if (!active) return `<span class="material-symbols-outlined">expand_more</span>`
+    else return `<span class="material-symbols-outlined">expand_less</span>`
+}
+
+function styleDeleteButton() {
+    return `<span class="material-symbols-outlined">delete</span>`
 }
 
 function colorizeOption(pollID, optionID) {
@@ -299,10 +325,15 @@ function removeColorOption(pollID, optionID) {
 
 async function popupActions(postID, hideParent, hideReplies, owner, pinned=false, saved=false) {
     var elementPopup = document.getElementById(`popupOpen_${postID}`);
-    if (elementPopup) return elementPopup.remove();
+    if (elementPopup) {
+        document.getElementById(`popupactions_${postID}`).innerHTML = styleActionButton(false)
+        return elementPopup.remove();
+    } else {
+        document.getElementById(`popupactions_${postID}`).innerHTML = styleActionButton(true)
+    }
 
     document.getElementById(`postElement_${postID}`).innerHTML+=`
-        <div id="popupOpen_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
+        <div id="popupOpen_${postID}" class="publicPost posts-style no-select" style="position: element(#popupactions_${postID});">
             ${owner && mobileClient? `
                 <p>Owner Actions</p>
                 <p>---</p>
@@ -2786,7 +2817,7 @@ function editPost(postID, edited) {
             <input type="text" id="editPostInput" class="contentMessage contentMessageFormEdit menu-style" value="${oldMessage}">
         </form>
     `
-    document.getElementById(`editButton_${postID}`).innerHTML=`<p onclick='cancelEdit("${postID}", "${oldMessage}", "${edited}")'>cancel edit</p>`
+    document.getElementById(`editButton_${postID}`).innerHTML=`<span onclick='cancelEdit("${postID}", "${oldMessage}", "${edited}")'>${styleEditButton(true)}</span>`
     document.getElementById(`editPostInput`).focus()
     document.getElementById("editPostForm").addEventListener("submit", function (e) { e.preventDefault()})
 }
@@ -2797,9 +2828,14 @@ async function cancelEdit(postID, content, edited) {
     const post = await sendRequest(`/posts/get/${postID}`, { method: 'GET' })
     if (!post || post.error) return false;
 
-    const user = await sendRequest(`/get/userByID/${post.userID}`, { method: 'GET' })
-    if (!user || user.error) return false;
-    return document.getElementById(`postElement_${postID}`).innerHTML = postElementCreate({post, user})
+    document.getElementById(`postContentArea_${postID}`).innerHTML = `
+        <div class="textAreaPost posts_content-style">
+            <p id="postContent_${post._id}">${post.content}</p>
+            ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
+        </div>
+    `
+
+    document.getElementById(`editButton_${postID}`).innerHTML=`<span onclick='editPost("${postID}")' class="posts_action-style">${styleEditButton()}</span>`
 }
 
 async function submitEdit(postID) {
@@ -2817,7 +2853,7 @@ async function submitEdit(postID) {
 
     const imageContent = checkForImage(editData.new.content)
 
-    document.getElementById(`editButton_${postID}`).innerHTML=`<a onclick='editPost("${postID}")'>edit post</a>`
+    document.getElementById(`editButton_${postID}`).innerHTML=`<span onclick='editPost("${postID}")' class="posts_action-style">${styleEditButton()}</span>`
 
     return document.getElementById(`postContentArea_${postID}`).innerHTML = `
         <div class="textAreaPost">
@@ -2922,7 +2958,7 @@ async function likePost(postID) {
         document.getElementById(`likePost_${postID}`).classList.remove("ownUser-style");
         document.getElementById(`likePost_${postID}`).classList.add("posts_action-style");
 
-        document.getElementById(`likePost_${postID}`).innerText = puralDataType('like', data.totalLikes);
+        document.getElementById(`likePost_${postID}`).innerHTML = styleLikedButton(false, data.totalLikes);
     } else {
         if (debug) console.log("liking post")
         const data = await sendRequest(`/posts/like/${postID}`, { method: 'PUT' })
@@ -2933,7 +2969,7 @@ async function likePost(postID) {
         document.getElementById(`likePost_${postID}`).classList.add("ownUser-style");
         document.getElementById(`likePost_${postID}`).classList.remove("posts_action-style");
 
-        document.getElementById(`likePost_${postID}`).innerText = puralDataType('like', data.totalLikes)
+        document.getElementById(`likePost_${postID}`).innerHTML = styleLikedButton(true, data.totalLikes);
     }
 }
 
