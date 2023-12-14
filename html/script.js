@@ -3692,6 +3692,7 @@ function checkForImage(content) {
     if (!content) return '';
     const contentArgs = content.split(/[ ]+/)
     var foundImage = false
+    var foundSpotifys = 0
 
     var attachments = []
     for (index = 0; index < contentArgs.length; index++) {
@@ -3731,11 +3732,14 @@ function checkForImage(content) {
             }
 
             if (contentArgs[index].startsWith("https://open.spotify.com/embed/")) {
-                foundImage = true
-                const URL = contentArgs[index]
+                if (foundSpotifys<3) {
+                    foundImage = true
+                    const URL = contentArgs[index]
 
-                const iframeSpotify = `<iframe src="${URL}" width="320" height="240" frameborder="0" encrypted-media; picture-in-picture"></iframe>`
-                attachments.push(iframeSpotify)
+                    const iframeSpotify = `<iframe src="${URL}" width="320" height="240" frameborder="0" encrypted-media; picture-in-picture"></iframe>`
+                    attachments.push(iframeSpotify)
+                    foundSpotifys++
+                }
             }
         }
     }
