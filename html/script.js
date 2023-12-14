@@ -3729,6 +3729,14 @@ function checkForImage(content) {
                 const iframeHuelet = `<iframe src="https://publish.huelet.net/?embed=true&vuid=${videoID}" width="320" height="240" frameborder="0" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen="true"></iframe>`
                 attachments.push(iframeHuelet)
             }
+
+            if (contentArgs[index].startsWith("https://open.spotify.com/embed/")) {
+                foundImage = true
+                const URL = contentArgs[index]
+
+                const iframeSpotify = `<iframe src="${URL}" width="320" height="240" frameborder="0" encrypted-media; picture-in-picture"></iframe>`
+                attachments.push(iframeSpotify)
+            }
         }
     }
 
