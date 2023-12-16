@@ -17,6 +17,7 @@ var getUrl = window.location;
 var baseUrl = getUrl .protocol + "//" + getUrl.host + "/" + getUrl.pathname.split('/')[1];
 var pathArray = window.location.pathname.split( '/' );
 var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
+var hostedUrl = `${config ? `${config.current == "prod" ? config.prod.hosted_url : config.dev.hosted_url}` : 'https://interact.novapro.net/' }`
 var params = new URLSearchParams(window.location.search)
 
 // API HEADERS
@@ -148,7 +149,17 @@ async function checkURLParams() {
     return paramsInfo
 }
 
-function postElementCreate({ post, user, type, hideParent, hideReplies, pollData, voteData, quoteData, extraData }) {
+function postElementCreate({
+    post,
+    user,
+    type, hideParent,
+    hideReplies,
+    pollData,
+    voteData,
+    quoteData,
+    coposterData,
+    extraData
+}) {
     if (!post) return;
     if (post.deleted) {
         const ele = `
@@ -204,7 +215,14 @@ function postElementCreate({ post, user, type, hideParent, hideReplies, pollData
                         <p onclick="viewParentPost('${post._id}', '${post.replyData.postID}')" id="parentViewing_${post._id}">This was a reply, click here to see.</p>
                     ` : ``}
                 `: ``}
-                <p class="pointerCursor ${ user && (post.userID == currentUserLogin.userID )? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'}<br class="spacer_2px">${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
+                <div>
+                    <p><span class="pointerCursor ${ user && (post.userID == currentUserLogin.userID )? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️' : ''}` : '>Unknown User'}</span>
+                    ${coposterData && coposterData[0] ? `${coposterData.map(function(coposter) {
+                        return `, <span class="spacer_2px pointerCursor ${ coposter._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${coposter ? ` onclick="userHtml('${coposter._id}')"> ${coposter.displayName} @${coposter.username}${coposter.verified ? ' ✔️ ' : ''}` : '>Unknown User'}</span>`
+                    }).join(" ")}`:``}
+                    </p>
+                    <p class="spacer_2px pointerCursor ${ user && (post.userID == currentUserLogin.userID )? "ownUser-style" : "otherUser-style"}">${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
+                </div>
                 <div class="postContent" id="postContentArea_${post._id}">
                     <div class="textAreaPost posts_content-style">
                         <p id="postContent_${post._id}">${imageContent.content}</p>
@@ -226,33 +244,24 @@ function postElementCreate({ post, user, type, hideParent, hideReplies, pollData
                 <div class="debug">
                     <p onclick="copyToClipboard('${post._id}')">postID: ${post._id}</p>
                     <p onclick="copyToClipboard('${post.userID}')">userID: ${post.userID}</p>
+                    ${coposterData && coposterData[0] ? `${coposterData.map(function(coposter) {
+                        return ` <p onclick="copyToClipboard('${coposter._id}')">coposter ${coposter.username}: ${coposter._id}</p>`
+                    }).join(" ")}`:``}
                     ${post.pollID ? `<p onclick="copyToClipboard('${post.pollID}')">pollID: ${post.pollID}</p>` : `` }
                 </div>
-                <div class="actionOptions pointerCursor"> 
-                    ${post.totalLikes ? 
-                        `<p onclick="likePost('${post._id}')" class="${extraData.liked == true ? 'ownUser-style likedColour':'posts_action-style'}" id="likePost_${post._id}">${puralDataType('like', post.totalLikes)}</p>` :
-                        `<p onclick="likePost('${post._id}')" class="posts_action-style" id="likePost_${post._id}">like</p>`
-                    }
-                    ${post.totalReplies ? 
-                        `<p onclick="replyPost('${post._id}')" class="posts_action-style" >${puralDataType('reply', post.totalReplies)}</p>` : 
-                        `<p onclick="replyPost('${post._id}')" class="posts_action-style" >reply</p>`
-                    }
-                    ${post.totalQuotes ? 
-                        `<p onclick="quotePost('${post._id}')" class="posts_action-style" >${puralDataType('quote', post.totalQuotes)}</p>` : 
-                        `<p id="quoteButton_${post._id}">
-                            <p onclick="quotePost('${post._id}')" class="posts_action-style" >quote</p>
-                        </p>`
-                    }
+                <div class="actionOptions pointerCursor no-select"> 
+                    <p onclick="likePost('${post._id}')" class="${extraData.liked == true ? 'ownUser-style likedColour':'posts_action-style'}" id="likePost_${post._id}">${styleLikedButton(extraData.liked, post.totalLikes ?? 0)}</p>
+                    <p onclick="replyPost('${post._id}')" class="posts_action-style">${styleReplyButton(post.totalReplies)}</p>
+                    <p onclick="quotePost('${post._id}')" class="posts_action-style">${styleQuoteButton(post.totalQuotes)}</p>
                     ${!mobileClient ? `
                         ${post.userID == currentUserLogin.userID ? `
-                            <p onclick="deletePost('${post._id}')" class="posts_action-style">delete post</p>
+                            <p onclick="deletePost('${post._id}')" class="posts_action-style">${styleDeleteButton()}</p>
                             <p id='editButton_${post._id}'>
-                                <p onclick="editPost('${post._id}', '${post.edited}')" class="posts_action-style">edit post</p>
+                                <span onclick="editPost('${post._id}', '${post.edited}')" class="posts_action-style">${styleEditButton()}</span>
                             </p>
                         ` : ''}
                     ` : ''}
-                    </p>
-                    <p id="popupactions_${post._id}" class="posts_action-style" onclick="popupActions('${post._id}', '${options.hideParent}', '${options.hideReplies}', '${options.owner}', ${extraData.pinned}, ${extraData.saved})">more</p>
+                    <p id="popupactions_${post._id}" class="posts_action-style" onclick="popupActions('${post._id}', '${options.hideParent}', '${options.hideReplies}', '${options.owner}', ${extraData.pinned}, ${extraData.saved})">${styleActionButton()}</p>
                 </div>
             </div>
         </div>
@@ -263,6 +272,44 @@ function postElementCreate({ post, user, type, hideParent, hideReplies, pollData
     }
 
     return element;
+}
+
+function styleLikedButton(liked, totalLikes) {
+    var returnElement = `<span>`;
+    if (totalLikes) returnElement+=`<span>${totalLikes}</span>`
+
+    if (!liked) returnElement+=`<span class="material-symbols-outlined">heart_plus</span>`
+    else returnElement+=`<span class="material-symbols-outlined">heart_minus</span>`
+
+    return returnElement + `</span>`
+}
+
+function styleReplyButton(totalReplies) {
+    var returnElement = `<span>`;
+    if (totalReplies) returnElement+=`<span>${totalReplies}</span>`
+    returnElement+=`<span class="material-symbols-outlined">reply</span>`
+    return returnElement + `</span>`
+}
+
+function styleQuoteButton(totalQuotes) {
+    var returnElement = `<span>`;
+    if (totalQuotes) returnElement+=`<span>${totalQuotes}</span>`
+    returnElement+=`<span class="material-symbols-outlined">format_quote</span>`
+    return returnElement + `</span>`
+}
+
+function styleEditButton(cancel) {
+    if (!cancel) return `<span class="material-symbols-outlined">edit</span>`
+    else return `<span class="material-symbols-outlined">close</span>`
+}
+
+function styleActionButton(active) {
+    if (!active) return `<span class="material-symbols-outlined">expand_more</span>`
+    else return `<span class="material-symbols-outlined">expand_less</span>`
+}
+
+function styleDeleteButton() {
+    return `<span class="material-symbols-outlined">delete</span>`
 }
 
 function colorizeOption(pollID, optionID) {
@@ -279,10 +326,15 @@ function removeColorOption(pollID, optionID) {
 
 async function popupActions(postID, hideParent, hideReplies, owner, pinned=false, saved=false) {
     var elementPopup = document.getElementById(`popupOpen_${postID}`);
-    if (elementPopup) return elementPopup.remove();
+    if (elementPopup) {
+        document.getElementById(`popupactions_${postID}`).innerHTML = styleActionButton(false)
+        return elementPopup.remove();
+    } else {
+        document.getElementById(`popupactions_${postID}`).innerHTML = styleActionButton(true)
+    }   
 
     document.getElementById(`postElement_${postID}`).innerHTML+=`
-        <div id="popupOpen_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
+        <div id="popupOpen_${postID}" class="publicPost posts-style no-select" style="position: element(#popupactions_${postID});">
             ${owner && mobileClient? `
                 <p>Owner Actions</p>
                 <p>---</p>
@@ -295,6 +347,7 @@ async function popupActions(postID, hideParent, hideReplies, owner, pinned=false
             <p>---</p>
             <p class="pointerCursor" onclick="${pinned===true ? `unpinPost('${postID}')` : `pinPost('${postID}')` }" id="pin_post_${postID}">${pinned===true ? `Unpin from Profile` : `Pin to Profile` }</p>
             <p class="pointerCursor" onclick="${saved===true ? `unsaveBookmark('${postID}')` : `saveBookmark('${postID}')`}" id="saveBookmark_${postID}">${saved===true ? `Remove from Bookmarks`:`Save to Bookmarks`}</p>
+            <p class="pointerCursor" onclick="copyPostLink('${postID}')" id="post_copy_${postID}">Copy Post Link</p>
             <p class="pointerCursor" onclick="showEditHistory('${postID}')" id="editHistory_${postID}">Check Edit History</p>
             <p class="pointerCursor" onclick="showLikes('${postID}')" id="likedBy_${postID}">Check Who Liked</p>
             ${hideReplies != true ? `<p class="pointerCursor" onclick="viewReplies('${postID}')" id="replies_${postID}">Check Replies</p>` : ``}
@@ -302,6 +355,12 @@ async function popupActions(postID, hideParent, hideReplies, owner, pinned=false
         </div>
     `;
 };
+
+function copyPostLink(postID) {
+    const postLink = `${hostedUrl}?postID=${postID}`
+    copyToClipboard(postLink)
+    document.getElementById(`post_copy_${postID}`).innerText = "Copied Link!"
+}
 
 async function pinPost(postID) {
     const req = await sendRequest(`/users/edit/pins/${postID}`, { method: 'POST' });
@@ -641,10 +700,10 @@ async function createPostModal() {
     `, "hide")
 }
 
-async function socialTypePost() {
+async function socialTypePost(customInputID, forCoposter=false) {
     // return false; // remove once feature is done
     if (debug) console.log("socialTypePost")
-    const content = document.getElementById('newPostTextArea').value
+    const content = document.getElementById(customInputID ? customInputID : 'newPostTextArea').value
     const foundTags = await findTag(content)
     if (foundTags.found == false) {
         if (document.getElementById('taggingsOpened')) {
@@ -657,7 +716,7 @@ async function socialTypePost() {
     if (debug) console.log("!!")
     for (const index of foundTags.results) {
         taggings+=`
-            <div class=""onclick="autoCompleteUser('${index.user.username}')">
+            <div class=""onclick="${forCoposter ? `autoCompleteCoposter('${index.user.username}', '${index.user._id}')`: `autoCompleteUser('${index.user.username}')`}">
                 <p>${index.user.username}</p>
                 ${index.user.description ? `<p>${index.user.description}</p>` : ``}
                 <p>${index.possiblity}% match</p>
@@ -669,6 +728,41 @@ async function socialTypePost() {
         <div id="taggingsOpened"></div>
         ${taggings}
     `
+}
+
+async function autoCompleteCoposter(username, userID) {
+    const content = document.getElementById('coPostersInput').value
+    const contentArgs = content.split(" ")
+
+    // replaces with new value
+    contentArgs[contentArgs.length-1] = `@${username} `;
+    document.getElementById('foundTaggings').innerHTML=""
+
+    document.getElementById('coPostersInput').value = contentArgs.join(" ")
+    document.getElementById('coPostersInput').focus()
+
+    document.getElementById('coPostersDiv').innerHTML+=`
+        <div class="menu menu-style" id="coposter_${userID}">
+            <p>${username}</p>
+            <p style="display:none" class="addCoPosterID">${userID}</p>
+            <p onclick="removeCoposter('${userID}', '${username}')">Remove</p>
+        </div>
+    `
+}
+
+async function removeCoposter(userID, username) {
+    document.getElementById(`coposter_${userID}`).remove()
+
+    const content = document.getElementById('coPostersInput').value
+    const contentArgs = content.split(" ")
+    const newContentArgs = []
+
+    for (const arg of contentArgs) {
+        if (arg != `@${username}`) newContentArgs.push(arg)
+    }
+
+    document.getElementById('coPostersInput').value = newContentArgs.join(" ")
+    document.getElementById('coPostersInput').focus()
 }
 
 async function autoCompleteUser(username) {
@@ -1675,6 +1769,7 @@ async function userHtml(userID) {
                     pollData: pin.type?.poll=="included" ? pin.pollData : null,
                     voteData: pin.type?.vote=="included" ? pin.voteData : null,
                     quoteData: pin.type?.quote=="included" ? pin.quoteData : null,
+                    coposterData: pin.type?.coposter=="included" ? pin.coposterData : null,
                     extraData: pin.type?.extra=="included" ? pin.extraData : {},
                 })
             }).join(" ")}
@@ -1686,7 +1781,15 @@ async function userHtml(userID) {
             </div>
             <hr class="rounded">
             ${profileData.postData.map(function(post) {
-                return postElementCreate({post: post, user: profileData.userData})                
+                return postElementCreate({
+                    post: post.postData, 
+                    user: post.userData,
+                    pollData: post.type?.poll=="included" ? post.pollData : null,
+                    voteData: post.type?.vote=="included" ? post.voteData : null,
+                    quoteData: post.type?.quote=="included" ? post.quoteData : null,
+                    coposterData: post.type?.copost=="included" ? post.coposterData : null,
+                    extraData: post.type?.extra=="included" ? post.extraData : {},
+                })                
             }).join(" ")}
         ` : ``}
     `
@@ -2571,6 +2674,7 @@ async function getFeed(feedType) {
 
     document.getElementById('mainFeed').innerHTML=loadingHTML("Loading feed...");
     listenForLoading();
+    buildCopostRequests()
     const data = await sendRequest(`/feeds/${feedToUse}`, { method: 'GET' })
     if (!data || !data[0]) return showModal("<p>There was no data in the feed selected, please load a different feed</p>")
     currentFeedType = feedToUse;
@@ -2582,6 +2686,55 @@ async function getFeed(feedType) {
         return;
     }
     else return
+}
+
+function setupCopostRequests() {
+
+}
+
+async function buildCopostRequests() {
+    const data = await sendRequest('/posts/coposts/requests', { method: 'GET', ignoreError: true})
+    if (!data || data.error) return false;
+    if (debug) console.log(data)
+
+    var ele = `
+        <div class="menu menu-style">
+            <p>CoPost Requests</p>
+            <p>Requests: ${data.length}</p>
+        </div>
+    `;
+
+    for (const request of data) {
+        ele += copostRequestElement(request);
+    }
+
+    document.getElementById("copostRequests").innerHTML = ele;
+
+}
+
+function copostRequestElement({request, post, user}) {
+    return `
+        <div id="copostRequest_${request._id}" class="menu menu-style">
+            <p>Request from: ${user.username}</p>
+            <p>Post: ${post.content}</p>
+            <button class="menuButton menuButton-style" onclick="acceptCopostRequest('${request._id}')">Accept</button>
+            <button class="menuButton menuButton-style" onclick="declineCopostRequest('${request._id}')">Decline</button>
+        </div>
+    `
+}
+
+async function acceptCopostRequest(requestID) {
+    const data = await sendRequest(`/posts/coposts/approve/${requestID}`, { method: 'POST' })
+    if (!data || data.error) return false;
+
+    return document.getElementById(`copostRequest_${requestID}`).remove()
+}
+
+async function declineCopostRequest(requestID) {
+    const data = await sendRequest(`/posts/coposts/decline/${requestID}`, { method: 'DELETE' })
+    if (!data || data.error) return false;
+
+    return document.getElementById(`copostRequest_${requestID}`).remove()
 }
 
 // EASTER EGG
@@ -2640,6 +2793,7 @@ function buildView(posts) {
                 pollData: postArray.type?.poll=="included" ? postArray.pollData : null,
                 voteData: postArray.type?.vote=="included" ? postArray.voteData : null,
                 quoteData: postArray.type?.quote=="included" ? postArray.quoteData : null,
+                coposterData: postArray.type?.copost=="included" ? postArray.coposterData : null,
                 extraData: postArray.type?.extra=="included" ? postArray.extraData : null,
             })
         }).join(" ")}
@@ -2671,7 +2825,7 @@ function editPost(postID, edited) {
             <input type="text" id="editPostInput" class="contentMessage contentMessageFormEdit menu-style" value="${oldMessage}">
         </form>
     `
-    document.getElementById(`editButton_${postID}`).innerHTML=`<p onclick='cancelEdit("${postID}", "${oldMessage}", "${edited}")'>cancel edit</p>`
+    document.getElementById(`editButton_${postID}`).innerHTML=`<span onclick='cancelEdit("${postID}", "${oldMessage}", "${edited}")'>${styleEditButton(true)}</span>`
     document.getElementById(`editPostInput`).focus()
     document.getElementById("editPostForm").addEventListener("submit", function (e) { e.preventDefault()})
 }
@@ -2682,9 +2836,14 @@ async function cancelEdit(postID, content, edited) {
     const post = await sendRequest(`/posts/get/${postID}`, { method: 'GET' })
     if (!post || post.error) return false;
 
-    const user = await sendRequest(`/get/userByID/${post.userID}`, { method: 'GET' })
-    if (!user || user.error) return false;
-    return document.getElementById(`postElement_${postID}`).innerHTML = postElementCreate({post, user})
+    document.getElementById(`postContentArea_${postID}`).innerHTML = `
+        <div class="textAreaPost posts_content-style">
+            <p id="postContent_${post._id}">${post.content}</p>
+            ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
+        </div>
+    `
+
+    document.getElementById(`editButton_${postID}`).innerHTML=`<span onclick='editPost("${postID}")' class="posts_action-style">${styleEditButton()}</span>`
 }
 
 async function submitEdit(postID) {
@@ -2702,7 +2861,7 @@ async function submitEdit(postID) {
 
     const imageContent = checkForImage(editData.new.content)
 
-    document.getElementById(`editButton_${postID}`).innerHTML=`<a onclick='editPost("${postID}")'>edit post</a>`
+    document.getElementById(`editButton_${postID}`).innerHTML=`<span onclick='editPost("${postID}")' class="posts_action-style">${styleEditButton()}</span>`
 
     return document.getElementById(`postContentArea_${postID}`).innerHTML = `
         <div class="textAreaPost">
@@ -2807,7 +2966,7 @@ async function likePost(postID) {
         document.getElementById(`likePost_${postID}`).classList.remove("ownUser-style");
         document.getElementById(`likePost_${postID}`).classList.add("posts_action-style");
 
-        document.getElementById(`likePost_${postID}`).innerText = puralDataType('like', data.totalLikes);
+        document.getElementById(`likePost_${postID}`).innerHTML = styleLikedButton(false, data.totalLikes);
     } else {
         if (debug) console.log("liking post")
         const data = await sendRequest(`/posts/like/${postID}`, { method: 'PUT' })
@@ -2818,7 +2977,7 @@ async function likePost(postID) {
         document.getElementById(`likePost_${postID}`).classList.add("ownUser-style");
         document.getElementById(`likePost_${postID}`).classList.remove("posts_action-style");
 
-        document.getElementById(`likePost_${postID}`).innerText = puralDataType('like', data.totalLikes)
+        document.getElementById(`likePost_${postID}`).innerHTML = styleLikedButton(true, data.totalLikes);
     }
 }
 
@@ -2890,6 +3049,8 @@ async function searchResult(input) {
                 user: postArray.userData, 
                 pollData: postArray.type?.poll=="included" ? postArray.pollData : null,
                 voteData: postArray.type?.vote=="included" ? postArray.voteData : null,
+                quoteData: postArray.type?.quote=="included" ? postArray.quoteData : null,
+                coposterData: postArray.type?.copost=="included" ? postArray.coposterData : null,
                 extraDta: postArray.type?.extra=="included" ? postArray.extraData : null,
             })
         }).join(" ")}
@@ -3000,6 +3161,7 @@ async function createPostPage() {
                 <p class="publicPost menuButton menuButton-style" onclick="leavePostPage()">Back</p>
                 <p class="publicPost menuButton menuButton-style" onclick="publishFromPostPage()">Upload Post</p>
                 <p class="publicPost menuButton menuButton-style" id="pollCreationButton" onclick="showPollCreation()">Add Poll</p>
+                <p class="publicPost menuButton menuButton-style" id="pollCreationButton" onclick="showCoPostersCreation()">Add Co-Posters</p>
                 <div class="publicPost menuButton menuButton-style">
                     <p onclick="exportPostHeaderURL()">Create Post Template</p>
                     <p id="postURL_preview"></p>
@@ -3007,6 +3169,7 @@ async function createPostPage() {
                 </div>
             </div>
             <div>
+                <iv id="addCoPoster"></div>
                 <input type="text" id="pollCreateLink" class="addPollOption menu-style" placeholder="Link Poll via ID" ${data.pollID ? `value="${data.pollID}"` : ""}></input>
             </div>
             <div id="pollCreate"></div>
@@ -3036,6 +3199,30 @@ async function createPostPage() {
         }
     }
 };
+
+function showCoPostersCreation() {
+    const ele = `
+        <div class="menu menu-style">
+            <p>Co-Posters</p>
+            <input type="text" onkeyup="socialTypePost('coPostersInput', true)" id="coPostersInput" class="addPollOption menu-style" placeholder="Add Co-Poster"></input>
+            <div id="coPostersDiv"></div>
+        </div>
+    `;
+
+    document.getElementById("addCoPoster").innerHTML = ele;
+}
+
+async function onTypeCoPosters() {
+    const input = document.getElementById('co-posters-input').value;
+    if (input == "") return document.getElementById('co-posters-div').innerHTML = "";
+    const foundTags = await findTag(content)
+    if (foundTags.found == false) {
+        if (document.getElementById('taggingsOpened')) {
+            document.getElementById('foundTaggings').innerHTML=""
+        }
+        return false;
+    };
+}
 
 function createPostPageHeaders() {
     const content = document.getElementById('newPostTextArea')?.value
@@ -3196,8 +3383,24 @@ async function publishFromPostPage() {
         else return null;
     }
 
+    var coposters = null
+    const copostersDiv = document.getElementById('coPostersDiv');
+    if (copostersDiv) {
+        const copostersFound = document.getElementsByClassName('addCoPosterID');
+        console.log(copostersFound)
+        if (copostersFound) {
+            coposters = [];
+            for (const coposter of copostersFound) {
+                console.log(coposter)
+                coposters.push(coposter.innerHTML);
+            }
+
+        }
+    }
+
+
     /* if poll then publish poll first */
-    return createPost({ pollID: pollID ? pollID : null });
+    return createPost({ pollID: pollID ? pollID : null, coposters: coposters ? coposters : null });
 };
 
 function changePostPageNavButton(method) {
@@ -3362,12 +3565,17 @@ async function createPost(params) {
 
     if (debug) console.log(pollID)
 
+    var coposters
+    if (params?.coposters) coposters = params.coposters
+    else coposters = undefined
+
     const data = { 
         "userID" : currentUserLogin.userID, 
         "content" : input,
         "quoteReplyPostID" : quoted,
         "replyingPostID" : replied,
-        "linkedPollID" : pollID || null
+        "linkedPollID" : pollID || null,
+        "coposters" : coposters
     };
 
     if (isFromPostPage) leavePostPage()
@@ -3485,6 +3693,17 @@ function getId(url) {
     return (match && match[2].length === 11) ? match[2] : undefined;
 }
     
+function loadSpotify(amount, link) {
+    const iframeSpotify = `<div><p onclick="unloadSpotify(${amount}, '${link}')">Hide Spotify Embed</p><iframe src="${link}" width="320" height="240" frameborder="0" encrypted-media; picture-in-picture"></iframe></div>`
+    document.getElementById(`spotify_frame_${amount}`).innerHTML = iframeSpotify
+    document.getElementById(`spotify_frame_${amount}`).onclick = null
+}
+
+function unloadSpotify(amount, link) {
+    document.getElementById(`spotify_frame_${amount}`).innerHTML = `Click to load spotify link #${amount}`
+    document.getElementById(`spotify_frame_${amount}`).onclick = `loadSpotify(${amount}, '${link}')`
+}
+
 function checkForImage(content) {
     const imageFormats = ['.jpg', '.png','.jpeg', '.svg', '.gif']
     const videoFormats = [{'urlEnd': '.mp4', "type": 'mp4'}, {'urlEnd':'.mov','type':'mp4'}, {'urlEnd':'.ogg', 'type': 'ogg'}]
@@ -3492,9 +3711,11 @@ function checkForImage(content) {
     if (!content) return '';
     const contentArgs = content.split(/[ ]+/)
     var foundImage = false
+    var foundSpotifys = 1
 
     var attachments = []
     for (index = 0; index < contentArgs.length; index++) {
+        //if (contentArgs[index].includes(' ')) contentArgs[index] = contentArgs[index].replace(' ', '')
         if (contentArgs[index].startsWith('https://')) {
             for (const imageFormat of imageFormats) {
                 if (contentArgs[index].endsWith(imageFormat)) {
@@ -3528,6 +3749,16 @@ function checkForImage(content) {
 
                 const iframeHuelet = `<iframe src="https://publish.huelet.net/?embed=true&vuid=${videoID}" width="320" height="240" frameborder="0" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen="true"></iframe>`
                 attachments.push(iframeHuelet)
+            }
+
+            if (contentArgs[index].startsWith("https://open.spotify.com/embed/")) {
+                foundImage = true
+                var URL = contentArgs[index]
+                URL = URL.replace(/\n/g, '');
+
+                const iframeSpotify = `<div><div onclick="loadSpotify(${foundSpotifys},'${URL}')">Click to load spotify link #${foundSpotifys}</div><div id="spotify_frame_${foundSpotifys}"></div></div>`
+                attachments.push(iframeSpotify)
+                foundSpotifys++
             }
         }
     }
