@@ -333,8 +333,6 @@ async function popupActions(postID, hideParent, hideReplies, owner, pinned=false
         document.getElementById(`popupactions_${postID}`).innerHTML = styleActionButton(true)
     }   
 
-    const postLink = `${hostedUrl}?postID=${postID}`
-
     document.getElementById(`postElement_${postID}`).innerHTML+=`
         <div id="popupOpen_${postID}" class="publicPost posts-style no-select" style="position: element(#popupactions_${postID});">
             ${owner && mobileClient? `
@@ -349,7 +347,7 @@ async function popupActions(postID, hideParent, hideReplies, owner, pinned=false
             <p>---</p>
             <p class="pointerCursor" onclick="${pinned===true ? `unpinPost('${postID}')` : `pinPost('${postID}')` }" id="pin_post_${postID}">${pinned===true ? `Unpin from Profile` : `Pin to Profile` }</p>
             <p class="pointerCursor" onclick="${saved===true ? `unsaveBookmark('${postID}')` : `saveBookmark('${postID}')`}" id="saveBookmark_${postID}">${saved===true ? `Remove from Bookmarks`:`Save to Bookmarks`}</p>
-            <p class="pointerCursor" onclick="copyToClipboard('${postLink}')">Copy Post Link</p>
+            <p class="pointerCursor" onclick="copyPostLink('${postID}')" id="post_copy_${postID}">Copy Post Link</p>
             <p class="pointerCursor" onclick="showEditHistory('${postID}')" id="editHistory_${postID}">Check Edit History</p>
             <p class="pointerCursor" onclick="showLikes('${postID}')" id="likedBy_${postID}">Check Who Liked</p>
             ${hideReplies != true ? `<p class="pointerCursor" onclick="viewReplies('${postID}')" id="replies_${postID}">Check Replies</p>` : ``}
@@ -357,6 +355,12 @@ async function popupActions(postID, hideParent, hideReplies, owner, pinned=false
         </div>
     `;
 };
+
+function copyPostLink(postID) {
+    const postLink = `${hostedUrl}?postID=${postID}`
+    copyToClipboard(postLink)
+    document.getElementById(`post_copy_${postID}`).innerText = "Copied Link!"
+}
 
 async function pinPost(postID) {
     const req = await sendRequest(`/users/edit/pins/${postID}`, { method: 'POST' });
@@ -3689,6 +3693,17 @@ function getId(url) {
     return (match && match[2].length === 11) ? match[2] : undefined;
 }
     
+function loadSpotify(amount, link) {
+    const iframeSpotify = `<div><p onclick="unloadSpotify(${amount}, '${link}')">Hide Spotify Embed</p><iframe src="${link}" width="320" height="240" frameborder="0" encrypted-media; picture-in-picture"></iframe></div>`
+    document.getElementById(`spotify_frame_${amount}`).innerHTML = iframeSpotify
+    document.getElementById(`spotify_frame_${amount}`).onclick = null
+}
+
+function unloadSpotify(amount, link) {
+    document.getElementById(`spotify_frame_${amount}`).innerHTML = `Click to load spotify link #${amount}`
+    document.getElementById(`spotify_frame_${amount}`).onclick = `loadSpotify(${amount}, '${link}')`
+}
+
 function checkForImage(content) {
     const imageFormats = ['.jpg', '.png','.jpeg', '.svg', '.gif']
     const videoFormats = [{'urlEnd': '.mp4', "type": 'mp4'}, {'urlEnd':'.mov','type':'mp4'}, {'urlEnd':'.ogg', 'type': 'ogg'}]
@@ -3696,10 +3711,11 @@ function checkForImage(content) {
     if (!content) return '';
     const contentArgs = content.split(/[ ]+/)
     var foundImage = false
-    var foundSpotifys = 0
+    var foundSpotifys = 1
 
     var attachments = []
     for (index = 0; index < contentArgs.length; index++) {
+        //if (contentArgs[index].includes(' ')) contentArgs[index] = contentArgs[index].replace(' ', '')
         if (contentArgs[index].startsWith('https://')) {
             for (const imageFormat of imageFormats) {
                 if (contentArgs[index].endsWith(imageFormat)) {
@@ -3736,14 +3752,13 @@ function checkForImage(content) {
             }
 
             if (contentArgs[index].startsWith("https://open.spotify.com/embed/")) {
-                if (foundSpotifys<3) {
-                    foundImage = true
-                    const URL = contentArgs[index]
+                foundImage = true
+                var URL = contentArgs[index]
+                URL = URL.replace(/\n/g, '');
 
-                    const iframeSpotify = `<iframe src="${URL}" width="320" height="240" frameborder="0" encrypted-media; picture-in-picture"></iframe>`
-                    attachments.push(iframeSpotify)
-                    foundSpotifys++
-                }
+                const iframeSpotify = `<div><div onclick="loadSpotify(${foundSpotifys},'${URL}')">Click to load spotify link #${foundSpotifys}</div><div id="spotify_frame_${foundSpotifys}"></div></div>`
+                attachments.push(iframeSpotify)
+                foundSpotifys++
             }
         }
     }
