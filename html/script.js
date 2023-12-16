@@ -17,6 +17,7 @@ var getUrl = window.location;
 var baseUrl = getUrl .protocol + "//" + getUrl.host + "/" + getUrl.pathname.split('/')[1];
 var pathArray = window.location.pathname.split( '/' );
 var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
+var hostedUrl = `${config ? `${config.current == "prod" ? config.prod.hosted_url : config.dev.hosted_url}` : 'https://interact.novapro.net/' }`
 var params = new URLSearchParams(window.location.search)
 
 // API HEADERS
@@ -330,7 +331,9 @@ async function popupActions(postID, hideParent, hideReplies, owner, pinned=false
         return elementPopup.remove();
     } else {
         document.getElementById(`popupactions_${postID}`).innerHTML = styleActionButton(true)
-    }
+    }   
+
+    const postLink = `${hostedUrl}?postID=${postID}`
 
     document.getElementById(`postElement_${postID}`).innerHTML+=`
         <div id="popupOpen_${postID}" class="publicPost posts-style no-select" style="position: element(#popupactions_${postID});">
@@ -346,6 +349,7 @@ async function popupActions(postID, hideParent, hideReplies, owner, pinned=false
             <p>---</p>
             <p class="pointerCursor" onclick="${pinned===true ? `unpinPost('${postID}')` : `pinPost('${postID}')` }" id="pin_post_${postID}">${pinned===true ? `Unpin from Profile` : `Pin to Profile` }</p>
             <p class="pointerCursor" onclick="${saved===true ? `unsaveBookmark('${postID}')` : `saveBookmark('${postID}')`}" id="saveBookmark_${postID}">${saved===true ? `Remove from Bookmarks`:`Save to Bookmarks`}</p>
+            <p class="pointerCursor" onclick="copyToClipboard('${postLink}')">Copy Post Link</p>
             <p class="pointerCursor" onclick="showEditHistory('${postID}')" id="editHistory_${postID}">Check Edit History</p>
             <p class="pointerCursor" onclick="showLikes('${postID}')" id="likedBy_${postID}">Check Who Liked</p>
             ${hideReplies != true ? `<p class="pointerCursor" onclick="viewReplies('${postID}')" id="replies_${postID}">Check Replies</p>` : ``}
