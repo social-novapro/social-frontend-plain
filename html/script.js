@@ -1681,7 +1681,7 @@ async function userHtml(userID) {
     var clientUser = profileData.userData._id === currentUserLogin.userID ? true : false
     if (profileData?.userData?.displayName) document.title = `${profileData?.userData?.displayName} | Interact`
     
-    profileData.postData.reverse()
+    if (!profileData.postData.error) profileData.postData.reverse()
     if (debug) console.log(profileData)
 
     document.getElementById("mainFeed").innerHTML =  `
@@ -1774,7 +1774,7 @@ async function userHtml(userID) {
                 })
             }).join(" ")}
         ` : ``}
-        ${profileData.included.posts ? `
+        ${!profileData.postData.error ? `
             <div class="menu menu-style">
                 <p><b>Posts</b></p>
                 <p>${profileData.postData.length}</p>
