@@ -1,7 +1,10 @@
+// VARIBLES
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
+var LOCAL_STORAGE_LOGINS='social.loginAccounts'
+var params = new URLSearchParams(window.location.search);
+var foundparams = false;
 
 var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
-//var redirectURL = `${config ? `${config.current == "prod" ? config.prod.hosted_url : config.dev.hosted_url}` : 'https://interact-api.novapro.net/v1' }`
 var redirectURL = `/`;
 
 var headers = {
@@ -10,9 +13,12 @@ var headers = {
     "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421"
 }
 
-var params = new URLSearchParams(window.location.search);
-var foundparams = false;
-
+/* loginACcounts info
+    will be an array, with the usertoken, and userID, and access token, nothing else
+    when user logs in, gets added to the array, and then when the user logs out, gets removed
+    when user logs in, checks if the user is already logged in, if so, then it will log them out, and then log them in
+    if user switchs account or new log in, itll go to .loginUserToken 
+*/
 async function checkURLParams() {
     var paramsInfo = {
         paramsFound: false
@@ -26,7 +32,6 @@ async function checkURLParams() {
     if (ifRedirect) {
         const redirectSearch = params.get('redirect')
         if (redirectSearch) redirectURL += redirectSearch
-        //else if (redirectSearch == 'live-chat') redirectURL += redirectSearch
         else console.log('redirect not found')
     }
     if (ifLoginRequest) {
@@ -44,7 +49,6 @@ async function checkURLParams() {
     else if (ifForgotPassowrd) {
         paramsFound = true
         paramsInfo.paramsFound = true
-        // forgotPasswordPage();
     }
 
     if (paramsInfo.paramsFound == false) return checkLogin()
@@ -63,21 +67,6 @@ function redirection() {
     window.location.href = redirectURL;
 }
 
-/*
-// LOGIN INFO 
-async function checkLogin() {
-    var loginUserToken = false
-
-    const userStorageLogin = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
-    if (userStorageLogin) {
-        currentUserLogin = userStorageLogin
-        loginUserToken = true
-
-        return redirection()
-    }
-    
-    if (!loginUserToken) return loginSplashScreen()
-}*/
 async function sendLoginRequest() {
     const response = await fetch(`${apiURL}/auth/checkToken/`, {
         method: 'GET',
@@ -97,11 +86,15 @@ async function loginSplashScreen() {
     console.log('-- login splash screen')
     document.getElementById("mainFeed").innerHTML = `hello`
     document.getElementById("mainFeed").innerHTML = `
-        <div class="publicPost signInDiv">
+        <div class="menu menu-style">
             <h1><a onclick="changeYour()" id="badYourGrammer">You're</a> not signed in</h1>
             <p>Please sign into Interact to Proceed!</p>
-            <button class="buttonStyled" onclick="loginPage()">Log into Your Account</button>
-            <button class="buttonStyled" onclick="createUserPage()">Create an Account</button>
+            <div>
+                <button class="menuButton menuButton-style" onclick="loginPage()">Log into Your Account</button>
+            </div>
+            <div>
+                <button class="menuButton menuButton-style" onclick="createUserPage()">Create an Account</button>
+            </div>
         </div>
     `
     console.log('--- login splash screen end');
@@ -117,23 +110,23 @@ async function changeYour() {
 // USER LOGIN PAGE 
 async function loginPage() {
     document.getElementById("mainFeed").innerHTML = `
-        <div class="userInfo">
+        <div class="menu menu-style">
             <h1>Please Login!</h1>
             <form onsubmit="sendLoginRequest()" id="signInForm">
-                <div class="userInfo">
+                <div class="menu menu-style">
                     <p>Enter Username or Email:</p>
-                    <p><input class="contentMessage userEditForm" id="userUsernameLogin" placeholder="Username/Email" type="username" name="username"></p>
+                    <p><input class="contentMessage userEditForm menu-style" id="userUsernameLogin" placeholder="Username/Email" type="username" name="username"></p>
                 </div>
-                <div class="userInfo">
+                <div class="menu menu-style">
                     <p>Enter Password</p>
-                    <p><input class="contentMessage userEditForm" id="userPasswordLogin" placeholder="Password" type="password" name="password"></p>
+                    <p><input class="contentMessage userEditForm menu-style" id="userPasswordLogin" placeholder="Password" type="password" name="password"></p>
                 </div>
-                <div class="signInDiv">
-                    <button class="buttonStyled" type="submit">Login</button>
+                <div>
+                    <button class="menuButton menuButton-style" type="submit">Login</button>
                 </div>
             </form>
-            <div class="signInDiv">
-                <button class="buttonStyled" onclick="forgetPassPage()">Forgot Password</button>
+            <div>
+                <button class="menuButton menuButton-style" onclick="forgetPassPage()">Forgot Password</button>
             </div>
        </div>
     `
@@ -147,16 +140,12 @@ async function sendLoginRequest() {
     headers.username = usernameLogin
     headers.password = passwordLogin
     
-    // const response = await fetch(`${baseURL}Priv/get/userLogin/`, {
     const response = await fetch(`${apiURL}/auth/userLogin/`, {
         method: 'GET',
         headers,
     })
 
-    // if (response.status != 200) 
-    console.log(response)
     const userData = await response.json()
-    console.log(userData)
 
     if (response.ok) saveLoginUser(userData.userID, userData.userToken, userData.accessToken)
     else return showModal(`<p>Error: ${userData.code}\n${userData.msg}</p>`)
@@ -166,7 +155,7 @@ async function sendLoginRequest() {
 
 async function forgetPassPage() {
     document.getElementById("mainFeed").innerHTML = `
-        <div class="userInfo">
+        <div class="menu menu-style">
             <h1>Enter Details!</h1>
             <p>Enter your username or email to reset your password!</p>
             <p>Once you have entered your username or email, you will recieve an email with a link to reset your password!</p>
@@ -174,12 +163,12 @@ async function forgetPassPage() {
             <p>This will only work if you have an email set to your Interact account.</p>
             <p>Please contact us at <a href="mailto:daniel@novapro.net">daniel@novapro.net</a> for any problems with resetting your password</p>
             <form onsubmit="sendForgetRequest()" id="signInForm">
-                <div class="userInfo">
+                <div class="menu menu-style">
                     <p>Enter Username or Email:</p>
-                    <p><input class="contentMessage userEditForm" id="usernameForgetPass" placeholder="Username/Email" type="username" name="username"></p>
+                    <p><input class="contentMessage userEditForm menu-style" id="usernameForgetPass" placeholder="Username/Email" type="username" name="username"></p>
                 </div>
-                <div class="signInDiv">
-                    <button class="buttonStyled" type="submit">Submit Request</button>
+                <div class="menu menu-style">
+                    <button class="buttonStyled menuButton menuButton-style" type="submit">Submit Request</button>
                 </div>
             </form>
             <div id="forgotPassResponse"></div>
@@ -191,14 +180,12 @@ async function forgetPassPage() {
 async function sendForgetRequest() {
     var usernameLogin = document.getElementById('usernameForgetPass').value;
 
-    // const response = await fetch(`${baseURL}Priv/get/userLogin/`, {
     const response = await fetch(`${apiURL}/auth/password/forgot/`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ username: usernameLogin })
     })
 
-    // if (response.status != 200) 
     const userData = await response.json()
 
     if (!response.ok) {
@@ -211,57 +198,53 @@ async function sendForgetRequest() {
 }
 
 function saveLoginUser(userID, userToken, accessToken) {
-    //setCookie("accesstoken", accessToken , 365);
-    //setCookie("usertoken", userToken , 365);
-    //setCookie("userid", userID , 365);
-
     localStorage.setItem(LOCAL_STORAGE_LOGIN_USER_TOKEN, JSON.stringify({ userID, userToken, accessToken}))
-}
+    const logins = localStorage.getItem(LOCAL_STORAGE_LOGINS);
 
-async function checkLoginUser() {
-    const response = await fetch(`${apiURL}/auth/checkToken`, {
-        method: 'GET',
-        headers,
-    })
-
-    console.log(response)
-    const userData = await response.json()
-    console.log(userData)
-
-    console.log(localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN))
-   //  localStorage.setItem(LOCAL_STORAGE_LOGIN_USER_TOKEN, JSON.stringify(userLoginToken))
+    if (logins) {
+        const loginsArray = JSON.parse(logins);
+        for (const login of loginsArray) {
+            if (login.userID == userID) {
+                loginsArray.splice(loginsArray.indexOf(login), 1);
+            }
+        }
+        loginsArray.push({ userID, userToken, accessToken });
+        localStorage.setItem(LOCAL_STORAGE_LOGINS, JSON.stringify(loginsArray));
+    } else {
+        localStorage.setItem(LOCAL_STORAGE_LOGINS, JSON.stringify([{ userID, userToken, accessToken }]));
+    }
 }
 
 function createUserPage() {
     document.getElementById("mainFeed").innerHTML = `
-        <div class="userInfo">
+        <div class="menu menu-style">
             <h1>Please Create an Account!</h1>
             <form onsubmit="createNewUserRequest()" id="createUserForm">
-                <div class="userInfo">
+                <div class="menu menu-style">
                     <p>Enter Your Email:</p>
-                    <input type="text" class="contentMessage userEditForm" id="emailCreate" placeholder="Email" type="text" name="email">
+                    <input type="text" class="contentMessage userEditForm menu-style" id="emailCreate" placeholder="Email" type="text" name="email">
                 </div>
-                <div class="userInfo">
+                <div class="menu menu-style">
                     <p>Enter Your New Username:</p>
-                    <input type="text" class="contentMessage userEditForm" id="usernameCreate" placeholder="Username" type="text" name="username">
+                    <input type="text" class="contentMessage userEditForm menu-style" id="usernameCreate" placeholder="Username" type="text" name="username">
                 </div>
-                <div class="userInfo">
+                <div class="menu menu-style">
                     <p>Enter Your New Displayname:</p>
-                    <input type="text" class="contentMessage userEditForm" id="displaynameCreate" placeholder="Displayname">
+                    <input type="text" class="contentMessage userEditForm menu-style" id="displaynameCreate" placeholder="Displayname">
                 </div>
-                <div class="userInfo">
+                <div class="menu menu-style">
                     <p>Enter Your New Password:</p>
-                    <input type="password" class="contentMessage userEditForm" id="passwordCreate" placeholder="Password" name="password">
+                    <input type="password" class="contentMessage userEditForm menu-style" id="passwordCreate" placeholder="Password" name="password">
                 </div>
-                <div class="userInfo">
+                <div class="menu menu-style">
                     <p>Enter Your Description:</p>
-                    <input type="text" class="contentMessage userEditForm" id="descriptionCreate" placeholder="Description">
+                    <input type="text" class="contentMessage userEditForm menu-style" id="descriptionCreate" placeholder="Description">
                 </div>
-                <div class="userInfo">
+                <div class="menu menu-style">
                     <p>Enter Your Pronouns:</p>
-                    <input type="text" class="contentMessage userEditForm" id="pronounsCreate" placeholder="Pronouns">
+                    <input type="text" class="contentMessage userEditForm menu-style" id="pronounsCreate" placeholder="Pronouns">
                 </div>
-                <div class="signInDiv">
+                <div class="menu menu-style">
                     <button class="buttonStyled" type="submit">Create Account</div>
                 </div>
             </form>
@@ -299,9 +282,3 @@ async function createNewUserRequest() {
 
     if (userData.login === true) return redirection()
 }
-/* function setCookie(cname,cvalue,exdays) {
-    var d = new Date();
-    d.setTime(d.getTime() + (exdays*24*60*60*1000));
-    var expires = "expires=" + d.toGMTString();
-    document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
-} */
