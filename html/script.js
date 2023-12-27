@@ -244,6 +244,8 @@ function postElementCreate({
                 <div class="debug">
                     <p onclick="copyToClipboard('${post._id}')">postID: ${post._id}</p>
                     <p onclick="copyToClipboard('${post.userID}')">userID: ${post.userID}</p>
+                    ${post.indexID ? `<p onclick="copyToClipboard('${post.indexID}')">indexID: ${post.indexID}</p>` : `` }
+
                     ${coposterData && coposterData[0] ? `${coposterData.map(function(coposter) {
                         return ` <p onclick="copyToClipboard('${coposter._id}')">coposter ${coposter.username}: ${coposter._id}</p>`
                     }).join(" ")}`:``}
@@ -2665,6 +2667,7 @@ async function changeFeed(feedType) {
 // GET DATA FROM API FOR MAIN FEED
 async function getFeed(feedType) {
     const feedToUse = feedType || 'userFeed'
+    buildingFeed=true
 
     if (currentFeed && (feedToUse == currentFeedType)) return buildView(currentFeed)
     if (debug) console.log("loading feed")
@@ -2676,7 +2679,7 @@ async function getFeed(feedType) {
     listenForLoading();
     buildCopostRequests()
     var url = `/feeds/${feedToUse}`
-    if (feedToUse == "userFeed" || "allPosts") url+="/v2"
+    if (feedToUse == "userFeed" || feedToUse=="allPosts") url+="/v2"
     const data = await sendRequest(`${url}`, { method: 'GET' })
     if (data.feedVersion == 2){
         currentFeedType = feedToUse;
