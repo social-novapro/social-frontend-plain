@@ -19,7 +19,7 @@ var pathArray = window.location.pathname.split( '/' );
 var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
 var hostedUrl = `${config ? `${config.current == "prod" ? config.prod.hosted_url : config.dev.hosted_url}` : 'https://interact.novapro.net/' }`
 var params = new URLSearchParams(window.location.search)
-
+var prevIndexID = 0;
 // API HEADERS
 var headers = {
     'Content-Type': 'application/json',
@@ -40,7 +40,7 @@ var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 var LOCAL_STORAGE_LOGINS='social.loginAccounts'
 var LOCAL_STORAGE_THEME_SETTINGS = 'social.themeSettings'
 var LOCAL_STORAGE_THEME_POSSIBLE = 'social.themePossible'
-
+var buildingFeed = true;
 // let loginUserToken = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
 
 function checkifMobile() {
@@ -244,6 +244,8 @@ function postElementCreate({
                 <div class="debug">
                     <p onclick="copyToClipboard('${post._id}')">postID: ${post._id}</p>
                     <p onclick="copyToClipboard('${post.userID}')">userID: ${post.userID}</p>
+                    ${post.indexID ? `<p onclick="copyToClipboard('${post.indexID}')">indexID: ${post.indexID}</p>` : `` }
+
                     ${coposterData && coposterData[0] ? `${coposterData.map(function(coposter) {
                         return ` <p onclick="copyToClipboard('${coposter._id}')">coposter ${coposter.username}: ${coposter._id}</p>`
                     }).join(" ")}`:``}
@@ -2665,6 +2667,7 @@ async function changeFeed(feedType) {
 // GET DATA FROM API FOR MAIN FEED
 async function getFeed(feedType) {
     const feedToUse = feedType || 'userFeed'
+    buildingFeed=true
 
     if (currentFeed && (feedToUse == currentFeedType)) return buildView(currentFeed)
     if (debug) console.log("loading feed")
@@ -2675,7 +2678,22 @@ async function getFeed(feedType) {
     document.getElementById('mainFeed').innerHTML=loadingHTML("Loading feed...");
     listenForLoading();
     buildCopostRequests()
-    const data = await sendRequest(`/feeds/${feedToUse}`, { method: 'GET' })
+    var url = `/feeds/${feedToUse}`
+    if (feedToUse == "userFeed" || feedToUse=="allPosts") url+="/v2"
+    const data = await sendRequest(`${url}`, { method: 'GET' })
+    if (data.feedVersion == 2){
+        currentFeedType = feedToUse;
+        currentFeed = data.posts.reverse()
+        prevIndexID = data.prevIndexID
+    
+        if (params.paramsFound == false) {
+            buildView(data.posts)
+            await changeFeedHeader(feedToUse);
+            return;
+        }
+        else return
+    }
+
     if (!data || !data[0]) return showModal("<p>There was no data in the feed selected, please load a different feed</p>")
     currentFeedType = feedToUse;
     currentFeed = data.reverse()
@@ -2797,9 +2815,74 @@ function buildView(posts) {
                 extraData: postArray.type?.extra=="included" ? postArray.extraData : null,
             })
         }).join(" ")}
+        <div id="addToBottom"></div>
     `
+    buildingFeed = false;
     devMode()
 }
+// BUILDING MAIN FEED
+function addBuildView(posts) {
+    if (debug) console.log("buidlding extra view")
+    if (searching) return
+
+    document.getElementById("addToBottom").outerHTML = `
+        ${posts.map(function(postArray) {
+            return postElementCreate({
+                post: postArray.postData,
+                user: postArray.userData, 
+                pollData: postArray.type?.poll=="included" ? postArray.pollData : null,
+                voteData: postArray.type?.vote=="included" ? postArray.voteData : null,
+                quoteData: postArray.type?.quote=="included" ? postArray.quoteData : null,
+                coposterData: postArray.type?.copost=="included" ? postArray.coposterData : null,
+                extraData: postArray.type?.extra=="included" ? postArray.extraData : null,
+            })
+        }).join(" ")}
+        <div id="addToBottom"></div>
+    `
+    buildingFeed = false
+    devMode()
+}
+
+async function nextFeedPage(feedType) {
+    buildingFeed = true
+
+    //nextIndexID = data.nextIndexID
+    const feedToUse = feedType || 'userFeed'
+
+    const data = await sendRequest(`/feeds/${feedToUse}/v2/${prevIndexID}`, { method: 'GET' })
+    if (data.feedVersion == 2){
+        currentFeedType = feedToUse;
+        currentFeed = data.posts.reverse()
+        prevIndexID = data.prevIndexID
+
+        addBuildView(data.posts)
+        return;
+    }
+}
+
+// Callback function to be executed when the intersection changes
+function handleIntersection(entries, observer) {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            console.log('Bottom div is now in view!');
+            if (!buildingFeed) nextFeedPage(currentFeedType)
+            // Do something when the bottom div is in view
+        }
+    });
+}
+
+// Create an intersection observer with the callback function
+const observer = new IntersectionObserver(handleIntersection, {
+    root: null, // Use the viewport as the root
+    rootMargin: '0px', // No margin
+    threshold: 0.5 // Trigger the callback when at least 50% of the target is visible
+});
+
+// Target the bottom div
+const bottomDiv = document.getElementsByClassName('end-page-padding')[0];
+
+// Start observing the bottom div
+observer.observe(bottomDiv);
 
 async function deletePost(postID) {
     if (debug) console.log(`deleting post ${postID}`)
