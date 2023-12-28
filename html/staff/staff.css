@@ -1,10 +1,21 @@
-.style {
+.team-people {
+    color: var(--main-p-color);
+    display: grid; 
+    align-content: center;
+    text-align: center;
+    grid-column-start: 1;
+    grid-column-end: 3;
+    grid-row-start: 1;
+    grid-row-end: 2;
+}
+.team-person {
     background-color: #2b2b2e;
     text-align: center;
     border-radius: 60px;
     font-size: 12px;
     color: #E6E6E6;
     display: inline-block;
+    margin: 40px;
     height: 250px;
     padding: 20px;
     width: 250px;
@@ -14,32 +25,33 @@
 
 .danAss {
     position: relative;
-    top: 50px ;
-    left: 400px ;
+    grid-column: 1;
+    grid-row: 1;
 }
 
 .samAss {
     position: relative;
-    top: 50px ;
-    left: 440px ;
+    grid-column: 2;
+    grid-row: 1;
 }
 
 .leoAss {
     position: relative;
-    top: 50px ;
-    left: 485px ;
+    grid-column: 3;
+    grid-row: 1;
 }
 
 .syrxAss {
     position: relative;
-    top: 400px ;
-    left: -350px ;
+    grid-column: 1;
+    grid-row: 2;
 }
 
 .flavioAss {
     position: relative;
-    top: 400px ;
-    left: -300px ;
+    grid-column: 2;
+    grid-row: 2;
+
 }
 
 /* .louieAss {
