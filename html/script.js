@@ -939,6 +939,11 @@ function settingsPage() {
                         <button class="menuButton menuButton-style" onclick='viewThemesDiscovery()'>Discover Themes</button>
                     </div> 
                     <div id="userThemeEditor"></div>
+                    <div class="menu menu-style">
+                        <p><b>Privacy</b></p>
+                        <button class="menuButton menuButton-style" onclick="openPrivacyPage()">Open Privacy Page</p>
+                    </div>
+                    <div id="privacyPopup"></div>
                     <div id="emailSettings" class="menu menu-style">
                         <p><b>Email</b></p>
                         <button class="menuButton menuButton-style" onclick="changeEmailPage()">Email Settings</p>
@@ -1799,6 +1804,85 @@ async function userHtml(userID) {
     return;
 }
 
+async function openPrivacyPage() {
+    const privacyData = await sendRequest("/users/privacy/get/", { method: "GET"});
+    if (debug) console.log(privacyData);
+
+    var ele = `
+        <div class="menu menu-style">
+            <p><b><br>Privacy Settings</b></p>
+            <p>This feature is unfinished, and will have a later update for better functionality.</p>
+            <p>Currently only privating posts works</p>
+            <hr class="rounded">
+        <form id="userEdit_privacySettings">
+    `;
+
+    for (const privacy of privacyData) {
+        ele+=`
+            <div>
+            <h3>${privacy.title}</h3>
+            <p>${privacy.description}</p>
+            <label for="${privacy.title}">Select an option:</label>
+            <select id="${privacy.title}">
+            `;
+            
+            for (const option of privacy.options) {
+                ele+=`
+                <option value="volvo" ${option.value}"${option.isActive ? ` selected ` : ""}>${option.title}</option>
+            `
+        }
+        ele+=`
+        </select>
+        <hr class="rounded">
+        `
+    }
+
+    ele += `
+            </form>
+            <button class="menuButton menuButton-style" onclick="updatePrivacySettings()">Update Settings</button>
+            <div id="completed_change_pass"></div>
+        </div>
+    `;
+    
+    document.getElementById("privacyPopup").innerHTML = ele;
+}
+
+async function updatePrivacySettings() {
+    // Get the form element
+    const form = document.getElementById("userEdit_privacySettings");
+
+    // Get all the checkboxes within the form
+    const checkboxes = form.querySelectorAll("input[type='checkbox']");
+
+    // Create an array to store the changed values
+    const changedItems = [];
+
+    // Loop through each checkbox and check if its checked state has changed
+    //checkboxes.forEach((checkbox) => {
+    //    if (checkbox.selected !== checkbox.defaultSelected) {
+    //        changedItems.push(checkbox.value);
+    //    }
+    //});
+
+    const reqBody = [];
+    
+    var i=0;
+    for (item of changedItems) {
+        reqBody.push({ option: item, value: document.getElementById(`privacy_setting_${item}`).checked })
+    }
+
+    console.log(reqBody)
+    //const res = await sendRequest(`/users/privacy/set`, {
+    //    method: 'POST',
+    //    body: {
+    //        newSettings: reqBody
+    //    },
+    //});
+    
+    //if (!res || res.error) return null;
+    //createEditEmailSettingsView(res);
+}
+
 async function changePasswordPage() {
     const ele = `
         <div class="menu menu-style">
@@ -1991,16 +2075,18 @@ async function editEmailSettings() {
         }
     });
 
-    const reqBody = [];
+    const newSettings = [];
     
     var i=0;
     for (item of changedItems) {
-        reqBody.push({ option: item, value: document.getElementById(`emailSetting_${item}`).checked })
+        newSettings.push({ option: item, value: document.getElementById(`emailSetting_${item}`).checked })
     }
 
     const res = await sendRequest(`/emails/settings`, {
         method: 'PUT',
-        body: reqBody,
+        body: {
+            newSettings
+        },
     });
     
     if (!res || res.error) return null;
