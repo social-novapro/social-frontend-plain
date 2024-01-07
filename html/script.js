@@ -1804,15 +1804,20 @@ async function userHtml(userID) {
     return;
 }
 
-async function openPrivacyPage() {
-    const privacyData = await sendRequest("/users/privacy/get/", { method: "GET"});
+async function openPrivacyPage(privacyDataFound) {
+    var privacyData
+    if (!privacyDataFound) {
+        privacyData = await sendRequest("/users/privacy/get/", { method: "GET"});
+    } else {
+        privacyData = privacyDataFound
+    }
     if (debug) console.log(privacyData);
 
     var ele = `
         <div class="menu menu-style">
             <p><b><br>Privacy Settings</b></p>
             <p>This feature is unfinished, and will have a later update for better functionality.</p>
-            <p>Currently only privating posts works</p>
+            <p>Currently only privating posts works.</p>
             <hr class="rounded">
         <form id="userEdit_privacySettings">
     `;
@@ -1823,12 +1828,12 @@ async function openPrivacyPage() {
             <h3>${privacy.title}</h3>
             <p>${privacy.description}</p>
             <label for="${privacy.title}">Select an option:</label>
-            <select id="${privacy.title}">
+            <select id="${privacy.name}">
             `;
             
             for (const option of privacy.options) {
                 ele+=`
-                <option value="volvo" ${option.value}"${option.isActive ? ` selected ` : ""}>${option.title}</option>
+                <option value="${option.value}"${option.isActive ? ` selected ` : ""}>${option.title}</option>
             `
         }
         ele+=`
@@ -1845,42 +1850,30 @@ async function openPrivacyPage() {
     `;
     
     document.getElementById("privacyPopup").innerHTML = ele;
+    document.getElementById("userEdit_privacySettings").addEventListener("submit", function (e) { e.preventDefault()})
+
 }
 
 async function updatePrivacySettings() {
-    // Get the form element
     const form = document.getElementById("userEdit_privacySettings");
-
-    // Get all the checkboxes within the form
-    const checkboxes = form.querySelectorAll("input[type='checkbox']");
-
-    // Create an array to store the changed values
+    const selections = form.querySelectorAll("select");
     const changedItems = [];
 
-    // Loop through each checkbox and check if its checked state has changed
-    //checkboxes.forEach((checkbox) => {
-    //    if (checkbox.selected !== checkbox.defaultSelected) {
-    //        changedItems.push(checkbox.value);
-    //    }
-    //});
-
-    const reqBody = [];
-    
-    var i=0;
-    for (item of changedItems) {
-        reqBody.push({ option: item, value: document.getElementById(`privacy_setting_${item}`).checked })
+    for (const selection of selections) {
+        if (selection.value) {
+            changedItems.push({name: selection.id, value: selection.value});
+        }
     }
 
-    console.log(reqBody)
-    //const res = await sendRequest(`/users/privacy/set`, {
-    //    method: 'POST',
-    //    body: {
-    //        newSettings: reqBody
-    //    },
-    //});
-    
-    //if (!res || res.error) return null;
-    //createEditEmailSettingsView(res);
+    const res = await sendRequest(`/users/privacy/set`, {
+        method: 'POST',
+        body: {
+            newSettings: changedItems
+        },
+    });
+
+    if (!res || res.error) return null;
+    openPrivacyPage(res)
 }
 
 async function changePasswordPage() {
