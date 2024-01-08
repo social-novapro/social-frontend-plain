@@ -939,6 +939,11 @@ function settingsPage() {
                         <button class="menuButton menuButton-style" onclick='viewThemesDiscovery()'>Discover Themes</button>
                     </div> 
                     <div id="userThemeEditor"></div>
+                    <div class="menu menu-style">
+                        <p><b>Privacy</b></p>
+                        <button class="menuButton menuButton-style" onclick="openPrivacyPage()">Open Privacy Page</p>
+                    </div>
+                    <div id="privacyPopup"></div>
                     <div id="emailSettings" class="menu menu-style">
                         <p><b>Email</b></p>
                         <button class="menuButton menuButton-style" onclick="changeEmailPage()">Email Settings</p>
@@ -1799,6 +1804,78 @@ async function userHtml(userID) {
     return;
 }
 
+async function openPrivacyPage(privacyDataFound) {
+    var privacyData
+    if (!privacyDataFound) {
+        privacyData = await sendRequest("/users/privacy/get/", { method: "GET"});
+    } else {
+        privacyData = privacyDataFound
+    }
+    if (debug) console.log(privacyData);
+
+    var ele = `
+        <div class="menu menu-style">
+            <p><b><br>Privacy Settings</b></p>
+            <p>This feature is unfinished, and will have a later update for better functionality.</p>
+            <p>Currently only privating posts works.</p>
+            <hr class="rounded">
+        <form id="userEdit_privacySettings">
+    `;
+
+    for (const privacy of privacyData) {
+        ele+=`
+            <div>
+            <h3>${privacy.title}</h3>
+            <p>${privacy.description}</p>
+            <label for="${privacy.title}">Select an option:</label>
+            <select id="${privacy.name}">
+            `;
+            
+            for (const option of privacy.options) {
+                ele+=`
+                <option value="${option.value}"${option.isActive ? ` selected ` : ""}>${option.title}</option>
+            `
+        }
+        ele+=`
+        </select>
+        <hr class="rounded">
+        `
+    }
+
+    ele += `
+            </form>
+            <button class="menuButton menuButton-style" onclick="updatePrivacySettings()">Update Settings</button>
+            <div id="completed_change_pass"></div>
+        </div>
+    `;
+    
+    document.getElementById("privacyPopup").innerHTML = ele;
+    document.getElementById("userEdit_privacySettings").addEventListener("submit", function (e) { e.preventDefault()})
+
+}
+
+async function updatePrivacySettings() {
+    const form = document.getElementById("userEdit_privacySettings");
+    const selections = form.querySelectorAll("select");
+    const changedItems = [];
+
+    for (const selection of selections) {
+        if (selection.value) {
+            changedItems.push({name: selection.id, value: selection.value});
+        }
+    }
+
+    const res = await sendRequest(`/users/privacy/set`, {
+        method: 'POST',
+        body: {
+            newSettings: changedItems
+        },
+    });
+
+    if (!res || res.error) return null;
+    openPrivacyPage(res)
+}
+
 async function changePasswordPage() {
     const ele = `
         <div class="menu menu-style">
@@ -1991,16 +2068,18 @@ async function editEmailSettings() {
         }
     });
 
-    const reqBody = [];
+    const newSettings = [];
     
     var i=0;
     for (item of changedItems) {
-        reqBody.push({ option: item, value: document.getElementById(`emailSetting_${item}`).checked })
+        newSettings.push({ option: item, value: document.getElementById(`emailSetting_${item}`).checked })
     }
 
     const res = await sendRequest(`/emails/settings`, {
         method: 'PUT',
-        body: reqBody,
+        body: {
+            newSettings
+        },
     });
     
     if (!res || res.error) return null;
