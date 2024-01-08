@@ -19,7 +19,7 @@ var pathArray = window.location.pathname.split( '/' );
 var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
 var hostedUrl = `${config ? `${config.current == "prod" ? config.prod.hosted_url : config.dev.hosted_url}` : 'https://interact.novapro.net/' }`
 var params = new URLSearchParams(window.location.search)
-
+var prevIndexID = 0;
 // API HEADERS
 var headers = {
     'Content-Type': 'application/json',
@@ -40,7 +40,7 @@ var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 var LOCAL_STORAGE_LOGINS='social.loginAccounts'
 var LOCAL_STORAGE_THEME_SETTINGS = 'social.themeSettings'
 var LOCAL_STORAGE_THEME_POSSIBLE = 'social.themePossible'
-
+var buildingFeed = true;
 // let loginUserToken = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
 
 function checkifMobile() {
@@ -244,6 +244,8 @@ function postElementCreate({
                 <div class="debug">
                     <p onclick="copyToClipboard('${post._id}')">postID: ${post._id}</p>
                     <p onclick="copyToClipboard('${post.userID}')">userID: ${post.userID}</p>
+                    ${post.indexID ? `<p onclick="copyToClipboard('${post.indexID}')">indexID: ${post.indexID}</p>` : `` }
+
                     ${coposterData && coposterData[0] ? `${coposterData.map(function(coposter) {
                         return ` <p onclick="copyToClipboard('${coposter._id}')">coposter ${coposter.username}: ${coposter._id}</p>`
                     }).join(" ")}`:``}
@@ -937,6 +939,11 @@ function settingsPage() {
                         <button class="menuButton menuButton-style" onclick='viewThemesDiscovery()'>Discover Themes</button>
                     </div> 
                     <div id="userThemeEditor"></div>
+                    <div class="menu menu-style">
+                        <p><b>Privacy</b></p>
+                        <button class="menuButton menuButton-style" onclick="openPrivacyPage()">Open Privacy Page</p>
+                    </div>
+                    <div id="privacyPopup"></div>
                     <div id="emailSettings" class="menu menu-style">
                         <p><b>Email</b></p>
                         <button class="menuButton menuButton-style" onclick="changeEmailPage()">Email Settings</p>
@@ -1797,6 +1804,78 @@ async function userHtml(userID) {
     return;
 }
 
+async function openPrivacyPage(privacyDataFound) {
+    var privacyData
+    if (!privacyDataFound) {
+        privacyData = await sendRequest("/users/privacy/get/", { method: "GET"});
+    } else {
+        privacyData = privacyDataFound
+    }
+    if (debug) console.log(privacyData);
+
+    var ele = `
+        <div class="menu menu-style">
+            <p><b><br>Privacy Settings</b></p>
+            <p>This feature is unfinished, and will have a later update for better functionality.</p>
+            <p>Currently only privating posts works.</p>
+            <hr class="rounded">
+        <form id="userEdit_privacySettings">
+    `;
+
+    for (const privacy of privacyData) {
+        ele+=`
+            <div>
+            <h3>${privacy.title}</h3>
+            <p>${privacy.description}</p>
+            <label for="${privacy.title}">Select an option:</label>
+            <select id="${privacy.name}">
+            `;
+            
+            for (const option of privacy.options) {
+                ele+=`
+                <option value="${option.value}"${option.isActive ? ` selected ` : ""}>${option.title}</option>
+            `
+        }
+        ele+=`
+        </select>
+        <hr class="rounded">
+        `
+    }
+
+    ele += `
+            </form>
+            <button class="menuButton menuButton-style" onclick="updatePrivacySettings()">Update Settings</button>
+            <div id="completed_change_pass"></div>
+        </div>
+    `;
+    
+    document.getElementById("privacyPopup").innerHTML = ele;
+    document.getElementById("userEdit_privacySettings").addEventListener("submit", function (e) { e.preventDefault()})
+
+}
+
+async function updatePrivacySettings() {
+    const form = document.getElementById("userEdit_privacySettings");
+    const selections = form.querySelectorAll("select");
+    const changedItems = [];
+
+    for (const selection of selections) {
+        if (selection.value) {
+            changedItems.push({name: selection.id, value: selection.value});
+        }
+    }
+
+    const res = await sendRequest(`/users/privacy/set`, {
+        method: 'POST',
+        body: {
+            newSettings: changedItems
+        },
+    });
+
+    if (!res || res.error) return null;
+    openPrivacyPage(res)
+}
+
 async function changePasswordPage() {
     const ele = `
         <div class="menu menu-style">
@@ -1989,16 +2068,18 @@ async function editEmailSettings() {
         }
     });
 
-    const reqBody = [];
+    const newSettings = [];
     
     var i=0;
     for (item of changedItems) {
-        reqBody.push({ option: item, value: document.getElementById(`emailSetting_${item}`).checked })
+        newSettings.push({ option: item, value: document.getElementById(`emailSetting_${item}`).checked })
     }
 
     const res = await sendRequest(`/emails/settings`, {
         method: 'PUT',
-        body: reqBody,
+        body: {
+            newSettings
+        },
     });
     
     if (!res || res.error) return null;
@@ -2665,6 +2746,7 @@ async function changeFeed(feedType) {
 // GET DATA FROM API FOR MAIN FEED
 async function getFeed(feedType) {
     const feedToUse = feedType || 'userFeed'
+    buildingFeed=true
 
     if (currentFeed && (feedToUse == currentFeedType)) return buildView(currentFeed)
     if (debug) console.log("loading feed")
@@ -2675,7 +2757,22 @@ async function getFeed(feedType) {
     document.getElementById('mainFeed').innerHTML=loadingHTML("Loading feed...");
     listenForLoading();
     buildCopostRequests()
-    const data = await sendRequest(`/feeds/${feedToUse}`, { method: 'GET' })
+    var url = `/feeds/${feedToUse}`
+    if (feedToUse == "userFeed" || feedToUse=="allPosts") url+="/v2"
+    const data = await sendRequest(`${url}`, { method: 'GET' })
+    if (data.feedVersion == 2){
+        currentFeedType = feedToUse;
+        currentFeed = data.posts.reverse()
+        prevIndexID = data.prevIndexID
+    
+        if (params.paramsFound == false) {
+            buildView(data.posts)
+            await changeFeedHeader(feedToUse);
+            return;
+        }
+        else return
+    }
+
     if (!data || !data[0]) return showModal("<p>There was no data in the feed selected, please load a different feed</p>")
     currentFeedType = feedToUse;
     currentFeed = data.reverse()
@@ -2797,9 +2894,74 @@ function buildView(posts) {
                 extraData: postArray.type?.extra=="included" ? postArray.extraData : null,
             })
         }).join(" ")}
+        <div id="addToBottom"></div>
     `
+    buildingFeed = false;
     devMode()
 }
+// BUILDING MAIN FEED
+function addBuildView(posts) {
+    if (debug) console.log("buidlding extra view")
+    if (searching) return
+
+    document.getElementById("addToBottom").outerHTML = `
+        ${posts.map(function(postArray) {
+            return postElementCreate({
+                post: postArray.postData,
+                user: postArray.userData, 
+                pollData: postArray.type?.poll=="included" ? postArray.pollData : null,
+                voteData: postArray.type?.vote=="included" ? postArray.voteData : null,
+                quoteData: postArray.type?.quote=="included" ? postArray.quoteData : null,
+                coposterData: postArray.type?.copost=="included" ? postArray.coposterData : null,
+                extraData: postArray.type?.extra=="included" ? postArray.extraData : null,
+            })
+        }).join(" ")}
+        <div id="addToBottom"></div>
+    `
+    buildingFeed = false
+    devMode()
+}
+
+async function nextFeedPage(feedType) {
+    buildingFeed = true
+
+    //nextIndexID = data.nextIndexID
+    const feedToUse = feedType || 'userFeed'
+
+    const data = await sendRequest(`/feeds/${feedToUse}/v2/${prevIndexID}`, { method: 'GET' })
+    if (data.feedVersion == 2){
+        currentFeedType = feedToUse;
+        currentFeed = data.posts.reverse()
+        prevIndexID = data.prevIndexID
+
+        addBuildView(data.posts)
+        return;
+    }
+}
+
+// Callback function to be executed when the intersection changes
+function handleIntersection(entries, observer) {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            console.log('Bottom div is now in view!');
+            if (!buildingFeed) nextFeedPage(currentFeedType)
+            // Do something when the bottom div is in view
+        }
+    });
+}
+
+// Create an intersection observer with the callback function
+const observer = new IntersectionObserver(handleIntersection, {
+    root: null, // Use the viewport as the root
+    rootMargin: '0px', // No margin
+    threshold: 0.5 // Trigger the callback when at least 50% of the target is visible
+});
+
+// Target the bottom div
+const bottomDiv = document.getElementsByClassName('end-page-padding')[0];
+
+// Start observing the bottom div
+observer.observe(bottomDiv);
 
 async function deletePost(postID) {
     if (debug) console.log(`deleting post ${postID}`)
