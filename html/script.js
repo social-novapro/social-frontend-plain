@@ -1762,6 +1762,7 @@ async function userHtml(userID) {
             <button class="menuButton menuButton-style" onclick='viewThemes("${profileData.userData._id}")'>View Themes</button>
         </div>
         <div id="userThemeEditor"></div>
+        ${profileData.included.badges ? badgeData(profileData.badgeData) : ``}
         ${profileData.included.pins ? `
             <div class="menu menu-style">
                 <p><b>Pins</b></p>
@@ -1802,6 +1803,61 @@ async function userHtml(userID) {
     `
 
     return;
+}
+
+function showBadges() {
+    document.getElementById("showBadgeArea").style.display = "";
+}
+
+function hideBadges() {
+    document.getElementById("showBadgeArea").style.display = "none";
+}
+
+function switchBadgeDisplay() {
+    if (document.getElementById("showBadgeArea").style.display == "none") showBadges()
+    else hideBadges()
+}
+
+function badgeData(badges) {
+    var ele = `
+        <div class="menu menu-style">
+            <p><b>Badges</b></p>
+            <p>Badges are a way to show off your achievements.</p>
+    `;
+
+    if (!badges || badges.length == 0) { 
+        ele+=`<p>Currently, there are no badges.</p></div>`;
+        return ele;
+    }
+    ele+=`<button class="menuButton menuButton-style" onclick="switchBadgeDisplay()">Reveal Badges</button>`;
+    ele+=`<div id="showBadgeArea" style="display:none;">`
+    for (const badge of badges) {
+        ele+=`
+            <div class="menu menu-style">
+                <p><b>${badge.name}</b></p>
+                <p>${badge.description}</p>
+                <p>Achieved: ${checkDate(badge.achieved)}</p>
+                ${badge.latest ? `<p>Latest: ${checkDate(badge.latest)}</p>` : ``}
+                ${badge.showCount ? `<p>Count: ${badge.count}</p>` : ``}
+                <div>
+                    <button class="" onclick="revealInfoData('${badge.id}')">Click to Show Extra Info</button>
+                </div>
+                <div id="extra_data_${badge.id}" style="display:none;">
+                    <p>Technical Description: ${badge.info.technical_description}</p>
+                    <p>Shown Date: ${badge.info.date_achieved}</p>
+                    <p>Version Introduced: ${badge.info.version_introduced}</p>
+                </div>
+            </div>
+        `;
+    }
+
+    ele+=`</div></div>`;
+    return ele;
+}
+function revealInfoData(badgeID) {
+    const ele = document.getElementById(`extra_data_${badgeID}`);
+    if (ele.style.display == "none") ele.style.display = "";
+    else ele.style.display = "none";
 }
 
 async function openPrivacyPage(privacyDataFound) {
