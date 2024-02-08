@@ -1818,41 +1818,84 @@ function switchBadgeDisplay() {
     else hideBadges()
 }
 
+function loadPossibleBadges() {
+    if (document.getElementById("possibleBadgesArea").style.display == "none") {
+        document.getElementById("possibleBadgesArea").style.display = "";
+        renderPossibleBadges()
+    }
+    else {
+        document.getElementById("possibleBadgesArea").style.display = "none";
+    }
+}
+async function renderPossibleBadges() {
+    const req = await sendRequest(`/users/badges/`, { method: 'GET' });
+    if (!req || req.error) return;
+    var ele = "<p><b>Possible Badges</b></p>";
+    if (!req || req.length == 0) { 
+        ele+=`<p>There were no badges found.</p></div>`;
+        return ele;
+    }
+    for (const badge of req) {
+        ele+=badgeEleBasic(badge);
+    }
+
+    document.getElementById('possibleBadgesArea').innerHTML=ele;
+}
+
 function badgeData(badges) {
     var ele = `
         <div class="menu menu-style">
             <p><b>Badges</b></p>
             <p>Badges are a way to show off your achievements.</p>
+            <button class="menuButton menuButton-style" onclick="loadPossibleBadges()">View Possible Badges</button>
     `;
 
     if (!badges || badges.length == 0) { 
-        ele+=`<p>Currently, there are no badges.</p></div>`;
+        ele+=`<p>Currently, there are no badges.</p>
+        <div id="possibleBadgesArea" style="display: none;"></div>
+        </div>`;
         return ele;
     }
-    ele+=`<button class="menuButton menuButton-style" onclick="switchBadgeDisplay()">Reveal Badges</button>`;
-    ele+=`<div id="showBadgeArea" style="display:none;">`
+    ele+=`<button class="menuButton menuButton-style" onclick="switchBadgeDisplay()">Reveal User Badges</button>`;
+    ele+=`<div id="possibleBadgesArea" style="display: none;"></div>`
+    ele+=`<div id="showBadgeArea" style="display:none;"><p><b>User Badges</b></p>`
     for (const badge of badges) {
-        ele+=`
-            <div class="menu menu-style">
-                <p><b>${badge.name}</b></p>
-                <p>${badge.description}</p>
-                <p>Achieved: ${checkDate(badge.achieved)}</p>
-                ${badge.latest ? `<p>Latest: ${checkDate(badge.latest)}</p>` : ``}
-                ${badge.showCount ? `<p>Count: ${badge.count}</p>` : ``}
-                <div>
-                    <button class="" onclick="revealInfoData('${badge.id}')">Click to Show Extra Info</button>
-                </div>
-                <div id="extra_data_${badge.id}" style="display:none;">
-                    <p>Technical Description: ${badge.info.technical_description}</p>
-                    <p>Shown Date: ${badge.info.date_achieved}</p>
-                    <p>Version Introduced: ${badge.info.version_introduced}</p>
-                </div>
-            </div>
-        `;
+        ele+=badgeEle(badge);
     }
-
-    ele+=`</div></div>`;
+    ele+=`</div></div></div>`;
     return ele;
+}
+
+function badgeEle(badge) {
+    return `
+        <div class="menu menu-style">
+            <p><b>${badge.name}</b></p>
+            <p>${badge.description}</p>
+            <p>Achieved: ${checkDate(badge.achieved)}</p>
+            ${badge.latest ? `<p>Latest: ${checkDate(badge.latest)}</p>` : ``}
+            ${badge.showCount ? `<p>Count: ${badge.count}</p>` : ``}
+            <div>
+                <button class="" onclick="revealInfoData('${badge.id}')">Click to Show Extra Info</button>
+            </div>
+            <div id="extra_data_${badge.id}" style="display:none;">
+                <p>Technical Description: ${badge.info.technical_description}</p>
+                <p>Shown Date: ${badge.info.date_achieved}</p>
+                <p>Version Introduced: v${badge.info.version_introduced}</p>
+            </div>
+        </div>
+    `;
+}
+
+function badgeEleBasic(badge) {
+    return `
+        <div class="menu menu-style">
+            <p><b>${badge.name}</b></p>
+            <p>${badge.description}</p>
+            <p>Technical Description: ${badge.technical_description}</p>
+            <p>Shown Date: ${badge.date_achieved}</p>
+            <p>Version Introduced: v${badge.version_introduced}</p>
+        </div>
+    `;
 }
 function revealInfoData(badgeID) {
     const ele = document.getElementById(`extra_data_${badgeID}`);
