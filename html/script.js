@@ -931,6 +931,11 @@ function settingsPage() {
                         <button class="menuButton menuButton-style" onclick="changeFeedSettings()">Feed Settings</p>
                     </div>
                     <div id="feedPopup"></div>
+                    <div id="searchSetting" class="menu menu-style">
+                        <p><b>Search</b></p>
+                        <button class="menuButton menuButton-style" onclick="changeSearchSettings()">Search Settings</p>
+                    </div>
+                    <div id="searchSettingPopup"></div>
                     <div id="themeEditor" class="menu menu-style"><p><b>Client Theme</b></p>
                         <button class="menuButton menuButton-style" onclick='editThemePanel("${headers.userid}")'>Open Editor</button>
                         <button class="menuButton menuButton-style" onclick='createTheme()'>Create Theme</button>
@@ -2042,7 +2047,7 @@ async function changeFeedSettings() {
 
 async function changePref(feedName) {
     const changed = changePrefAPI(feedName);
-    if (!changed || changed.error) alert(`An error occured while changing${changed.error? `: ${changed.msg}`: ""}`);
+    if (!changed || changed.error) alert(`An error occurred while changing${changed.error? `: ${changed.msg}`: ""}`);
     await changeFeedSettings();
 }
 
@@ -2057,6 +2062,42 @@ async function changePrefAPI(feedName) {
         body: { setPref: feedName }
     });
     return data; 
+}
+
+async function changeSearchSettings() {
+    const searchExport = await sendRequest('/search/setting', { method: 'GET' });
+    if (!searchExport) return alert("Error getting search settings");
+    else renderSearchSettings(searchExport);
+}
+
+function renderSearchSettings(searchExport) {
+    const currentDefaultOption = searchExport.possibleSearch.find(versions => versions.name === searchExport.currentSearch.preferredSearch);
+    const selectedDate = getTimeSince(searchExport.currentSearch.timestamp)
+    
+    var ele = `
+        <div class="menu menu-style">
+            <p><b>Change your default search algorithm</p></b>
+            <hr class="rounded">
+            <p>Current default search is:<br><b>${currentDefaultOption.niceName}</b> selected ${selectedDate.sinceOrUntil == "current" ? "just changed" : `${selectedDate.sinceOrUntil == "since" ? selectedDate.value + " ago" : selectedDate.value}`}
+    `;
+    for (const searchVersion of searchExport.possibleSearch) {
+        ele += `
+            <div class="menu menu-style">
+                <p>${searchVersion.description}</p>
+                <button class="menuButton menuButton-style ${searchExport.currentSearch.preferredSearch==searchVersion.name ? 'activeFeed' : ''}" onclick="changeSearchPref('${searchVersion.name}')">${searchVersion.name} - ${searchVersion.niceName}</button>
+            </div>
+        `
+    }
+
+    ele +="</div>"
+    document.getElementById("searchSettingPopup").innerHTML = ele;
+}
+
+async function changeSearchPref(searchVersion) {
+    const searchExport = await sendRequest('/search/setting', { method: 'POST', body: { newSearch: searchVersion} });
+    if (!searchExport || searchExport.error) alert(`An error occurred while changing${changed.error? `: ${changed.msg}`: ""}`);
+
+    renderSearchSettings(searchExport);
 }
 
 async function changeEmailPage() {
@@ -3280,7 +3321,7 @@ async function searchResult(input) {
 
     changeHeader(`?search=${input}`)
 
-    const data = await sendRequest(`/get/search/`, {
+    const data = await sendRequest(`/search/`, {
         method: 'GET',
         extraHeaders
     }); 
