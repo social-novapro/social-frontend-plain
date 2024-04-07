@@ -114,7 +114,7 @@ async function searchUsers() {
     const searchUser = document.getElementById('groupCreateInput').value
     if (!searchUser) return document.getElementById('possibleAdds').innerHTML=``
     
-    const response = await fetch(`${apiURL}/get/taguserSearch/${searchUser}`, {
+    const response = await fetch(`${apiURL}/search/userTag/${searchUser}`, {
         method: 'GET',
         headers,
     });
@@ -128,7 +128,7 @@ async function searchUsers() {
             <div class="borderArea" onclick="changeUserAddInput('${index.user.username}')">
                 <p>${index.user.username}</p>
                 ${index.user.description ? `<p>${index.user.description}</p>` : ``}
-                <p>${index.possiblity}% match</p>
+                <p>${index.possibility}% match</p>
             </div>
         `
     }
