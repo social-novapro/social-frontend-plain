@@ -721,11 +721,11 @@ async function socialTypePost(customInputID, forCoposter=false) {
             <div class=""onclick="${forCoposter ? `autoCompleteCoposter('${index.user.username}', '${index.user._id}')`: `autoCompleteUser('${index.user.username}')`}">
                 <p>${index.user.username}</p>
                 ${index.user.description ? `<p>${index.user.description}</p>` : ``}
-                <p>${index.possiblity}% match</p>
+                <p>${index.possibility}% match</p>
             </div>
         `
     }
-    if (debug) console.log(taggings)
+    if (debug) console.log(foundTags)
     document.getElementById('foundTaggings').innerHTML=`
         <div id="taggingsOpened"></div>
         ${taggings}
@@ -786,7 +786,7 @@ async function findTag(content) {
 
     if (searchUser==''||searchUser=="@") return { found: false };
     if (!searchUser.startsWith("@")) return { found: false };
-    const res = await sendRequest(`/get/taguserSearch/${searchUser.replace("@", "")}`, { method: 'GET' });
+    const res = await sendRequest(`/search/userTag/${searchUser.replace("@", "")}`, { method: 'GET' });
     if (!res || res.error || !res[0]) return { found: false };
     return {found: true, results: res};
 }
@@ -3956,6 +3956,8 @@ async function renameUsername() {
 
 // For API Use
 async function sendRequest(request, { method, body, extraHeaders, ignoreError=false }) {
+    // add "version" as a possible header, and .replace on the apiURL
+    // or force the version be in the request
     var headersEdited = {};
 
     if (extraHeaders) {
