@@ -721,11 +721,11 @@ async function socialTypePost(customInputID, forCoposter=false) {
             <div class=""onclick="${forCoposter ? `autoCompleteCoposter('${index.user.username}', '${index.user._id}')`: `autoCompleteUser('${index.user.username}')`}">
                 <p>${index.user.username}</p>
                 ${index.user.description ? `<p>${index.user.description}</p>` : ``}
-                <p>${index.possiblity}% match</p>
+                <p>${index.possibility}% match</p>
             </div>
         `
     }
-    if (debug) console.log(taggings)
+    if (debug) console.log(foundTags)
     document.getElementById('foundTaggings').innerHTML=`
         <div id="taggingsOpened"></div>
         ${taggings}
@@ -786,7 +786,7 @@ async function findTag(content) {
 
     if (searchUser==''||searchUser=="@") return { found: false };
     if (!searchUser.startsWith("@")) return { found: false };
-    const res = await sendRequest(`/get/taguserSearch/${searchUser.replace("@", "")}`, { method: 'GET' });
+    const res = await sendRequest(`/search/userTag/${searchUser.replace("@", "")}`, { method: 'GET' });
     if (!res || res.error || !res[0]) return { found: false };
     return {found: true, results: res};
 }
@@ -931,6 +931,11 @@ function settingsPage() {
                         <button class="menuButton menuButton-style" onclick="changeFeedSettings()">Feed Settings</p>
                     </div>
                     <div id="feedPopup"></div>
+                    <div id="searchSetting" class="menu menu-style">
+                        <p><b>Search</b></p>
+                        <button class="menuButton menuButton-style" onclick="changeSearchSettings()">Search Settings</p>
+                    </div>
+                    <div id="searchSettingPopup"></div>
                     <div id="themeEditor" class="menu menu-style"><p><b>Client Theme</b></p>
                         <button class="menuButton menuButton-style" onclick='editThemePanel("${headers.userid}")'>Open Editor</button>
                         <button class="menuButton menuButton-style" onclick='createTheme()'>Create Theme</button>
@@ -1762,6 +1767,7 @@ async function userHtml(userID) {
             <button class="menuButton menuButton-style" onclick='viewThemes("${profileData.userData._id}")'>View Themes</button>
         </div>
         <div id="userThemeEditor"></div>
+        ${profileData.included.badges ? badgeData(profileData.badgeData) : ``}
         ${profileData.included.pins ? `
             <div class="menu menu-style">
                 <p><b>Pins</b></p>
@@ -1802,6 +1808,104 @@ async function userHtml(userID) {
     `
 
     return;
+}
+
+function showBadges() {
+    document.getElementById("showBadgeArea").style.display = "";
+}
+
+function hideBadges() {
+    document.getElementById("showBadgeArea").style.display = "none";
+}
+
+function switchBadgeDisplay() {
+    if (document.getElementById("showBadgeArea").style.display == "none") showBadges()
+    else hideBadges()
+}
+
+function loadPossibleBadges() {
+    if (document.getElementById("possibleBadgesArea").style.display == "none") {
+        document.getElementById("possibleBadgesArea").style.display = "";
+        renderPossibleBadges()
+    }
+    else {
+        document.getElementById("possibleBadgesArea").style.display = "none";
+    }
+}
+async function renderPossibleBadges() {
+    const req = await sendRequest(`/users/badges/`, { method: 'GET' });
+    if (!req || req.error) return;
+    var ele = "<p><b>Possible Badges</b></p>";
+    if (!req || req.length == 0) { 
+        ele+=`<p>There were no badges found.</p></div>`;
+        return ele;
+    }
+    for (const badge of req) {
+        ele+=badgeEleBasic(badge);
+    }
+
+    document.getElementById('possibleBadgesArea').innerHTML=ele;
+}
+
+function badgeData(badges) {
+    var ele = `
+        <div class="menu menu-style">
+            <p><b>Badges</b></p>
+            <p>Badges are a way to show off your achievements.</p>
+            <button class="menuButton menuButton-style" onclick="loadPossibleBadges()">View Possible Badges</button>
+    `;
+
+    if (!badges || badges.length == 0) { 
+        ele+=`<p>Currently, there are no badges.</p>
+        <div id="possibleBadgesArea" style="display: none;"></div>
+        </div>`;
+        return ele;
+    }
+    ele+=`<button class="menuButton menuButton-style" onclick="switchBadgeDisplay()">Reveal User Badges</button>`;
+    ele+=`<div id="possibleBadgesArea" style="display: none;"></div>`
+    ele+=`<div id="showBadgeArea" style="display:none;"><p><b>User Badges</b></p>`
+    for (const badge of badges) {
+        ele+=badgeEle(badge);
+    }
+    ele+=`</div></div></div>`;
+    return ele;
+}
+
+function badgeEle(badge) {
+    return `
+        <div class="menu menu-style">
+            <p><b>${badge.name}</b></p>
+            <p>${badge.description}</p>
+            <p>Achieved: ${checkDate(badge.achieved)}</p>
+            ${badge.latest ? `<p>Latest: ${checkDate(badge.latest)}</p>` : ``}
+            ${badge.showCount ? `<p>Count: ${badge.count}</p>` : ``}
+            <div>
+                <button class="" onclick="revealInfoData('${badge.id}')">Click to Show Extra Info</button>
+            </div>
+            <div id="extra_data_${badge.id}" style="display:none;">
+                <p>Technical Description: ${badge.info.technical_description}</p>
+                <p>Shown Date: ${badge.info.date_achieved}</p>
+                <p>Version Introduced: v${badge.info.version_introduced}</p>
+            </div>
+        </div>
+    `;
+}
+
+function badgeEleBasic(badge) {
+    return `
+        <div class="menu menu-style">
+            <p><b>${badge.name}</b></p>
+            <p>${badge.description}</p>
+            <p>Technical Description: ${badge.technical_description}</p>
+            <p>Shown Date: ${badge.date_achieved}</p>
+            <p>Version Introduced: v${badge.version_introduced}</p>
+        </div>
+    `;
+}
+function revealInfoData(badgeID) {
+    const ele = document.getElementById(`extra_data_${badgeID}`);
+    if (ele.style.display == "none") ele.style.display = "";
+    else ele.style.display = "none";
 }
 
 async function openPrivacyPage(privacyDataFound) {
@@ -1943,7 +2047,7 @@ async function changeFeedSettings() {
 
 async function changePref(feedName) {
     const changed = changePrefAPI(feedName);
-    if (!changed || changed.error) alert(`An error occured while changing${changed.error? `: ${changed.msg}`: ""}`);
+    if (!changed || changed.error) alert(`An error occurred while changing${changed.error? `: ${changed.msg}`: ""}`);
     await changeFeedSettings();
 }
 
@@ -1958,6 +2062,42 @@ async function changePrefAPI(feedName) {
         body: { setPref: feedName }
     });
     return data; 
+}
+
+async function changeSearchSettings() {
+    const searchExport = await sendRequest('/search/setting', { method: 'GET' });
+    if (!searchExport) return alert("Error getting search settings");
+    else renderSearchSettings(searchExport);
+}
+
+function renderSearchSettings(searchExport) {
+    const currentDefaultOption = searchExport.possibleSearch.find(versions => versions.name === searchExport.currentSearch.preferredSearch);
+    const selectedDate = getTimeSince(searchExport.currentSearch.timestamp)
+    
+    var ele = `
+        <div class="menu menu-style">
+            <p><b>Change your default search algorithm</p></b>
+            <hr class="rounded">
+            <p>Current default search is:<br><b>${currentDefaultOption.niceName}</b> selected ${selectedDate.sinceOrUntil == "current" ? "just changed" : `${selectedDate.sinceOrUntil == "since" ? selectedDate.value + " ago" : selectedDate.value}`}
+    `;
+    for (const searchVersion of searchExport.possibleSearch) {
+        ele += `
+            <div class="menu menu-style">
+                <p>${searchVersion.description}</p>
+                <button class="menuButton menuButton-style ${searchExport.currentSearch.preferredSearch==searchVersion.name ? 'activeFeed' : ''}" onclick="changeSearchPref('${searchVersion.name}')">${searchVersion.name} - ${searchVersion.niceName}</button>
+            </div>
+        `
+    }
+
+    ele +="</div>"
+    document.getElementById("searchSettingPopup").innerHTML = ele;
+}
+
+async function changeSearchPref(searchVersion) {
+    const searchExport = await sendRequest('/search/setting', { method: 'POST', body: { newSearch: searchVersion} });
+    if (!searchExport || searchExport.error) alert(`An error occurred while changing${changed.error? `: ${changed.msg}`: ""}`);
+
+    renderSearchSettings(searchExport);
 }
 
 async function changeEmailPage() {
@@ -3181,7 +3321,7 @@ async function searchResult(input) {
 
     changeHeader(`?search=${input}`)
 
-    const data = await sendRequest(`/get/search/`, {
+    const data = await sendRequest(`/search/`, {
         method: 'GET',
         extraHeaders
     }); 
@@ -3816,6 +3956,8 @@ async function renameUsername() {
 
 // For API Use
 async function sendRequest(request, { method, body, extraHeaders, ignoreError=false }) {
+    // add "version" as a possible header, and .replace on the apiURL
+    // or force the version be in the request
     var headersEdited = {};
 
     if (extraHeaders) {
