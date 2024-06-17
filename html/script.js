@@ -707,6 +707,8 @@ async function socialTypePost(customInputID, forCoposter=false) {
     if (debug) console.log("socialTypePost")
     const content = document.getElementById(customInputID ? customInputID : 'newPostTextArea').value
     const foundTags = await findTag(content)
+    if (debug) console.log(foundTags)
+
     if (foundTags.found == false) {
         if (document.getElementById('taggingsOpened')) {
             document.getElementById('foundTaggings').innerHTML=""
@@ -716,15 +718,27 @@ async function socialTypePost(customInputID, forCoposter=false) {
 
     var taggings = ""
     if (debug) console.log("!!")
-    for (const index of foundTags.results) {
-        taggings+=`
-            <div class=""onclick="${forCoposter ? `autoCompleteCoposter('${index.user.username}', '${index.user._id}')`: `autoCompleteUser('${index.user.username}')`}">
-                <p>${index.user.username}</p>
-                ${index.user.description ? `<p>${index.user.description}</p>` : ``}
-                <p>${index.possibility}% match</p>
-            </div>
-        `
+    if (foundTags.results.users && foundTags.results.users[0]) {
+        for (const index of foundTags.results.users) {
+            taggings+=`
+                <div class=""onclick="${forCoposter ? `autoCompleteCoposter('${index.user.username}', '${index.user._id}')`: `autoCompleteUser('${index.user.username}')`}">
+                    <p>@${index.user.username}</p>
+                    ${index.user.description ? `<p>${index.user.description}</p>` : ``}
+                    <p>${index.possibility}% match</p>
+                </div>
+            `
+        }
+    } else if (foundTags.results.hashtags && foundTags.results.hashtags[0]) {
+        for (const index of foundTags.results.hashtags) {
+            taggings+=`
+                <div class=""onclick="autoCompleteUser('${index.tag}')">
+                    <p>${index.tag}</p>
+                    <p>${index.possibility}% match</p>
+                </div>
+            `
+        }
     }
+    
     if (debug) console.log(foundTags)
     document.getElementById('foundTaggings').innerHTML=`
         <div id="taggingsOpened"></div>
@@ -772,7 +786,8 @@ async function autoCompleteUser(username) {
     const contentArgs = content.split(" ")
 
     // replaces with new value
-    contentArgs[contentArgs.length-1] = `@${username} `;
+    if (contentArgs[contentArgs.length-1].startsWith("#")) contentArgs[contentArgs.length-1] = `${username} `;
+    else contentArgs[contentArgs.length-1] = `@${username} `;
     document.getElementById('foundTaggings').innerHTML=""
 
     
@@ -780,7 +795,7 @@ async function autoCompleteUser(username) {
     document.getElementById('newPostTextArea').focus()
 }
 
-async function findTag(content) {
+async function findUserTag(content) {
     const contentArgs = content.split(/[ ]+/)
     const searchUser = contentArgs[contentArgs.length-1];
 
@@ -788,6 +803,19 @@ async function findTag(content) {
     if (!searchUser.startsWith("@")) return { found: false };
     const res = await sendRequest(`/search/userTag/${searchUser.replace("@", "")}`, { method: 'GET' });
     if (!res || res.error || !res[0]) return { found: false };
+    return {found: true, results: res};
+}
+
+async function findTag(content) {
+    const contentArgs = content.split(/[ ]+/)
+    var searchUser = contentArgs[contentArgs.length-1];
+
+    if (!searchUser.startsWith("@") && !searchUser.startsWith("#")) return { found: false, error: "doesnt start with required case" };
+    if (searchUser=="@" || searchUser=="#") return { found: false, error: "only includes starting case of search" };
+    if (searchUser.startsWith("@")) searchUser = searchUser.replace("@", "0");
+    if (searchUser.startsWith("#")) searchUser = searchUser.replace("#", "1");
+    const res = await sendRequest(`/search/tags/${searchUser}`, { method: 'GET', ignoreError: true });
+    if (!res || res.error) return { found: false };
     return {found: true, results: res};
 }
 
@@ -3329,7 +3357,7 @@ async function searchResult(input) {
     if (debug) console.log("loading search")
     
     if (!data || data.error || (!data.tagsFound[0] && !data.postsFound[0] && !data.usersFound[0])) return document.getElementById("mainFeed").innerHTML= `<div class="publicPost searchUser"><p>no results were found, try to seach something else.</div>`
-    else console.log(data.postsFound)
+    if (debug) console.log(data.postsFound)
 
     document.getElementById("mainFeed").innerHTML = `
         ${data.usersFound.length > 0 ? `<div><h1 class="publicPost posts-styles font_h1-style">Users found</h1>` : ""}
@@ -3540,7 +3568,7 @@ function showCoPostersCreation() {
 async function onTypeCoPosters() {
     const input = document.getElementById('co-posters-input').value;
     if (input == "") return document.getElementById('co-posters-div').innerHTML = "";
-    const foundTags = await findTag(content)
+    const foundTags = await findUserTag(content)
     if (foundTags.found == false) {
         if (document.getElementById('taggingsOpened')) {
             document.getElementById('foundTaggings').innerHTML=""
@@ -4008,7 +4036,9 @@ async function sendRequest(request, { method, body, extraHeaders, ignoreError=fa
 
         return data;
     } catch(err) {
-        showModal(`<h1>Error</h1><p>Unknown Error.</p>`);
+        if (!ignoreError) {
+            showModal(`<h1>Error</h1><p>Unknown Error.</p>`);
+        }
         return { error : true };
     }
 }
