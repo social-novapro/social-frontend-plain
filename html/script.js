@@ -3328,10 +3328,11 @@ async function searchResult(input) {
 
     if (debug) console.log("loading search")
     
-    if (!data || data.error || (!data.postsFound[0] && !data.usersFound[0])) return document.getElementById("mainFeed").innerHTML= `<div class="publicPost searchUser"><p>no results were found, try to seach something else.</div>`
+    if (!data || data.error || (!data.tagsFound[0] && !data.postsFound[0] && !data.usersFound[0])) return document.getElementById("mainFeed").innerHTML= `<div class="publicPost searchUser"><p>no results were found, try to seach something else.</div>`
     else console.log(data.postsFound)
 
     document.getElementById("mainFeed").innerHTML = `
+        ${data.usersFound.length > 0 ? `<div><h1 class="publicPost posts-styles font_h1-style">Users found</h1>` : ""}
         ${data.usersFound.reverse().map(function(user) {
             var timesince
             if (user.creationTimestamp) timesince = checkDate(user.creationTimestamp)
@@ -3345,6 +3346,26 @@ async function searchResult(input) {
                 </div>
             `
         }).join(" ")}
+        ${data.usersFound.length > 0 ? `</div>` : ""}
+        ${data.tagsFound?.map(function(tagFound) {
+            return `
+                <div class="">
+                <h1 class="publicPost posts-styles font_h1-style">Posts for ${tagFound.tag}</h1>
+                    ${tagFound.posts.map(function(postData) {
+                        return postElementCreate({
+                            post: postData.postData,
+                            user: postData.userData, 
+                            pollData: postData.type?.poll=="included" ? postData.pollData : null,
+                            voteData: postData.type?.vote=="included" ? postData.voteData : null,
+                            quoteData: postData.type?.quote=="included" ? postData.quoteData : null,
+                            coposterData: postData.type?.copost=="included" ? postData.coposterData : null,
+                            extraData: postData.type?.extra=="included" ? postData.extraData : null,
+                        })
+                }).join(" ")}
+                </div>
+            `
+        }).join(" ")}
+        ${data.postsFound.length > 0 ? `<div><h1 class="publicPost posts-styles font_h1-style">Posts Found</h1>` : ""}
         ${data.postsFound.reverse().map(function(postArray) {
             return postElementCreate({
                 post: postArray.postData,
@@ -3356,6 +3377,8 @@ async function searchResult(input) {
                 extraDta: postArray.type?.extra=="included" ? postArray.extraData : null,
             })
         }).join(" ")}
+        ${data.postsFound.length > 0 ? `</div>` : ""}
+
     `
 
     devMode()
