@@ -18,7 +18,7 @@ var baseUrl = getUrl .protocol + "//" + getUrl.host + "/" + getUrl.pathname.spli
 var pathArray = window.location.pathname.split( '/' );
 var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
 var hostedUrl = `${config ? `${config.current == "prod" ? config.prod.hosted_url : config.dev.hosted_url}` : 'https://interact.novapro.net/' }`
-var params = new URLSearchParams(window.location.search)
+// var params = new URLSearchParams(window.location.search)
 var prevIndexID = 0;
 // API HEADERS
 var headers = {
@@ -71,6 +71,7 @@ function changeHeader(newLink) {
 
 // parameter checks
 async function checkURLParams() {
+    var params = new URLSearchParams(window.location.search)
     var paramsInfo = {
         paramsFound: false
     }
@@ -105,8 +106,8 @@ async function checkURLParams() {
         paramsInfo.paramsFound = true
 
         const searchSearching = params.get('search')
+        // console.log(searchSearching)
         searchResult(searchSearching)
-        addWritingToSeachBar(searchSearching)
     }
     else if (ifPostPage) {
         paramsFound = true
@@ -158,6 +159,7 @@ function postElementCreate({
     voteData,
     quoteData,
     coposterData,
+    tagData,
     extraData
 }) {
     if (!post) return;
@@ -176,7 +178,7 @@ function postElementCreate({
     if (!extraData) extraData = { }
     var timesince
     if (post.timePosted) timesince = checkDate(post.timePosted)
-    const imageContent = checkForImage(post.content)
+    const imageContent = checkForImage(post.content, tagData)
     const owner = post.userID == currentUserLogin.userID ? true : false;
 
     const options = {
@@ -721,7 +723,7 @@ async function socialTypePost(customInputID, forCoposter=false) {
     if (foundTags.results.users && foundTags.results.users[0]) {
         for (const index of foundTags.results.users) {
             taggings+=`
-                <div class=""onclick="${forCoposter ? `autoCompleteCoposter('${index.user.username}', '${index.user._id}')`: `autoCompleteUser('${index.user.username}')`}">
+                <div class="publicPost posts-style" onclick="${forCoposter ? `autoCompleteCoposter('${index.user.username}', '${index.user._id}')`: `autoCompleteUser('${index.user.username}')`}">
                     <p>@${index.user.username}</p>
                     ${index.user.description ? `<p>${index.user.description}</p>` : ``}
                     <p>${index.possibility}% match</p>
@@ -731,7 +733,7 @@ async function socialTypePost(customInputID, forCoposter=false) {
     } else if (foundTags.results.hashtags && foundTags.results.hashtags[0]) {
         for (const index of foundTags.results.hashtags) {
             taggings+=`
-                <div class=""onclick="autoCompleteUser('${index.tag}')">
+                <div class="publicPost posts-style" onclick="autoCompleteUser('${index.tag}')">
                     <p>${index.tag}</p>
                     <p>${index.possibility}% match</p>
                 </div>
@@ -1811,6 +1813,7 @@ async function userHtml(userID) {
                     voteData: pin.type?.vote=="included" ? pin.voteData : null,
                     quoteData: pin.type?.quote=="included" ? pin.quoteData : null,
                     coposterData: pin.type?.coposter=="included" ? pin.coposterData : null,
+                    tagData: pin.type?.tag=="included" ? pin.tagData : null,
                     extraData: pin.type?.extra=="included" ? pin.extraData : {},
                 })
             }).join(" ")}
@@ -1829,6 +1832,7 @@ async function userHtml(userID) {
                     voteData: post.type?.vote=="included" ? post.voteData : null,
                     quoteData: post.type?.quote=="included" ? post.quoteData : null,
                     coposterData: post.type?.copost=="included" ? post.coposterData : null,
+                    tagData: post.type?.tag=="included" ? post.tagData : null,
                     extraData: post.type?.extra=="included" ? post.extraData : {},
                 })                
             }).join(" ")}
@@ -2750,6 +2754,7 @@ async function requestVerification() {
 }
 
 function activeSearchBar() {
+    if (document.getElementById("searchArea").innerHTML) return;
     document.getElementById("searchArea").innerHTML = `
         <div class="searchSelect search menu-style">
             <input id="searchBarArea" class="menu-style" onkeyup="searchSocial()" placeholder="Search for Posts and Users...">
@@ -2765,6 +2770,7 @@ function activeSearchBar() {
 }
 
 function unactiveSearchBar() {
+    if (!document.getElementById("searchArea").innerHTML) return;
     document.getElementById("searchArea").innerHTML = ``
     document.getElementById('navSection5').innerHTML = `
         <div id="searchBar" class="nav-link" onclick="activeSearchBar()">
@@ -3059,6 +3065,7 @@ function buildView(posts) {
                 voteData: postArray.type?.vote=="included" ? postArray.voteData : null,
                 quoteData: postArray.type?.quote=="included" ? postArray.quoteData : null,
                 coposterData: postArray.type?.copost=="included" ? postArray.coposterData : null,
+                tagData: postArray.type?.tag=="included" ? postArray.tagData : null,
                 extraData: postArray.type?.extra=="included" ? postArray.extraData : null,
             })
         }).join(" ")}
@@ -3071,6 +3078,7 @@ function buildView(posts) {
 function addBuildView(posts) {
     if (debug) console.log("buidlding extra view")
     if (searching) return
+    if (!document.getElementById("addToBottom")) return console.log("no bottom div")
 
     document.getElementById("addToBottom").outerHTML = `
         ${posts.map(function(postArray) {
@@ -3081,6 +3089,7 @@ function addBuildView(posts) {
                 voteData: postArray.type?.vote=="included" ? postArray.voteData : null,
                 quoteData: postArray.type?.quote=="included" ? postArray.quoteData : null,
                 coposterData: postArray.type?.copost=="included" ? postArray.coposterData : null,
+                tagData: postArray.type?.tag=="included" ? postArray.tagData : null,
                 extraData: postArray.type?.extra=="included" ? postArray.extraData : null,
             })
         }).join(" ")}
@@ -3338,10 +3347,11 @@ function hashtagElementCreate(tag) {
 }
 
 async function searchResult(input) {
+    console.log(input)
     if (!input) {
         if (debug) console.log("returning to feed")
+        unactiveSearchBar()
         changeHeader('')
-
         return getFeed()
     }
     if (currentSearch == input){
@@ -3349,13 +3359,28 @@ async function searchResult(input) {
         return console.log("same")
     }
 
+    var headerReplace = input;
+    console.log(headerReplace)
+    
     currentSearch = input
     searching = true
     const extraHeaders = {
         lookupkey: input
     }
 
-    changeHeader(`?search=${input}`)
+    if (input.startsWith("@")) {
+        headerReplace = input.replace("@", "0")
+    } else if (input.startsWith("#")) {
+        headerReplace = input.replace("#", "1")
+    } else if (input.startsWith("0")) {
+        extraHeaders.lookupkey = input.replace("0", "@")
+    } else if (input.startsWith("1")) {
+        extraHeaders.lookupkey = input.replace("1", "#")
+    }
+
+    activeSearchBar()
+    addWritingToSeachBar(extraHeaders.lookupkey)
+    changeHeader(`?search=${headerReplace}`)
 
     const data = await sendRequest(`/search/`, {
         method: 'GET',
@@ -3401,6 +3426,7 @@ async function searchResult(input) {
                             voteData: postData.type?.vote=="included" ? postData.voteData : null,
                             quoteData: postData.type?.quote=="included" ? postData.quoteData : null,
                             coposterData: postData.type?.copost=="included" ? postData.coposterData : null,
+                            tagData: postData.type?.tag=="included" ? postData.tagData : null,
                             extraData: postData.type?.extra=="included" ? postData.extraData : null,
                         })
                 }).join(" ")}
@@ -3416,13 +3442,12 @@ async function searchResult(input) {
                 voteData: postArray.type?.vote=="included" ? postArray.voteData : null,
                 quoteData: postArray.type?.quote=="included" ? postArray.quoteData : null,
                 coposterData: postArray.type?.copost=="included" ? postArray.coposterData : null,
+                tagData: postArray.type?.tag=="included" ? postArray.tagData : null,
                 extraDta: postArray.type?.extra=="included" ? postArray.extraData : null,
             })
         }).join(" ")}
         ${data.postsFound.length > 0 ? `</div>` : ""}
-
     `
-
     devMode()
     searching = false
 }
@@ -4075,7 +4100,7 @@ function unloadSpotify(amount, link) {
     document.getElementById(`spotify_frame_${amount}`).onclick = `loadSpotify(${amount}, '${link}')`
 }
 
-function checkForImage(content) {
+function checkForImage(content, tags) {
     const imageFormats = ['.jpg', '.png','.jpeg', '.svg', '.gif']
     const videoFormats = [{'urlEnd': '.mp4', "type": 'mp4'}, {'urlEnd':'.mov','type':'mp4'}, {'urlEnd':'.ogg', 'type': 'ogg'}]
 
@@ -4086,6 +4111,20 @@ function checkForImage(content) {
 
     var attachments = []
     for (index = 0; index < contentArgs.length; index++) {
+        if (tags) {
+            for (const tag of tags) {
+                if (
+                    (index == tag.wordIndex) && 
+                    (tag.tagTextOriginal == contentArgs[index])
+                ) {
+                    if (tag.tagTextOriginal.startsWith("@")) {
+                        contentArgs[index] = `<a class="ownUser-style" onclick="userPage('${tag.tagTextOriginal.replace("@", "0")}')">${contentArgs[index]}</a>`
+                    } else if (tag.tagTextOriginal.startsWith("#")) {
+                        contentArgs[index] = `<a class="ownUser-style" onclick="searchResult('${tag.tagTextOriginal.replace("#", "1")}')">${contentArgs[index]}</a>`
+                    }
+                }
+            }
+        }
         //if (contentArgs[index].includes(' ')) contentArgs[index] = contentArgs[index].replace(' ', '')
         if (contentArgs[index].startsWith('https://')) {
             for (const imageFormat of imageFormats) {
