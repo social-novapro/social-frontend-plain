@@ -3350,8 +3350,8 @@ async function searchResult(input) {
     console.log(input)
     if (!input) {
         if (debug) console.log("returning to feed")
-        unactiveSearchBar()
         changeHeader('')
+        addWritingToSeachBar('')
         return getFeed()
     }
     if (currentSearch == input){
@@ -3389,7 +3389,9 @@ async function searchResult(input) {
 
     if (debug) console.log("loading search")
     
-    if (!data || data.error || (!data.tagsFound[0] && !data.postsFound[0] && !data.usersFound[0])) return document.getElementById("mainFeed").innerHTML= `<div class="publicPost searchUser"><p>no results were found, try to seach something else.</div>`
+    if (!data || data.error || 
+        (!data.hashtagsFound[0] && !data.tagsFound[0] && !data.postsFound[0] && !data.usersFound[0])
+    ) return document.getElementById("mainFeed").innerHTML= `<div class="publicPost searchUser"><p>no results were found, try to seach something else.</div>`
     if (debug) console.log(data.postsFound)
 
     document.getElementById("mainFeed").innerHTML = `
