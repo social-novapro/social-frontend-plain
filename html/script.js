@@ -3329,6 +3329,14 @@ async function addWritingToSeachBar(input) {
     document.getElementById('searchBarArea').value = input
 }
 
+function hashtagElementCreate(tag) {
+    return `
+        <div class="publicPost posts-style">
+            <p>${tag.tag}</p>
+        </div>
+    `
+}
+
 async function searchResult(input) {
     if (!input) {
         if (debug) console.log("returning to feed")
@@ -3375,6 +3383,12 @@ async function searchResult(input) {
             `
         }).join(" ")}
         ${data.usersFound.length > 0 ? `</div>` : ""}
+        ${data.hashtagsFound?.length > 0 ? `<div><h1 class="publicPost posts-styles font_h1-style">Related Hashtags</h1>` : ""}
+        ${data.hashtagsFound?.map(function(hashtagFound) {
+            if (debug) console.log(hashtagFound)
+            return hashtagElementCreate(hashtagFound)
+        }).join(" ")}
+        ${data.hashtagsFound?.length > 0 ? `</div>` : ""}
         ${data.tagsFound?.map(function(tagFound) {
             return `
                 <div class="">
