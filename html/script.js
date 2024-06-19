@@ -3420,7 +3420,7 @@ async function searchResult(input) {
             return `
                 <div class="">
                 <h1 class="publicPost posts-styles font_h1-style">Posts for ${tagFound.tag}</h1>
-                    ${tagFound.posts.map(function(postData) {
+                    ${tagFound.posts?.reverse().map(function(postData) {
                         return postElementCreate({
                             post: postData.postData,
                             user: postData.userData, 
@@ -3458,6 +3458,7 @@ async function createPostPage() {
     var preinput = false;
     var data = { };
     var paramsFound = [];
+    const params = new URLSearchParams(window.location.search)
     if (debug) console.log("params? " + getUrl.search)
     if (debug) console.log("params != ?posting " + getUrl.search.includes("?posting"))
 
@@ -3701,6 +3702,8 @@ async function onTypePostPage(e) {
 }
 
 function newPostHeader(paramName, data) {
+    const params = new URLSearchParams(window.location.search)
+
     const newString = createNewParam(paramName, data);
     if (debug) console.log("new param: " + newString)
     const current = getUrl.search;
