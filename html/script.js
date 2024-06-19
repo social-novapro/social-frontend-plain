@@ -410,7 +410,7 @@ async function viewParentPost(postID, parentPostID) {
         return;
     }
 
-    const userData = await sendRequest(`/get/userByID/${postData.userID}`, { method: 'GET', });
+    const userData = await sendRequest(`/users/get/basic/${postData.userID}`, { method: 'GET', });
    
     const postEle = postElementCreate({post: postData, user: userData});
     document.getElementById(`parent_${postID}`).innerHTML = `
@@ -441,7 +441,7 @@ async function viewQuotes(postID) {
 
     var ele = ``;
     for (const quote of quoteData.quotes) {
-        const userData = await sendRequest(`/get/userByID/${quote.userID}`, { method: 'GET' });
+        const userData = await sendRequest(`/users/get/basic/${quote.userID}`, { method: 'GET' });
         ele+=postElementCreate({post: quote, user: userData, hideParent: true });
     }
 
@@ -479,7 +479,7 @@ async function viewReplies(postID) {
 
     var ele = ``;
     for (const reply of replyData.replies) {
-        const userData = await sendRequest(`/get/userByID/${reply.userID}`, { method: 'GET' });
+        const userData = await sendRequest(`/users/get/basic/${reply.userID}`, { method: 'GET' });
         ele+=postElementCreate({post: reply, user: userData, hideParent: true });
     }
 
@@ -664,12 +664,12 @@ async function voteOption(pollID, optionID) {
     if (debug) console.log("Voted!")
 }
 
-async function userPage(username) {
+async function userPage(userSearch) {
     searching = true
 
-    const userData = await sendRequest(`/get/username/${username}`, { method: 'GET' })
+    // const userData = await sendRequest(`/users/get/basic/${username}`, { method: 'GET' })
     
-    userHtml(userData._id)
+    userHtml(userSearch)
 
     return null;
 }
@@ -899,7 +899,7 @@ async function postHtml(postID) {
     const postData = await sendRequest(`/posts/get/${postID}`, { method: 'GET' })
     if (!postData || postData.deleted) return console.log("error with post");
 
-    const userData = await sendRequest(`/get/userByID/${postData.userID}`, { method: 'GET' })
+    const userData = await sendRequest(`/users/get/basic/${postData.userID}`, { method: 'GET' })
     
     const ele = postElementCreate({post: postData, user: userData});
     document.getElementById("mainFeed").innerHTML = ele
@@ -916,8 +916,8 @@ async function postHtml(postID) {
     */
 }
 
-async function getFullUserData(userID) {
-    const profileData = await sendRequest(`/get/user/${userID}`, { method: 'GET' })
+async function getFullUserData(userSearch) {
+    const profileData = await sendRequest(`/users/get/${userSearch}`, { method: 'GET' })
     
     if (!profileData || profileData.error) return console.log("error with user");
     return profileData;
@@ -1125,7 +1125,7 @@ async function switchAccountPage() {
 }
 
 async function miniPreviewUser(userID) {
-    const userData = await sendRequest(`/get/userByID/${userID}`, { method: 'GET' })
+    const userData = await sendRequest(`/users/get/basic/${userID}`, { method: 'GET' })
     if (!userData || userData.error) return console.log("error with user");
     const ele = `<p>${userData.displayName}@${userData.username}</p>`;
     return ele;
@@ -1711,8 +1711,8 @@ function convertRGBToHex(rgb) {
     return hex;
 }
 
-async function userHtml(userID) {
-    const profileData = await getFullUserData(userID)
+async function userHtml(userSearch) {
+    const profileData = await getFullUserData(userSearch)
     if (!profileData) return showModal("<div><p>Sorry, this user does not exist!</p></div>")
 
     changeHeader('?username='+profileData.userData.username, 'Profile')
@@ -2522,7 +2522,7 @@ async function showPost(postID) {
 }
 
 async function getUserDataSimple(userID) {
-    const res = await sendRequest(`/get/userByID/${userID}`, { method: 'GET' });
+    const res = await sendRequest(`/users/get/basic/${userID}`, { method: 'GET' });
     if (!res || res.error) return 
     else return res
 }
@@ -2727,7 +2727,7 @@ async function getPostAndProfileData(postID) {
     if (!postData || postData.error) return {error: `${postData.error ? postData.error : "an unknown error"}`};
     if (debug) console.log(postData);
 
-    const profileData = await sendRequest(`/get/userByID/${postData.userID}`, { method: 'GET', ignoreError: true});
+    const profileData = await sendRequest(`/users/get/basic/${postData.userID}`, { method: 'GET', ignoreError: true});
     if (!profileData || profileData.error) return {error: `${profileData.error ? profileData.error : "an unknown error"}`};
 
     return { "postData" : postData, "profileData": profileData };
@@ -3215,7 +3215,7 @@ async function submitEdit(postID) {
 async function quotePost(postID) {
     const post = await sendRequest(`/posts/get/${postID}`, { method: 'GET' })
     if (!post || post.error) return false;
-    const user = await sendRequest(`/get/userByID/${post.userID}`, { method: 'GET' })
+    const user = await sendRequest(`/users/get/basic/${post.userID}`, { method: 'GET' })
     if (!user || user.error) return false;
 
     await showModal(`
@@ -3243,7 +3243,7 @@ async function replyPost(postID) {
     const post = await sendRequest(`/posts/get/${postID}`, { method: 'GET', headers})
     if (!post || post.error) return false;
 
-    const user = await sendRequest(`/get/userByID/${post.userID}`, { method: 'GET', headers })
+    const user = await sendRequest(`/users/get/basic/${post.userID}`, { method: 'GET', headers })
     if (!user || user.error) return false;
 
     await showModal(`
@@ -3322,7 +3322,7 @@ async function likePost(postID) {
 
 // USER DATA FOR FEED
 async function getUserData(userID) {
-    const response = await sendRequest(`/get/user/${userID}`, { method: 'GET' });
+    const response = await sendRequest(`/users/get/${userID}`, { method: 'GET' });
     return response;
 }
 
