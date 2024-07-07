@@ -1045,6 +1045,7 @@ function generateRelatedPages() {
         { name: "Analytics", url: "https://interact-analytics.novapro.net" },
         { name: "Interact Info", url: "https://novapro.net/interact/" },
         { name: "Admin Page", url: "/admin/" },
+        { name: "Interact Staff", url: "/staff/" },
         { name: "GitHub", url: "https://github.com/social-novapro/" },
         { name: "Nova Productions", url: "https://novapro.net/" },
         { name: "dkravec site", url: "https://dkravec.net/" },
