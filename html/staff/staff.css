@@ -1,0 +1,164 @@
+.team-people {
+    color: var(--main-p-color);
+    display: grid; 
+    align-content: center;
+    text-align: center;
+    grid-column-start: 1;
+    grid-column-end: 3;
+    grid-row-start: 1;
+    grid-row-end: 2;
+}
+.team-person {
+    background-color: #2b2b2e;
+    text-align: center;
+    border-radius: 60px;
+    font-size: 12px;
+    color: #E6E6E6;
+    display: inline-block;
+    
+    margin: 40px;
+    height: (50% + 20px);
+    padding: 20px;
+    width: 50%;
+    outline-color: #6b6b6b;
+    border: 5px solid #6e6e6e;
+}
+.team-person h1 {
+    text-align: center;
+    color: var(--main-a-color);
+    font-size: 20px;
+}
+.danAss {
+    position: relative;
+    grid-column: 1;
+    grid-row: 1;
+}
+.samAss {
+    position: relative;
+    grid-column: 2;
+    grid-row: 1;
+}
+.leoAss {
+    position: relative;
+    grid-column: 3;
+    grid-row: 1;
+}
+.syrxAss {
+    position: relative;
+    grid-column: 1;
+    grid-row: 2;
+}
+.flavioAss {
+    position: relative;
+    grid-column: 2;
+    grid-row: 2;
+
+}
+
+img {
+    width: 200px;
+    width: 100%;
+    border-radius: 60px;
+    padding-top: 15px;
+    
+
+    text-align: center;
+    align-items: center;
+    float: center;
+    /*width: 80%;*/
+    /*height: 80%;*/
+    /*border-radius: 6%;
+    border: 0 0 0 0;*/
+    /*box-shadow: var(--main-shadow-color);*/
+    transition: transform 300ms, box-shadow 300ms; 
+}
+.staffPageMain img {
+    /*max-width: 200px;*/
+}
+.staffPageMain .team-person {
+    max-width: 250px;
+}
+
+/* STAFF PAGES STYLES */
+.staffPage {
+    align-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.p1Staff {
+    text-align: center;
+    margin-top: 100px;
+    font-size: 20px;
+    color: #E6E6E6;
+}
+.staffPageMain {
+    text-align: center;
+    margin-top: 100px;
+    font-size: 20px;
+    color: #E6E6E6;
+    width: 100%;
+}
+
+.goBack {
+    text-align: center;
+    color: var(--main-p-color);
+
+    background-color: #2b2b2e;
+    border-radius: 60px;
+    font-size: 8px;
+    color: #E6E6E6;
+    display: inline-block;
+    height: 40px;
+    padding-top: 20px;
+    width: 100px;
+    outline-color: #6b6b6b;
+    border: 5px solid #6e6e6e;
+}
+
+@media (max-width: 800px) {
+    .team-people {
+        justify-content: space-around;
+        grid-gap: 0%;
+        grid-column-start: 1;
+        grid-column-end: 1;
+        grid-row-start: 1;
+        grid-row-end: 5;
+    }
+    .team-person {
+        text-align: center;
+        color: rgb(175, 175, 175);
+        padding-bottom: 20px;
+        font-size: 15px;
+    }
+    .danAss {
+        align-content: center;
+        display: grid;
+        grid-column: 1;
+        grid-row: 1;
+    }
+    .samAss {
+        align-content: center;
+        display: grid;
+        grid-column: 1;
+        grid-row: 2;
+    }
+    .leoAss {
+        align-content: center;
+        display: grid;
+        grid-column: 1;
+        grid-row: 3;
+    }
+    .syrxAss {
+        align-content: center;
+        display: grid;
+        grid-column: 1;
+        grid-row: 4;
+    } 
+    .flavioAss {
+        align-content: center;
+        display: grid;
+        grid-column: 1;
+        grid-row: 5;
+    } 
+}
