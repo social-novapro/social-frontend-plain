@@ -18,7 +18,7 @@ var baseUrl = getUrl .protocol + "//" + getUrl.host + "/" + getUrl.pathname.spli
 var pathArray = window.location.pathname.split( '/' );
 var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
 var hostedUrl = `${config ? `${config.current == "prod" ? config.prod.hosted_url : config.dev.hosted_url}` : 'https://interact.novapro.net/' }`
-var params = new URLSearchParams(window.location.search)
+// var params = new URLSearchParams(window.location.search)
 var prevIndexID = 0;
 // API HEADERS
 var headers = {
@@ -71,6 +71,7 @@ function changeHeader(newLink) {
 
 // parameter checks
 async function checkURLParams() {
+    var params = new URLSearchParams(window.location.search)
     var paramsInfo = {
         paramsFound: false
     }
@@ -105,8 +106,8 @@ async function checkURLParams() {
         paramsInfo.paramsFound = true
 
         const searchSearching = params.get('search')
+        // console.log(searchSearching)
         searchResult(searchSearching)
-        addWritingToSeachBar(searchSearching)
     }
     else if (ifPostPage) {
         paramsFound = true
@@ -158,6 +159,7 @@ function postElementCreate({
     voteData,
     quoteData,
     coposterData,
+    tagData,
     extraData
 }) {
     if (!post) return;
@@ -176,7 +178,7 @@ function postElementCreate({
     if (!extraData) extraData = { }
     var timesince
     if (post.timePosted) timesince = checkDate(post.timePosted)
-    const imageContent = checkForImage(post.content)
+    const imageContent = checkForImage(post.content, tagData)
     const owner = post.userID == currentUserLogin.userID ? true : false;
 
     const options = {
@@ -408,7 +410,7 @@ async function viewParentPost(postID, parentPostID) {
         return;
     }
 
-    const userData = await sendRequest(`/get/userByID/${postData.userID}`, { method: 'GET', });
+    const userData = await sendRequest(`/users/get/basic/${postData.userID}`, { method: 'GET', });
    
     const postEle = postElementCreate({post: postData, user: userData});
     document.getElementById(`parent_${postID}`).innerHTML = `
@@ -439,7 +441,7 @@ async function viewQuotes(postID) {
 
     var ele = ``;
     for (const quote of quoteData.quotes) {
-        const userData = await sendRequest(`/get/userByID/${quote.userID}`, { method: 'GET' });
+        const userData = await sendRequest(`/users/get/basic/${quote.userID}`, { method: 'GET' });
         ele+=postElementCreate({post: quote, user: userData, hideParent: true });
     }
 
@@ -477,7 +479,7 @@ async function viewReplies(postID) {
 
     var ele = ``;
     for (const reply of replyData.replies) {
-        const userData = await sendRequest(`/get/userByID/${reply.userID}`, { method: 'GET' });
+        const userData = await sendRequest(`/users/get/basic/${reply.userID}`, { method: 'GET' });
         ele+=postElementCreate({post: reply, user: userData, hideParent: true });
     }
 
@@ -662,12 +664,12 @@ async function voteOption(pollID, optionID) {
     if (debug) console.log("Voted!")
 }
 
-async function userPage(username) {
+async function userPage(userSearch) {
     searching = true
 
-    const userData = await sendRequest(`/get/username/${username}`, { method: 'GET' })
+    // const userData = await sendRequest(`/users/get/basic/${username}`, { method: 'GET' })
     
-    userHtml(userData._id)
+    userHtml(userSearch)
 
     return null;
 }
@@ -707,6 +709,8 @@ async function socialTypePost(customInputID, forCoposter=false) {
     if (debug) console.log("socialTypePost")
     const content = document.getElementById(customInputID ? customInputID : 'newPostTextArea').value
     const foundTags = await findTag(content)
+    if (debug) console.log(foundTags)
+
     if (foundTags.found == false) {
         if (document.getElementById('taggingsOpened')) {
             document.getElementById('foundTaggings').innerHTML=""
@@ -716,16 +720,28 @@ async function socialTypePost(customInputID, forCoposter=false) {
 
     var taggings = ""
     if (debug) console.log("!!")
-    for (const index of foundTags.results) {
-        taggings+=`
-            <div class=""onclick="${forCoposter ? `autoCompleteCoposter('${index.user.username}', '${index.user._id}')`: `autoCompleteUser('${index.user.username}')`}">
-                <p>${index.user.username}</p>
-                ${index.user.description ? `<p>${index.user.description}</p>` : ``}
-                <p>${index.possiblity}% match</p>
-            </div>
-        `
+    if (foundTags.results.users && foundTags.results.users[0]) {
+        for (const index of foundTags.results.users) {
+            taggings+=`
+                <div class="publicPost posts-style" onclick="${forCoposter ? `autoCompleteCoposter('${index.user.username}', '${index.user._id}')`: `autoCompleteUser('${index.user.username}')`}">
+                    <p>@${index.user.username}</p>
+                    ${index.user.description ? `<p>${index.user.description}</p>` : ``}
+                    <p>${index.possibility}% match</p>
+                </div>
+            `
+        }
+    } else if (foundTags.results.hashtags && foundTags.results.hashtags[0]) {
+        for (const index of foundTags.results.hashtags) {
+            taggings+=`
+                <div class="publicPost posts-style" onclick="autoCompleteUser('${index.tag}')">
+                    <p>${index.tag}</p>
+                    <p>${index.possibility}% match</p>
+                </div>
+            `
+        }
     }
-    if (debug) console.log(taggings)
+    
+    if (debug) console.log(foundTags)
     document.getElementById('foundTaggings').innerHTML=`
         <div id="taggingsOpened"></div>
         ${taggings}
@@ -772,7 +788,8 @@ async function autoCompleteUser(username) {
     const contentArgs = content.split(" ")
 
     // replaces with new value
-    contentArgs[contentArgs.length-1] = `@${username} `;
+    if (contentArgs[contentArgs.length-1].startsWith("#")) contentArgs[contentArgs.length-1] = `${username} `;
+    else contentArgs[contentArgs.length-1] = `@${username} `;
     document.getElementById('foundTaggings').innerHTML=""
 
     
@@ -780,14 +797,27 @@ async function autoCompleteUser(username) {
     document.getElementById('newPostTextArea').focus()
 }
 
-async function findTag(content) {
+async function findUserTag(content) {
     const contentArgs = content.split(/[ ]+/)
     const searchUser = contentArgs[contentArgs.length-1];
 
     if (searchUser==''||searchUser=="@") return { found: false };
     if (!searchUser.startsWith("@")) return { found: false };
-    const res = await sendRequest(`/get/taguserSearch/${searchUser.replace("@", "")}`, { method: 'GET' });
+    const res = await sendRequest(`/search/userTag/${searchUser.replace("@", "")}`, { method: 'GET' });
     if (!res || res.error || !res[0]) return { found: false };
+    return {found: true, results: res};
+}
+
+async function findTag(content) {
+    const contentArgs = content.split(/[ ]+/)
+    var searchUser = contentArgs[contentArgs.length-1];
+
+    if (!searchUser.startsWith("@") && !searchUser.startsWith("#")) return { found: false, error: "doesnt start with required case" };
+    if (searchUser=="@" || searchUser=="#") return { found: false, error: "only includes starting case of search" };
+    if (searchUser.startsWith("@")) searchUser = searchUser.replace("@", "0");
+    if (searchUser.startsWith("#")) searchUser = searchUser.replace("#", "1");
+    const res = await sendRequest(`/search/tags/${searchUser}`, { method: 'GET', ignoreError: true });
+    if (!res || res.error) return { found: false };
     return {found: true, results: res};
 }
 
@@ -869,7 +899,7 @@ async function postHtml(postID) {
     const postData = await sendRequest(`/posts/get/${postID}`, { method: 'GET' })
     if (!postData || postData.deleted) return console.log("error with post");
 
-    const userData = await sendRequest(`/get/userByID/${postData.userID}`, { method: 'GET' })
+    const userData = await sendRequest(`/users/get/basic/${postData.userID}`, { method: 'GET' })
     
     const ele = postElementCreate({post: postData, user: userData});
     document.getElementById("mainFeed").innerHTML = ele
@@ -886,8 +916,8 @@ async function postHtml(postID) {
     */
 }
 
-async function getFullUserData(userID) {
-    const profileData = await sendRequest(`/get/user/${userID}`, { method: 'GET' })
+async function getFullUserData(userSearch) {
+    const profileData = await sendRequest(`/users/get/${userSearch}`, { method: 'GET' })
     
     if (!profileData || profileData.error) return console.log("error with user");
     return profileData;
@@ -931,6 +961,11 @@ function settingsPage() {
                         <button class="menuButton menuButton-style" onclick="changeFeedSettings()">Feed Settings</p>
                     </div>
                     <div id="feedPopup"></div>
+                    <div id="searchSetting" class="menu menu-style">
+                        <p><b>Search</b></p>
+                        <button class="menuButton menuButton-style" onclick="changeSearchSettings()">Search Settings</p>
+                    </div>
+                    <div id="searchSettingPopup"></div>
                     <div id="themeEditor" class="menu menu-style"><p><b>Client Theme</b></p>
                         <button class="menuButton menuButton-style" onclick='editThemePanel("${headers.userid}")'>Open Editor</button>
                         <button class="menuButton menuButton-style" onclick='createTheme()'>Create Theme</button>
@@ -939,6 +974,11 @@ function settingsPage() {
                         <button class="menuButton menuButton-style" onclick='viewThemesDiscovery()'>Discover Themes</button>
                     </div> 
                     <div id="userThemeEditor"></div>
+                    <div class="menu menu-style">
+                        <p><b>Privacy</b></p>
+                        <button class="menuButton menuButton-style" onclick="openPrivacyPage()">Open Privacy Page</p>
+                    </div>
+                    <div id="privacyPopup"></div>
                     <div id="emailSettings" class="menu menu-style">
                         <p><b>Email</b></p>
                         <button class="menuButton menuButton-style" onclick="changeEmailPage()">Email Settings</p>
@@ -1085,7 +1125,7 @@ async function switchAccountPage() {
 }
 
 async function miniPreviewUser(userID) {
-    const userData = await sendRequest(`/get/userByID/${userID}`, { method: 'GET' })
+    const userData = await sendRequest(`/users/get/basic/${userID}`, { method: 'GET' })
     if (!userData || userData.error) return console.log("error with user");
     const ele = `<p>${userData.displayName}@${userData.username}</p>`;
     return ele;
@@ -1671,8 +1711,8 @@ function convertRGBToHex(rgb) {
     return hex;
 }
 
-async function userHtml(userID) {
-    const profileData = await getFullUserData(userID)
+async function userHtml(userSearch) {
+    const profileData = await getFullUserData(userSearch)
     if (!profileData) return showModal("<div><p>Sorry, this user does not exist!</p></div>")
 
     changeHeader('?username='+profileData.userData.username, 'Profile')
@@ -1757,6 +1797,7 @@ async function userHtml(userID) {
             <button class="menuButton menuButton-style" onclick='viewThemes("${profileData.userData._id}")'>View Themes</button>
         </div>
         <div id="userThemeEditor"></div>
+        ${profileData.included.badges ? badgeData(profileData.badgeData) : ``}
         ${profileData.included.pins ? `
             <div class="menu menu-style">
                 <p><b>Pins</b></p>
@@ -1772,6 +1813,7 @@ async function userHtml(userID) {
                     voteData: pin.type?.vote=="included" ? pin.voteData : null,
                     quoteData: pin.type?.quote=="included" ? pin.quoteData : null,
                     coposterData: pin.type?.coposter=="included" ? pin.coposterData : null,
+                    tagData: pin.type?.tag=="included" ? pin.tagData : null,
                     extraData: pin.type?.extra=="included" ? pin.extraData : {},
                 })
             }).join(" ")}
@@ -1790,6 +1832,7 @@ async function userHtml(userID) {
                     voteData: post.type?.vote=="included" ? post.voteData : null,
                     quoteData: post.type?.quote=="included" ? post.quoteData : null,
                     coposterData: post.type?.copost=="included" ? post.coposterData : null,
+                    tagData: post.type?.tag=="included" ? post.tagData : null,
                     extraData: post.type?.extra=="included" ? post.extraData : {},
                 })                
             }).join(" ")}
@@ -1797,6 +1840,176 @@ async function userHtml(userID) {
     `
 
     return;
+}
+
+function showBadges() {
+    document.getElementById("showBadgeArea").style.display = "";
+}
+
+function hideBadges() {
+    document.getElementById("showBadgeArea").style.display = "none";
+}
+
+function switchBadgeDisplay() {
+    if (document.getElementById("showBadgeArea").style.display == "none") showBadges()
+    else hideBadges()
+}
+
+function loadPossibleBadges() {
+    if (document.getElementById("possibleBadgesArea").style.display == "none") {
+        document.getElementById("possibleBadgesArea").style.display = "";
+        renderPossibleBadges()
+    }
+    else {
+        document.getElementById("possibleBadgesArea").style.display = "none";
+    }
+}
+async function renderPossibleBadges() {
+    const req = await sendRequest(`/users/badges/`, { method: 'GET' });
+    if (!req || req.error) return;
+    var ele = "<p><b>Possible Badges</b></p>";
+    if (!req || req.length == 0) { 
+        ele+=`<p>There were no badges found.</p></div>`;
+        return ele;
+    }
+    for (const badge of req) {
+        ele+=badgeEleBasic(badge);
+    }
+
+    document.getElementById('possibleBadgesArea').innerHTML=ele;
+}
+
+function badgeData(badges) {
+    var ele = `
+        <div class="menu menu-style">
+            <p><b>Badges</b></p>
+            <p>Badges are a way to show off your achievements.</p>
+            <button class="menuButton menuButton-style" onclick="loadPossibleBadges()">View Possible Badges</button>
+    `;
+
+    if (!badges || badges.length == 0) { 
+        ele+=`<p>Currently, there are no badges.</p>
+        <div id="possibleBadgesArea" style="display: none;"></div>
+        </div>`;
+        return ele;
+    }
+    ele+=`<button class="menuButton menuButton-style" onclick="switchBadgeDisplay()">Reveal User Badges</button>`;
+    ele+=`<div id="possibleBadgesArea" style="display: none;"></div>`
+    ele+=`<div id="showBadgeArea" style="display:none;"><p><b>User Badges</b></p>`
+    for (const badge of badges) {
+        ele+=badgeEle(badge);
+    }
+    ele+=`</div></div></div>`;
+    return ele;
+}
+
+function badgeEle(badge) {
+    return `
+        <div class="menu menu-style">
+            <p><b>${badge.name}</b></p>
+            <p>${badge.description}</p>
+            <p>Achieved: ${checkDate(badge.achieved)}</p>
+            ${badge.latest ? `<p>Latest: ${checkDate(badge.latest)}</p>` : ``}
+            ${badge.showCount ? `<p>Count: ${badge.count}</p>` : ``}
+            <div>
+                <button class="" onclick="revealInfoData('${badge.id}')">Click to Show Extra Info</button>
+            </div>
+            <div id="extra_data_${badge.id}" style="display:none;">
+                <p>Technical Description: ${badge.info.technical_description}</p>
+                <p>Shown Date: ${badge.info.date_achieved}</p>
+                <p>Version Introduced: v${badge.info.version_introduced}</p>
+            </div>
+        </div>
+    `;
+}
+
+function badgeEleBasic(badge) {
+    return `
+        <div class="menu menu-style">
+            <p><b>${badge.name}</b></p>
+            <p>${badge.description}</p>
+            <p>Technical Description: ${badge.technical_description}</p>
+            <p>Shown Date: ${badge.date_achieved}</p>
+            <p>Version Introduced: v${badge.version_introduced}</p>
+        </div>
+    `;
+}
+function revealInfoData(badgeID) {
+    const ele = document.getElementById(`extra_data_${badgeID}`);
+    if (ele.style.display == "none") ele.style.display = "";
+    else ele.style.display = "none";
+}
+
+async function openPrivacyPage(privacyDataFound) {
+    var privacyData
+    if (!privacyDataFound) {
+        privacyData = await sendRequest("/users/privacy/get/", { method: "GET"});
+    } else {
+        privacyData = privacyDataFound
+    }
+    if (debug) console.log(privacyData);
+
+    var ele = `
+        <div class="menu menu-style">
+            <p><b><br>Privacy Settings</b></p>
+            <p>This feature is unfinished, and will have a later update for better functionality.</p>
+            <p>Currently only privating posts works.</p>
+            <hr class="rounded">
+        <form id="userEdit_privacySettings">
+    `;
+
+    for (const privacy of privacyData) {
+        ele+=`
+            <div>
+            <h3>${privacy.title}</h3>
+            <p>${privacy.description}</p>
+            <label for="${privacy.title}">Select an option:</label>
+            <select id="${privacy.name}">
+            `;
+            
+            for (const option of privacy.options) {
+                ele+=`
+                <option value="${option.value}"${option.isActive ? ` selected ` : ""}>${option.title}</option>
+            `
+        }
+        ele+=`
+        </select>
+        <hr class="rounded">
+        `
+    }
+
+    ele += `
+            </form>
+            <button class="menuButton menuButton-style" onclick="updatePrivacySettings()">Update Settings</button>
+            <div id="completed_change_pass"></div>
+        </div>
+    `;
+    
+    document.getElementById("privacyPopup").innerHTML = ele;
+    document.getElementById("userEdit_privacySettings").addEventListener("submit", function (e) { e.preventDefault()})
+
+}
+
+async function updatePrivacySettings() {
+    const form = document.getElementById("userEdit_privacySettings");
+    const selections = form.querySelectorAll("select");
+    const changedItems = [];
+
+    for (const selection of selections) {
+        if (selection.value) {
+            changedItems.push({name: selection.id, value: selection.value});
+        }
+    }
+
+    const res = await sendRequest(`/users/privacy/set`, {
+        method: 'POST',
+        body: {
+            newSettings: changedItems
+        },
+    });
+
+    if (!res || res.error) return null;
+    openPrivacyPage(res)
 }
 
 async function changePasswordPage() {
@@ -1866,7 +2079,7 @@ async function changeFeedSettings() {
 
 async function changePref(feedName) {
     const changed = changePrefAPI(feedName);
-    if (!changed || changed.error) alert(`An error occured while changing${changed.error? `: ${changed.msg}`: ""}`);
+    if (!changed || changed.error) alert(`An error occurred while changing${changed.error? `: ${changed.msg}`: ""}`);
     await changeFeedSettings();
 }
 
@@ -1881,6 +2094,42 @@ async function changePrefAPI(feedName) {
         body: { setPref: feedName }
     });
     return data; 
+}
+
+async function changeSearchSettings() {
+    const searchExport = await sendRequest('/search/setting', { method: 'GET' });
+    if (!searchExport) return alert("Error getting search settings");
+    else renderSearchSettings(searchExport);
+}
+
+function renderSearchSettings(searchExport) {
+    const currentDefaultOption = searchExport.possibleSearch.find(versions => versions.name === searchExport.currentSearch.preferredSearch);
+    const selectedDate = getTimeSince(searchExport.currentSearch.timestamp)
+    
+    var ele = `
+        <div class="menu menu-style">
+            <p><b>Change your default search algorithm</p></b>
+            <hr class="rounded">
+            <p>Current default search is:<br><b>${currentDefaultOption.niceName}</b> selected ${selectedDate.sinceOrUntil == "current" ? "just changed" : `${selectedDate.sinceOrUntil == "since" ? selectedDate.value + " ago" : selectedDate.value}`}
+    `;
+    for (const searchVersion of searchExport.possibleSearch) {
+        ele += `
+            <div class="menu menu-style">
+                <p>${searchVersion.description}</p>
+                <button class="menuButton menuButton-style ${searchExport.currentSearch.preferredSearch==searchVersion.name ? 'activeFeed' : ''}" onclick="changeSearchPref('${searchVersion.name}')">${searchVersion.name} - ${searchVersion.niceName}</button>
+            </div>
+        `
+    }
+
+    ele +="</div>"
+    document.getElementById("searchSettingPopup").innerHTML = ele;
+}
+
+async function changeSearchPref(searchVersion) {
+    const searchExport = await sendRequest('/search/setting', { method: 'POST', body: { newSearch: searchVersion} });
+    if (!searchExport || searchExport.error) alert(`An error occurred while changing${changed.error? `: ${changed.msg}`: ""}`);
+
+    renderSearchSettings(searchExport);
 }
 
 async function changeEmailPage() {
@@ -1991,16 +2240,18 @@ async function editEmailSettings() {
         }
     });
 
-    const reqBody = [];
+    const newSettings = [];
     
     var i=0;
     for (item of changedItems) {
-        reqBody.push({ option: item, value: document.getElementById(`emailSetting_${item}`).checked })
+        newSettings.push({ option: item, value: document.getElementById(`emailSetting_${item}`).checked })
     }
 
     const res = await sendRequest(`/emails/settings`, {
         method: 'PUT',
-        body: reqBody,
+        body: {
+            newSettings
+        },
     });
     
     if (!res || res.error) return null;
@@ -2271,7 +2522,7 @@ async function showPost(postID) {
 }
 
 async function getUserDataSimple(userID) {
-    const res = await sendRequest(`/get/userByID/${userID}`, { method: 'GET' });
+    const res = await sendRequest(`/users/get/basic/${userID}`, { method: 'GET' });
     if (!res || res.error) return 
     else return res
 }
@@ -2476,7 +2727,7 @@ async function getPostAndProfileData(postID) {
     if (!postData || postData.error) return {error: `${postData.error ? postData.error : "an unknown error"}`};
     if (debug) console.log(postData);
 
-    const profileData = await sendRequest(`/get/userByID/${postData.userID}`, { method: 'GET', ignoreError: true});
+    const profileData = await sendRequest(`/users/get/basic/${postData.userID}`, { method: 'GET', ignoreError: true});
     if (!profileData || profileData.error) return {error: `${profileData.error ? profileData.error : "an unknown error"}`};
 
     return { "postData" : postData, "profileData": profileData };
@@ -2503,6 +2754,7 @@ async function requestVerification() {
 }
 
 function activeSearchBar() {
+    if (document.getElementById("searchArea").innerHTML) return;
     document.getElementById("searchArea").innerHTML = `
         <div class="searchSelect search menu-style">
             <input id="searchBarArea" class="menu-style" onkeyup="searchSocial()" placeholder="Search for Posts and Users...">
@@ -2518,6 +2770,7 @@ function activeSearchBar() {
 }
 
 function unactiveSearchBar() {
+    if (!document.getElementById("searchArea").innerHTML) return;
     document.getElementById("searchArea").innerHTML = ``
     document.getElementById('navSection5').innerHTML = `
         <div id="searchBar" class="nav-link" onclick="activeSearchBar()">
@@ -2812,6 +3065,7 @@ function buildView(posts) {
                 voteData: postArray.type?.vote=="included" ? postArray.voteData : null,
                 quoteData: postArray.type?.quote=="included" ? postArray.quoteData : null,
                 coposterData: postArray.type?.copost=="included" ? postArray.coposterData : null,
+                tagData: postArray.type?.tag=="included" ? postArray.tagData : null,
                 extraData: postArray.type?.extra=="included" ? postArray.extraData : null,
             })
         }).join(" ")}
@@ -2824,6 +3078,7 @@ function buildView(posts) {
 function addBuildView(posts) {
     if (debug) console.log("buidlding extra view")
     if (searching) return
+    if (!document.getElementById("addToBottom")) return console.log("no bottom div")
 
     document.getElementById("addToBottom").outerHTML = `
         ${posts.map(function(postArray) {
@@ -2834,6 +3089,7 @@ function addBuildView(posts) {
                 voteData: postArray.type?.vote=="included" ? postArray.voteData : null,
                 quoteData: postArray.type?.quote=="included" ? postArray.quoteData : null,
                 coposterData: postArray.type?.copost=="included" ? postArray.coposterData : null,
+                tagData: postArray.type?.tag=="included" ? postArray.tagData : null,
                 extraData: postArray.type?.extra=="included" ? postArray.extraData : null,
             })
         }).join(" ")}
@@ -2959,7 +3215,7 @@ async function submitEdit(postID) {
 async function quotePost(postID) {
     const post = await sendRequest(`/posts/get/${postID}`, { method: 'GET' })
     if (!post || post.error) return false;
-    const user = await sendRequest(`/get/userByID/${post.userID}`, { method: 'GET' })
+    const user = await sendRequest(`/users/get/basic/${post.userID}`, { method: 'GET' })
     if (!user || user.error) return false;
 
     await showModal(`
@@ -2987,7 +3243,7 @@ async function replyPost(postID) {
     const post = await sendRequest(`/posts/get/${postID}`, { method: 'GET', headers})
     if (!post || post.error) return false;
 
-    const user = await sendRequest(`/get/userByID/${post.userID}`, { method: 'GET', headers })
+    const user = await sendRequest(`/users/get/basic/${post.userID}`, { method: 'GET', headers })
     if (!user || user.error) return false;
 
     await showModal(`
@@ -3066,7 +3322,7 @@ async function likePost(postID) {
 
 // USER DATA FOR FEED
 async function getUserData(userID) {
-    const response = await sendRequest(`/get/user/${userID}`, { method: 'GET' });
+    const response = await sendRequest(`/users/get/${userID}`, { method: 'GET' });
     return response;
 }
 
@@ -3082,11 +3338,20 @@ async function addWritingToSeachBar(input) {
     document.getElementById('searchBarArea').value = input
 }
 
+function hashtagElementCreate(tag) {
+    return `
+        <div class="publicPost posts-style">
+            <p>${tag.tag}</p>
+        </div>
+    `
+}
+
 async function searchResult(input) {
+    console.log(input)
     if (!input) {
         if (debug) console.log("returning to feed")
         changeHeader('')
-
+        addWritingToSeachBar('')
         return getFeed()
     }
     if (currentSearch == input){
@@ -3094,25 +3359,43 @@ async function searchResult(input) {
         return console.log("same")
     }
 
+    var headerReplace = input;
+    console.log(headerReplace)
+    
     currentSearch = input
     searching = true
     const extraHeaders = {
         lookupkey: input
     }
 
-    changeHeader(`?search=${input}`)
+    if (input.startsWith("@")) {
+        headerReplace = input.replace("@", "0")
+    } else if (input.startsWith("#")) {
+        headerReplace = input.replace("#", "1")
+    } else if (input.startsWith("0")) {
+        extraHeaders.lookupkey = input.replace("0", "@")
+    } else if (input.startsWith("1")) {
+        extraHeaders.lookupkey = input.replace("1", "#")
+    }
 
-    const data = await sendRequest(`/get/search/`, {
+    activeSearchBar()
+    addWritingToSeachBar(extraHeaders.lookupkey)
+    changeHeader(`?search=${headerReplace}`)
+
+    const data = await sendRequest(`/search/`, {
         method: 'GET',
         extraHeaders
     }); 
 
     if (debug) console.log("loading search")
     
-    if (!data || data.error || (!data.postsFound[0] && !data.usersFound[0])) return document.getElementById("mainFeed").innerHTML= `<div class="publicPost searchUser"><p>no results were found, try to seach something else.</div>`
-    else console.log(data.postsFound)
+    if (!data || data.error || 
+        (!data.hashtagsFound[0] && !data.tagsFound[0] && !data.postsFound[0] && !data.usersFound[0])
+    ) return document.getElementById("mainFeed").innerHTML= `<div class="publicPost searchUser"><p>no results were found, try to seach something else.</div>`
+    if (debug) console.log(data.postsFound)
 
     document.getElementById("mainFeed").innerHTML = `
+        ${data.usersFound.length > 0 ? `<div><h1 class="publicPost posts-styles font_h1-style">Users found</h1>` : ""}
         ${data.usersFound.reverse().map(function(user) {
             var timesince
             if (user.creationTimestamp) timesince = checkDate(user.creationTimestamp)
@@ -3126,6 +3409,33 @@ async function searchResult(input) {
                 </div>
             `
         }).join(" ")}
+        ${data.usersFound.length > 0 ? `</div>` : ""}
+        ${data.hashtagsFound?.length > 0 ? `<div><h1 class="publicPost posts-styles font_h1-style">Related Hashtags</h1>` : ""}
+        ${data.hashtagsFound?.map(function(hashtagFound) {
+            if (debug) console.log(hashtagFound)
+            return hashtagElementCreate(hashtagFound)
+        }).join(" ")}
+        ${data.hashtagsFound?.length > 0 ? `</div>` : ""}
+        ${data.tagsFound?.map(function(tagFound) {
+            return `
+                <div class="">
+                <h1 class="publicPost posts-styles font_h1-style">Posts for ${tagFound.tag}</h1>
+                    ${tagFound.posts?.reverse().map(function(postData) {
+                        return postElementCreate({
+                            post: postData.postData,
+                            user: postData.userData, 
+                            pollData: postData.type?.poll=="included" ? postData.pollData : null,
+                            voteData: postData.type?.vote=="included" ? postData.voteData : null,
+                            quoteData: postData.type?.quote=="included" ? postData.quoteData : null,
+                            coposterData: postData.type?.copost=="included" ? postData.coposterData : null,
+                            tagData: postData.type?.tag=="included" ? postData.tagData : null,
+                            extraData: postData.type?.extra=="included" ? postData.extraData : null,
+                        })
+                }).join(" ")}
+                </div>
+            `
+        }).join(" ")}
+        ${data.postsFound.length > 0 ? `<div><h1 class="publicPost posts-styles font_h1-style">Posts Found</h1>` : ""}
         ${data.postsFound.reverse().map(function(postArray) {
             return postElementCreate({
                 post: postArray.postData,
@@ -3134,11 +3444,12 @@ async function searchResult(input) {
                 voteData: postArray.type?.vote=="included" ? postArray.voteData : null,
                 quoteData: postArray.type?.quote=="included" ? postArray.quoteData : null,
                 coposterData: postArray.type?.copost=="included" ? postArray.coposterData : null,
+                tagData: postArray.type?.tag=="included" ? postArray.tagData : null,
                 extraDta: postArray.type?.extra=="included" ? postArray.extraData : null,
             })
         }).join(" ")}
+        ${data.postsFound.length > 0 ? `</div>` : ""}
     `
-
     devMode()
     searching = false
 }
@@ -3147,6 +3458,7 @@ async function createPostPage() {
     var preinput = false;
     var data = { };
     var paramsFound = [];
+    const params = new URLSearchParams(window.location.search)
     if (debug) console.log("params? " + getUrl.search)
     if (debug) console.log("params != ?posting " + getUrl.search.includes("?posting"))
 
@@ -3298,7 +3610,7 @@ function showCoPostersCreation() {
 async function onTypeCoPosters() {
     const input = document.getElementById('co-posters-input').value;
     if (input == "") return document.getElementById('co-posters-div').innerHTML = "";
-    const foundTags = await findTag(content)
+    const foundTags = await findUserTag(content)
     if (foundTags.found == false) {
         if (document.getElementById('taggingsOpened')) {
             document.getElementById('foundTaggings').innerHTML=""
@@ -3390,6 +3702,8 @@ async function onTypePostPage(e) {
 }
 
 function newPostHeader(paramName, data) {
+    const params = new URLSearchParams(window.location.search)
+
     const newString = createNewParam(paramName, data);
     if (debug) console.log("new param: " + newString)
     const current = getUrl.search;
@@ -3737,6 +4051,8 @@ async function renameUsername() {
 
 // For API Use
 async function sendRequest(request, { method, body, extraHeaders, ignoreError=false }) {
+    // add "version" as a possible header, and .replace on the apiURL
+    // or force the version be in the request
     var headersEdited = {};
 
     if (extraHeaders) {
@@ -3764,7 +4080,9 @@ async function sendRequest(request, { method, body, extraHeaders, ignoreError=fa
 
         return data;
     } catch(err) {
-        showModal(`<h1>Error</h1><p>Unknown Error.</p>`);
+        if (!ignoreError) {
+            showModal(`<h1>Error</h1><p>Unknown Error.</p>`);
+        }
         return { error : true };
     }
 }
@@ -3787,7 +4105,7 @@ function unloadSpotify(amount, link) {
     document.getElementById(`spotify_frame_${amount}`).onclick = `loadSpotify(${amount}, '${link}')`
 }
 
-function checkForImage(content) {
+function checkForImage(content, tags) {
     const imageFormats = ['.jpg', '.png','.jpeg', '.svg', '.gif']
     const videoFormats = [{'urlEnd': '.mp4', "type": 'mp4'}, {'urlEnd':'.mov','type':'mp4'}, {'urlEnd':'.ogg', 'type': 'ogg'}]
 
@@ -3798,6 +4116,20 @@ function checkForImage(content) {
 
     var attachments = []
     for (index = 0; index < contentArgs.length; index++) {
+        if (tags) {
+            for (const tag of tags) {
+                if (
+                    (index == tag.wordIndex) && 
+                    (tag.tagTextOriginal == contentArgs[index])
+                ) {
+                    if (tag.tagTextOriginal.startsWith("@")) {
+                        contentArgs[index] = `<a class="ownUser-style" onclick="userPage('${tag.tagTextOriginal.replace("@", "0")}')">${contentArgs[index]}</a>`
+                    } else if (tag.tagTextOriginal.startsWith("#")) {
+                        contentArgs[index] = `<a class="ownUser-style" onclick="searchResult('${tag.tagTextOriginal.replace("#", "1")}')">${contentArgs[index]}</a>`
+                    }
+                }
+            }
+        }
         //if (contentArgs[index].includes(' ')) contentArgs[index] = contentArgs[index].replace(' ', '')
         if (contentArgs[index].startsWith('https://')) {
             for (const imageFormat of imageFormats) {
