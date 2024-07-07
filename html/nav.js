@@ -454,19 +454,19 @@ function closeModal() {
 }
 
 
-var openedSidebar = false
-var mainContentSideBarOpenClosed = false
+var openedSidebar = false;
+var mainContentSideBarOpenClosed = false;
 
-var sideBarOpenClosed = document.getElementById("expandingNavBar")
-var mainContentSideBarOpenClosed = document.getElementById("expandingMainContent")
+var sideBarOpenClosed = document.getElementById("expandingNavBar");
+var mainContentSideBarOpenClosed = document.getElementById("expandingMainContent");
 
 function sidebarOpen() {
-    if(!openedSidebar) {
-        setCookie("expandSidebar", true, 365);
-        openSideBar()
+    if (!openedSidebar) {
+        setCookie("expandSidebar", "true", 365);
+        openSideBar();
     } else {
-        setCookie("expandSidebar", false, 365);
-        closeSideBar()
+        setCookie("expandSidebar", "false", 365);
+        closeSideBar();
     }
 }
 
@@ -485,22 +485,26 @@ function closeSideBar() {
 // Sidebar Cookie
 function checkNavCookie() {
     var showmenu = getCookie("expandSidebar");
-    if (showmenu == "true") {
-        openSideBar()
-        return;
-    } if (showmenu == false) {
-        closeSideBar()
-        return;
-    } else {
-        setCookie("expandSidebar", false, 365)
+    if (showmenu === "true") {
+        openSideBar();
         return;
     } 
+    if (showmenu === "false") {
+        closeSideBar();
+        return;
+    } 
+    // No cookie found, apply window size
+    if (window.innerWidth >= 1080) {
+        openSideBar();
+    } else {
+        closeSideBar();
+    }
 }
 
 // Cookie Settings
-function setCookie(cname,cvalue,exdays) {
+function setCookie(cname, cvalue, exdays) {
     var d = new Date();
-    d.setTime(d.getTime() + (exdays*24*60*60*1000));
+    d.setTime(d.getTime() + (exdays * 24 * 60 * 60 * 1000));
     var expires = "expires=" + d.toGMTString();
     document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
 }
@@ -510,13 +514,40 @@ function getCookie(cname) {
     var decodedCookie = decodeURIComponent(document.cookie);
     var ca = decodedCookie.split(';');
 
-    for(var i = 0; i < ca.length; i++) {
+    for (var i = 0; i < ca.length; i++) {
         var c = ca[i];
         while (c.charAt(0) == ' ') {
             c = c.substring(1);
-        } if (c.indexOf(name) == 0) {
+        }
+        if (c.indexOf(name) == 0) {
             return c.substring(name.length, c.length);
         }
     }
     return "";
+}
+
+// Check cookie and apply window size rule if no cookie
+checkNavCookie();
+
+// Automatically open/close navbar if window size changes
+if (window.attachEvent) {
+    window.attachEvent('onresize', function() {
+        if (!getCookie("expandSidebar")) {
+            if (window.innerWidth < 1080) {
+                closeSideBar();
+            } else {
+                openSideBar();
+            }
+        }
+    });
+} else if (window.addEventListener) {
+    window.addEventListener('resize', function() {
+        if (!getCookie("expandSidebar")) {
+            if (window.innerWidth < 1080) {
+                closeSideBar();
+            } else {
+                openSideBar();
+            }
+        }
+    }, true);
 }
