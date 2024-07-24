@@ -219,6 +219,7 @@ function postElementCreate({
                 `: ``}
                 <div>
                     <p><span class="pointerCursor ${ user && (post.userID == currentUserLogin.userID )? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️' : ''}` : '>Unknown User'}</span>
+                    <span onclick="followUser('${post.userID}')">Follow (TEMP)</span>
                     ${coposterData && coposterData[0] ? `${coposterData.map(function(coposter) {
                         return `, <span class="spacer_2px pointerCursor ${ coposter._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${coposter ? ` onclick="userHtml('${coposter._id}')"> ${coposter.displayName} @${coposter.username}${coposter.verified ? ' ✔️ ' : ''}` : '>Unknown User'}</span>`
                     }).join(" ")}`:``}
@@ -388,6 +389,19 @@ async function unpinAllPosts() {
     showModal(`<p>Success!</p>`)
 }
 
+async function followUser(userID) {
+    const req = await sendRequest(`/users/follow/${userID}`, { method: "POST" });
+    if (req.error) return;
+    
+    showModal(`<p>Followed User</p>`)
+}
+
+async function unFollowUser(userID) {
+    const req = await sendRequest(`/users/follow/${userID}`, { method: "DELETE" });
+    if (req.error) return;
+    
+    showModal(`<p>Unfollowed User</p>`)
+}
 async function viewParentPost(postID, parentPostID) {
     if (document.getElementById(`openedParent_${postID}`)) {
         document.getElementById(`parentViewing_${postID}`).innerText = "This was a reply, click here to see.";
