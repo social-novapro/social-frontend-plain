@@ -219,7 +219,6 @@ function postElementCreate({
                 `: ``}
                 <div>
                     <p><span class="pointerCursor ${ user && (post.userID == currentUserLogin.userID )? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️' : ''}` : '>Unknown User'}</span>
-                    <span onclick="followUser('${post.userID}')">Follow (TEMP)</span>
                     ${coposterData && coposterData[0] ? `${coposterData.map(function(coposter) {
                         return `, <span class="spacer_2px pointerCursor ${ coposter._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${coposter ? ` onclick="userHtml('${coposter._id}')"> ${coposter.displayName} @${coposter.username}${coposter.verified ? ' ✔️ ' : ''}` : '>Unknown User'}</span>`
                     }).join(" ")}`:``}
@@ -266,7 +265,7 @@ function postElementCreate({
                             </p>
                         ` : ''}
                     ` : ''}
-                    <p id="popupactions_${post._id}" class="posts_action-style" onclick="popupActions('${post._id}', '${options.hideParent}', '${options.hideReplies}', '${options.owner}', ${extraData.pinned}, ${extraData.saved})">${styleActionButton()}</p>
+                    <p id="popupactions_${post._id}" class="posts_action-style" onclick="popupActions('${post._id}', '${post.userID}', '${options.hideParent}', '${options.hideReplies}', ${owner}, ${extraData.pinned}, ${extraData.saved}, ${extraData.followed})">${styleActionButton()}</p>
                 </div>
             </div>
         </div>
@@ -329,14 +328,14 @@ function removeColorOption(pollID, optionID) {
     document.getElementById(elementID).classList.remove("voted");
 }
 
-async function popupActions(postID, hideParent, hideReplies, owner, pinned=false, saved=false) {
+async function popupActions(postID, userID, hideParent, hideReplies, owner, pinned=false, saved=false, followed=false) {
     var elementPopup = document.getElementById(`popupOpen_${postID}`);
     if (elementPopup) {
         document.getElementById(`popupactions_${postID}`).innerHTML = styleActionButton(false)
         return elementPopup.remove();
     } else {
         document.getElementById(`popupactions_${postID}`).innerHTML = styleActionButton(true)
-    }   
+    }
 
     document.getElementById(`postElement_${postID}`).innerHTML+=`
         <div id="popupOpen_${postID}" class="publicPost posts-style no-select" style="position: element(#popupactions_${postID});">
@@ -352,6 +351,11 @@ async function popupActions(postID, hideParent, hideReplies, owner, pinned=false
             <p>---</p>
             <p class="pointerCursor" onclick="${pinned===true ? `unpinPost('${postID}')` : `pinPost('${postID}')` }" id="pin_post_${postID}">${pinned===true ? `Unpin from Profile` : `Pin to Profile` }</p>
             <p class="pointerCursor" onclick="${saved===true ? `unsaveBookmark('${postID}')` : `saveBookmark('${postID}')`}" id="saveBookmark_${postID}">${saved===true ? `Remove from Bookmarks`:`Save to Bookmarks`}</p>
+            <p class="pointerCursor" id="followUser_${postID}" onclick=
+            ${owner ? `` : `${followed===true ? 
+                `"unFollowUser('${userID}', 'followUser_${postID}')">Unfollow User` :
+                `"followUser('${userID}', 'followUser_${postID}')">Follow User`
+            }</p>`}
             <p class="pointerCursor" onclick="copyPostLink('${postID}')" id="post_copy_${postID}">Copy Post Link</p>
             <p class="pointerCursor" onclick="showEditHistory('${postID}')" id="editHistory_${postID}">Check Edit History</p>
             <p class="pointerCursor" onclick="showLikes('${postID}')" id="likedBy_${postID}">Check Who Liked</p>
@@ -389,19 +393,30 @@ async function unpinAllPosts() {
     showModal(`<p>Success!</p>`)
 }
 
-async function followUser(userID) {
-    const req = await sendRequest(`/users/follow/${userID}`, { method: "POST" });
-    if (req.error) return;
-    
-    showModal(`<p>Followed User</p>`)
+async function followUser(userID, eleIdChange) {
+    const res = await sendRequest(`/users/follow/${userID}`, { method: "POST" });
+    if (res.error) return;
+
+    if (eleIdChange) {
+        document.getElementById(eleIdChange).innerText="Unfollow User";
+        document.getElementById(eleIdChange).onclick = () => unFollowUser(userID, eleIdChange);
+    } else {
+        showModal(`<p>Unfollowed User!</p>`);
+    }
 }
 
-async function unFollowUser(userID) {
-    const req = await sendRequest(`/users/follow/${userID}`, { method: "DELETE" });
-    if (req.error) return;
-    
-    showModal(`<p>Unfollowed User</p>`)
+async function unFollowUser(userID, eleIdChange) {
+    const res = await sendRequest(`/users/unfollow/${userID}`, { method: "DELETE" });
+    if (res.error) return;
+
+    if (eleIdChange) {
+        document.getElementById(eleIdChange).innerText="Follow User";
+        document.getElementById(eleIdChange).onclick = () => followUser(userID, eleIdChange);
+    } else {
+        showModal(`<p>Unfollowed User!</p>`);
+    }
 }
+
 async function viewParentPost(postID, parentPostID) {
     if (document.getElementById(`openedParent_${postID}`)) {
         document.getElementById(`parentViewing_${postID}`).innerText = "This was a reply, click here to see.";
@@ -1760,6 +1775,17 @@ async function userHtml(userSearch) {
             ` : ``
         }
         <div class="menu menu-style">
+            <p><b>Follow Data</b><p>
+            <p>Followers: ${profileData.userData.followerCount} | Following: ${profileData.userData.followingCount}</p>
+            ${profileData.userData._id == currentUserLogin.userID ? `` : `
+                <button class="menu menu-style" id="follow_user_id_${profileData.userData._id}" onclick=
+                ${profileData.extraData.followed===true ? 
+                    `"unFollowUser('${profileData.userData._id}', 'follow_user_id_${profileData.userData._id}')">Unfollow User` :
+                    `"followUser('${profileData.userData._id}', 'follow_user_id_${profileData.userData._id}')">Follow User`
+                }</button>
+            `}
+        </div>
+        <div class="menu menu-style">
             <p><b>Notifications</b></p>
             <a id="notificationSub" onclick="subNotifi('${profileData.userData._id}')">Subscribe</a>
         </div>
@@ -1772,7 +1798,6 @@ async function userHtml(userSearch) {
             <p>${profileData.userData.username}</p>
         </div>
         ${profileData.userData.statusTitle ? 
-
             `
                 <div class="menu menu-style">
                     <p><b>Status</b></p>
@@ -3414,12 +3439,19 @@ async function searchResult(input) {
         ${data.usersFound.reverse().map(function(user) {
             var timesince
             if (user.creationTimestamp) timesince = checkDate(user.creationTimestamp)
-            
+            console.log(user)
             return `
                 <div class="publicPost posts-style">
                     <p class="${user._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" onclick="userHtml('${user._id}')"> ${user.displayName} @${user.username} | ${user.creationTimestamp ? timesince : '' }</p>
                     <p>${user.description ? user.description : "no description"}</p>
                     <p>Following: ${user.followingCount} | Followers: ${user.followerCount}</p>
+                    ${user._id == currentUserLogin.userID ? `` : `
+                        <p id="follow_search_id_${user._id}" onclick=
+                        ${user.followed===true ? 
+                            `"unFollowUser('${user._id}', 'follow_search_id_${user._id}')">Unfollow User` :
+                            `"followUser('${user._id}', 'follow_search_id_${user._id}')">Follow User`
+                        }</p>
+                    `}
                     <p class="debug" onclick="copyToClipboard('${user._id}')">${user._id}</p>
                 </div>
             `
