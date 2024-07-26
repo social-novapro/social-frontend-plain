@@ -20,6 +20,13 @@ var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : con
 var hostedUrl = `${config ? `${config.current == "prod" ? config.prod.hosted_url : config.dev.hosted_url}` : 'https://interact.novapro.net/' }`
 // var params = new URLSearchParams(window.location.search)
 var prevIndexID = 0;
+var followingFollowerData = {
+    userID: null,
+    prevIndexID: null,
+    currentlyBuilding: false,
+    type: 0
+}
+
 // API HEADERS
 var headers = {
     'Content-Type': 'application/json',
@@ -34,6 +41,7 @@ var searching
 var currentFeed 
 var currentFeedType
 var mobileClient = checkifMobile();
+var followingFollowerListStore = []
 
 // LOCAL STORAGE
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
@@ -51,7 +59,6 @@ function checkifMobile() {
         return false;
     }
 }
-
 
 // makes sure url is as expected
 if (location.protocol !== 'https:' && !((/localhost|(127|192\.168|10)\.(\d{1,3}\.?){2,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.(\d{1,3}\.?){2}/).test(location.hostname))) {
@@ -393,6 +400,13 @@ async function unpinAllPosts() {
     showModal(`<p>Success!</p>`)
 }
 
+async function followingFollowerList(userID, type=0, indexID=null) {
+    const res = await sendRequest(`/users/${type==0 ? "following" : "followers"}/${userID}${indexID ? `/${indexID}`:``}`, { method: "GET" });
+    if (res.error) return;
+
+    return res; 
+}
+
 async function followUser(userID, eleIdChange) {
     const res = await sendRequest(`/users/follow/${userID}`, { method: "POST" });
     if (res.error) return;
@@ -693,13 +707,15 @@ async function voteOption(pollID, optionID) {
     if (debug) console.log("Voted!")
 }
 
+async function followingFollowerPage(userID, type=0) {
+    searching = true
+    followingFollowerHtml(userID, type)
+    return null;
+}
+
 async function userPage(userSearch) {
     searching = true
-
-    // const userData = await sendRequest(`/users/get/basic/${username}`, { method: 'GET' })
-    
     userHtml(userSearch)
-
     return null;
 }
 
@@ -1741,6 +1757,87 @@ function convertRGBToHex(rgb) {
     return hex;
 }
 
+async function followingFollowerHtml(userID, type=0) {
+    followingFollowerData.type=type;
+    followingFollowerData.userID=userID;
+    // type, 0=following, 1=followers
+    const followData = await followingFollowerList(userID, type);
+    if (!followData) return; //showModal(`<p>Error: ${userList.code}, ${userList.msg}</p>`);
+
+    followingFollowerData.prevIndexID = followData.prevIndexID;
+
+    document.getElementById("mainFeed").innerHTML =  `
+        <div class="menu menu-style">
+            <p><b>Profile</b></p>
+            <button class="menuButton menuButton-style" onclick="userPage('${userID}')">Profile Page</button>
+        </div>
+
+        <div class="menu menu-style">
+            <p><b>${type == 0 ? "Following" : "Followers"}</b></p>
+        </div>
+        <div id="followingFollowerList"></div>
+    `;
+
+    /*<div class="menu menu-style">
+        <div onclick="userPage('${user._id}')">
+            <p><b>${user.displayName}</b></p>
+            <p><b>@${user.username}</p>
+        </div>
+    </div>*/
+    
+    if (!followData.found || !followData?.userData) return document.getElementById("followingFollowerList").innerHTML = `
+        <div class="publicPost posts-style">
+            <p>No ${type==0 ? "following" : "followers"} found</p>
+        </div>
+    `;
+
+    followingFollowerListStore = [...followData?.userData];
+    
+    listFollowingFollower();
+}
+
+function listFollowingFollower() {
+    followingFollowerData.currentlyBuilding = true;
+    var ele = ``;
+
+    for (const user of followingFollowerListStore) {
+        var timesince
+        if (user.creationTimestamp) timesince = checkDate(user.creationTimestamp)
+
+        ele += `
+            <div class="publicPost posts-style">
+                <p class="${user._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" onclick="userHtml('${user._id}')"> ${user.displayName} @${user.username} | ${user.creationTimestamp ? timesince : '' }</p>
+                <p>${user.description ? user.description : "no description"}</p>
+                <p>Following: ${user.followingCount} | Followers: ${user.followerCount}</p>
+                ${user._id == currentUserLogin.userID ? `` : `
+                    <p id="follow_search_id_${user._id}" onclick=
+                    ${user.followed===true ? 
+                        `"unFollowUser('${user._id}', 'follow_search_id_${user._id}')">Unfollow User` :
+                        `"followUser('${user._id}', 'follow_search_id_${user._id}')">Follow User`
+                    }</p>
+                `}
+                <p class="debug" onclick="copyToClipboard('${user._id}')">${user._id}</p>
+            </div>
+        `;
+    }
+
+    ele+=`<div id="addToBottomFollowingFollower"></div>`;
+    document.getElementById("followingFollowerList").innerHTML = ele;
+    followingFollowerData.currentlyBuilding=false;
+}
+
+async function nextFollowingFollowerList() {
+    if (!followingFollowerData.prevIndexID) return;
+    if (followingFollowerData.currentlyBuilding) return;
+    followingFollowerData.currentlyBuilding=true;
+    const followData = await followingFollowerList(followingFollowerData.userID, followingFollowerData.type, followingFollowerData.prevIndexID);
+    if (!followData) return; //showModal(`<p>Error: ${userList.code}, ${userList.msg}</p>`);
+
+    followingFollowerData.prevIndexID = followData.prevIndexID;
+    followingFollowerListStore = [...followingFollowerListStore, ...followData?.userData];
+    listFollowingFollower();
+}
+
 async function userHtml(userSearch) {
     const profileData = await getFullUserData(userSearch)
     if (!profileData) return showModal("<div><p>Sorry, this user does not exist!</p></div>")
@@ -1776,7 +1873,8 @@ async function userHtml(userSearch) {
         }
         <div class="menu menu-style">
             <p><b>Follow Data</b><p>
-            <p>Followers: ${profileData.userData.followerCount} | Following: ${profileData.userData.followingCount}</p>
+            <button class="menu menu-style" onclick="followingFollowerPage('${profileData.userData._id}', 0)">Following: ${profileData.userData.followingCount}</button>
+            <button class="menu menu-style" onclick="followingFollowerPage('${profileData.userData._id}', 1)">Followers: ${profileData.userData.followerCount}</button>
             ${profileData.userData._id == currentUserLogin.userID ? `` : `
                 <button class="menu menu-style" id="follow_user_id_${profileData.userData._id}" onclick=
                 ${profileData.extraData.followed===true ? 
@@ -3161,6 +3259,7 @@ function handleIntersection(entries, observer) {
     entries.forEach(entry => {
         if (entry.isIntersecting) {
             console.log('Bottom div is now in view!');
+            if (document.getElementById("addToBottomFollowingFollower")) return nextFollowingFollowerList()
             if (!buildingFeed) nextFeedPage(currentFeedType)
             // Do something when the bottom div is in view
         }
@@ -3439,7 +3538,7 @@ async function searchResult(input) {
         ${data.usersFound.reverse().map(function(user) {
             var timesince
             if (user.creationTimestamp) timesince = checkDate(user.creationTimestamp)
-            console.log(user)
+
             return `
                 <div class="publicPost posts-style">
                     <p class="${user._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" onclick="userHtml('${user._id}')"> ${user.displayName} @${user.username} | ${user.creationTimestamp ? timesince : '' }</p>
