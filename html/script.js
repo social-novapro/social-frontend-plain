@@ -1775,8 +1775,8 @@ async function followingFollowerHtml(userID, type=0) {
         <div class="menu menu-style">
             <p><b><u>${type == 0 ? "Following" : "Followers"}</u></b></p>
             <div>
-                <button class="menuButton menuButton-style" onclick="${type == 1 ? `followingFollowerHtml('${userID}', 0)` : ""}">Following</button>
-                <button class="menuButton menuButton-style" onclick="${type == 0 ? `followingFollowerHtml('${userID}', 1)` : ""}">Followers</button>
+                <button class="menuButton menuButton-style" onclick="${type == 1 ? `followingFollowerHtml('${userID}', 0)` : ""}">${followData.userData.followingCount} Following</button>
+                <button class="menuButton menuButton-style" onclick="${type == 0 ? `followingFollowerHtml('${userID}', 1)` : ""}">${followData.userData.followerCount} Follower${followData.userData.followerCount == 1 ? "":"s"}</button>
             </div>
 
         </div>
