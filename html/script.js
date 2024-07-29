@@ -1785,14 +1785,14 @@ async function followingFollowerHtml(userID, type=0) {
         </div>
     </div>*/
     
-    if (!followData.found || !followData?.userData) return document.getElementById("followingFollowerList").innerHTML = `
+    if (!followData.found || !followData?.data) return document.getElementById("followingFollowerList").innerHTML = `
         <div class="publicPost posts-style">
             <p>No ${type==0 ? "following" : "followers"} found</p>
         </div>
     `;
 
-    followingFollowerListStore = [...followData?.userData];
-    
+    followingFollowerListStore = [...followData?.data];
+
     listFollowingFollower();
 }
 
@@ -1800,9 +1800,15 @@ function listFollowingFollower() {
     followingFollowerData.currentlyBuilding = true;
     var ele = ``;
 
-    for (const user of followingFollowerListStore) {
+    for (const data of followingFollowerListStore) {
+        const user = data.userData;
+        const follow = data.followData;
+
         var timesince
         if (user.creationTimestamp) timesince = checkDate(user.creationTimestamp)
+
+        var timesinceFollow
+        if (follow.timestamp) timesinceFollow = checkDate(follow.timestamp)
 
         ele += `
             <div class="publicPost posts-style">
@@ -1817,6 +1823,7 @@ function listFollowingFollower() {
                     }</p>
                 `}
                 <p class="debug" onclick="copyToClipboard('${user._id}')">${user._id}</p>
+               ${follow.timestamp ? `<p>Followed: ${timesinceFollow}</p>` : ``}
             </div>
         `;
     }
@@ -1834,7 +1841,7 @@ async function nextFollowingFollowerList() {
     if (!followData) return; //showModal(`<p>Error: ${userList.code}, ${userList.msg}</p>`);
 
     followingFollowerData.prevIndexID = followData.prevIndexID;
-    followingFollowerListStore = [...followingFollowerListStore, ...followData?.userData];
+    followingFollowerListStore = [...followingFollowerListStore, ...followData?.data];
     listFollowingFollower();
 }
 
