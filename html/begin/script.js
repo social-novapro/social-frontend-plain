@@ -225,15 +225,15 @@ function createUserPage() {
                     <input type="text" class="contentMessage userEditForm menu-style" id="emailCreate" placeholder="Email" type="text" name="email">
                 </div>
                 <div class="menu menu-style">
-                    <p>Enter Your New Username:</p>
+                    <p>Enter Your New Username: (required)</p>
                     <input type="text" class="contentMessage userEditForm menu-style" id="usernameCreate" placeholder="Username" type="text" name="username">
                 </div>
                 <div class="menu menu-style">
-                    <p>Enter Your New Displayname:</p>
+                    <p>Enter Your New Displayname: (required)</p>
                     <input type="text" class="contentMessage userEditForm menu-style" id="displaynameCreate" placeholder="Displayname">
                 </div>
                 <div class="menu menu-style">
-                    <p>Enter Your New Password:</p>
+                    <p>Enter Your New Password: (required)</p>
                     <input type="password" class="contentMessage userEditForm menu-style" id="passwordCreate" placeholder="Password" name="password">
                 </div>
                 <div class="menu menu-style">
@@ -245,6 +245,10 @@ function createUserPage() {
                     <input type="text" class="contentMessage userEditForm menu-style" id="pronounsCreate" placeholder="Pronouns">
                 </div>
                 <div class="menu menu-style">
+                    <p>Enter Your Birthdate: (required)</p>
+                    <input type="date" class="contentMessage userEditForm menu-style" id="birthDateCreate" placeholder="01/01/04">
+                </div>
+                <div class="menu menu-style">
                     <button class="buttonStyled" type="submit">Create Account</div>
                 </div>
             </form>
@@ -252,7 +256,10 @@ function createUserPage() {
     `
     document.getElementById("createUserForm").addEventListener("submit", function (e) { e.preventDefault()})
 }
-
+function convertDateToEpoch(date) {
+    const newDate = new Date(date).getTime()
+    return newDate;
+}
 async function createNewUserRequest() {
     var emailCreate = document.getElementById('emailCreate').value;
     var usernameCreate = document.getElementById('usernameCreate').value;
@@ -260,6 +267,7 @@ async function createNewUserRequest() {
     var passwordCreate = document.getElementById('passwordCreate').value;
     var descriptionCreate = document.getElementById('descriptionCreate').value;
     var pronounsCreate = document.getElementById('pronounsCreate').value;
+    var birthDateCreate = document.getElementById('birthDateCreate').value;
 
     var data = {}
     if (emailCreate) data.email = emailCreate;
@@ -268,6 +276,7 @@ async function createNewUserRequest() {
     if (passwordCreate) data.password = passwordCreate
     if (descriptionCreate) data.description = descriptionCreate
     if (pronounsCreate) data.pronouns = pronounsCreate
+    if (birthDateCreate) data.userAge = convertDateToEpoch(birthDateCreate)
 
     const response = await fetch(`${apiURL}Priv/post/newUser`, {
         method: 'POST',

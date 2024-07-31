@@ -909,6 +909,55 @@ async function profile() {
     currentPage = "profile"
 }
 
+function convertEpochToDate(epoch) {
+    // ms to mm-dd-yyyy
+    const newDate = new Date(epoch).toLocaleDateString()
+    return newDate;
+}
+
+function convertDateToEpoch(date) {
+    const newDate = new Date(date).getTime()
+    return newDate;
+}
+
+async function userEditV2() {
+    if (!userData || !userData.userUpdates) return showModal(`<p>Error: No user data found, reopen edit page.</p>`)
+
+    var editBody = {};
+
+    for (const update of userData.userUpdates) {
+        var value = document.getElementById(`userEdit_${update.dbName}_text`).value
+        console.log(value)
+
+        if (!value || (update.currentValue && update.currentValue == value)) continue;
+        if (update.type == "Date") value = convertDateToEpoch(value)
+
+        editBody[update.dbName] = value;
+    }
+
+    const newUser = await sendRequest(`/users/update`, {
+        method: 'POST',
+        body: editBody
+    });
+
+    if (!newUser || newUser.error) return console.log(newUser);
+    userData.userUpdates = newUser.newData;
+    
+    if (newUser.fails && newUser.fails[0]) {
+        for (const fail of newUser.fails) {
+            document.getElementById(`userEdit_update_${fail.field}`).innerText = fail.msg;
+        }
+    }
+
+    if (newUser.acceptedChanges && newUser.acceptedChanges[0]) {
+        for (const accepted of newUser.acceptedChanges) {
+            if (accepted.type == "Date") accepted.value = convertEpochToDate(accepted.value)
+            document.getElementById(`userEdit_${accepted.field}_text`).value = accepted.value;
+            document.getElementById(`userEdit_update_${accepted.field}`).innerText = `Updated to: ${accepted.value}`;
+        }
+    }
+}
+
 async function userEdit(action) {
     const possibleEdits = ["profileImage", "displayName", "username", "status", "description", "pronouns"];
     var actions = []; 
@@ -1269,19 +1318,35 @@ async function userEditHtmlV2(userID) {
             </div>
             <div class="menu menu-style">
                 <p><b>Save any changes made</b></p>
-                <button class="menuButton menuButton-style" onclick="userEdit()">Save</button>
+                <button class="menuButton menuButton-style" onclick="userEditV2()">Save</button>
             </div>
     `
 
     for (const update of updateData) {
+        if (update.type=="Date") {
+            ele+=`
+                <div class="menu menu-style">
+                    <p><b>${update.title}</b></p>
+                    <p>${update.description}</p>
+                    <p id="userEdit_current_${update.dbName}">Current: ${update.currentValue ? convertEpochToDate(update.currentValue) : "No value set"}</p>
+                    <p id="userEdit_update_${update.dbName}"></p>
+                    <form id="userEdit_${update.dbName}" class="contentMessage" onsubmit="userEditV2()">
+                        <input type="date" id="userEdit_${update.dbName}_text" class="userEditForm menu-style" placeholder="${update.currentValue ? convertEpochToDate(update.currentValue) : update.title}" value="${update.currentValue ? convertEpochToDate(update.currentValue) : ""}">
+                    </form>
+                </div>
+            `
+            continue;
+        }
+
         ele+=`
             <div class="menu menu-style">
                 <p><b>${update.title}</b></p>
                 <p>${update.description}</p>
                 <p>Current: ${update.currentValue || "No value set"}</p>
                 ${update.dbName=="profileURL" && update.currentValue != null? `<img src="${update.currentValue}" class="profileImage">` : ""}
-                <form id="userEdit_${update.dbName}" class="contentMessage" onsubmit="userEdit('${update.action}')">
-                    <input type="text" id="userEdit_${update.dbName}_text" class="userEditForm menu-style" placeholder="${update.currentValue || update.title}">
+                    <p id="userEdit_update_${update.dbName}"></p>
+                    <form id="userEdit_${update.dbName}" class="contentMessage" onsubmit="userEditV2Specific('${update.action}')">
+                    <input type="text" id="userEdit_${update.dbName}_text" class="userEditForm menu-style" placeholder="${update.currentValue || update.title}" value="${update.currentValue || ""}">
                 </form>
             </div>
         `
