@@ -42,7 +42,10 @@ var currentFeed
 var currentFeedType
 var mobileClient = checkifMobile();
 var followingFollowerListStore = []
-
+var userData = {
+    userProfile: null,
+    userUpdates: null,
+}
 // LOCAL STORAGE
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 var LOCAL_STORAGE_LOGINS='social.loginAccounts'
@@ -1240,8 +1243,81 @@ function switchDevMode() {
 }
 
 async function userEditPage() {
-    await userEditHtml(currentUserLogin.userID);
+    await userEditHtmlV2(currentUserLogin.userID);
     return true;
+}
+async function userEditHtmlV2(userID) {
+    if (userID != currentUserLogin.userID) return showModal("<div><p>Sorry, you can't edit this user!</p></div>");
+    changeHeader("?userEdit")
+
+    const updateData = await sendRequest(`/users/update/`, { method: 'GET' })
+    const profileData = await sendRequest(`/users/get/basic/${userID}`, { method: 'GET' })
+
+    userData.userProfile = profileData
+    userData.userUpdates = updateData
+
+    var timesince
+    if (profileData.creationTimestamp) timesince = checkDate(profileData.creationTimestamp)
+
+    if (profileData?.displayName) document.title = `${profileData?.displayName} | Interact`
+
+    console.log(updateData)
+    var ele = `
+        <div class="userEdit">
+            <div class="menu menu-style">
+                <h1 class="font_h1-style">Edit Profile</h1>
+            </div>
+            <div class="menu menu-style">
+                <p><b>Save any changes made</b></p>
+                <button class="menuButton menuButton-style" onclick="userEdit()">Save</button>
+            </div>
+    `
+
+    for (const update of updateData) {
+        ele+=`
+            <div class="menu menu-style">
+                <p><b>${update.title}</b></p>
+                <p>${update.description}</p>
+                <p>Current: ${update.currentValue || "No value set"}</p>
+                ${update.dbName=="profileURL" && update.currentValue != null? `<img src="${update.currentValue}" class="profileImage">` : ""}
+                <form id="userEdit_${update.dbName}" class="contentMessage" onsubmit="userEdit('${update.action}')">
+                    <input type="text" id="userEdit_${update.dbName}_text" class="userEditForm menu-style" placeholder="${update.currentValue || update.title}">
+                </form>
+            </div>
+        `
+    }
+
+    ele+=`
+        ${profileData.creationTimestamp ? `  
+            <div class="menu menu-style">
+                <p><b>Creation</b></p>
+                <p>${timesince}</p>
+            </div>
+        `: `` }
+        ${profileData.verified ? `
+            <div class="menu menu-style">
+                <p>Verified</p>
+            </div>
+        ` : `
+            <div class="menu menu-style">
+                <p><b>Verify ✔️</b></p>
+                <div class="searchSelect search menu-style">
+                    <input id="content_request_verification" class="menu-style" placeholder="Why do you want to verify?">
+                </div>
+                <button class="menuButton menuButton-style" onclick="requestVerification()">Request</button>
+            </div>
+        `}
+    </div>`
+
+    document.getElementById("mainFeed").innerHTML = ele;
+
+    for (const update of updateData) {
+        document.getElementById(`userEdit_${update.dbName}`).addEventListener("submit", function (e) { e.preventDefault()})
+    }
+}
+
+async function updateProfile(userID) {
+
 }
 
 async function userEditHtml(userID) {
