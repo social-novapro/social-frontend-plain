@@ -916,8 +916,10 @@ function convertEpochToDate(epoch) {
 }
 
 function convertDateToEpoch(date) {
-    const newDate = new Date(date).getTime()
-    return newDate;
+    const newDate = new Date(date);
+    const timezoneOffset = newDate.getTimezoneOffset() * 60000;
+    const adjustedDate = newDate.getTime() + timezoneOffset;
+    return adjustedDate;
 }
 
 async function userEditV2() {
