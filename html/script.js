@@ -23,6 +23,7 @@ var prevIndexID = 0;
 var followingFollowerData = {
     userID: null,
     prevIndexID: null,
+    userData: null,
     currentlyBuilding: false,
     type: 0
 }
@@ -1905,9 +1906,11 @@ async function followingFollowerHtml(userID, type=0) {
     followingFollowerData.userID=userID;
     // type, 0=following, 1=followers
     const followData = await followingFollowerList(userID, type);
+    console.log(followData)
     if (!followData) return; //showModal(`<p>Error: ${userList.code}, ${userList.msg}</p>`);
 
-    followingFollowerData.prevIndexID = followData.prevIndexID;
+    if (followData.prevIndexID) followingFollowerData.prevIndexID = followData.prevIndexID;
+    if (followData.userData) followingFollowerData.userData = followData.userData;
 
     document.getElementById("mainFeed").innerHTML =  `
         <div class="menu menu-style">
@@ -1918,8 +1921,8 @@ async function followingFollowerHtml(userID, type=0) {
         <div class="menu menu-style">
             <p><b><u>${type == 0 ? "Following" : "Followers"}</u></b></p>
             <div>
-                <button class="menuButton menuButton-style" onclick="${type == 1 ? `followingFollowerHtml('${userID}', 0)` : ""}">${followData.userData.followingCount} Following</button>
-                <button class="menuButton menuButton-style" onclick="${type == 0 ? `followingFollowerHtml('${userID}', 1)` : ""}">${followData.userData.followerCount} Follower${followData.userData.followerCount == 1 ? "":"s"}</button>
+                <button class="menuButton menuButton-style" onclick="${type == 1 ? `followingFollowerHtml('${userID}', 0)` : ""}">${followingFollowerData.userData?.followingCount} Following</button>
+                <button class="menuButton menuButton-style" onclick="${type == 0 ? `followingFollowerHtml('${userID}', 1)` : ""}">${followingFollowerData.userData?.followerCount} Follower${followingFollowerData.userData?.followerCount ?? 0 == 1 ? "":"s"}</button>
             </div>
 
         </div>
@@ -2007,6 +2010,8 @@ async function userHtml(userSearch) {
     
     if (!profileData.postData.error) profileData.postData.reverse()
     if (debug) console.log(profileData)
+    if (profileData.userData) followingFollowerData.userData = profileData.userData;
+
 
     document.getElementById("mainFeed").innerHTML =  `
         ${clientUser ? `
