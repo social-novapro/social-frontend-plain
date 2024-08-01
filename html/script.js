@@ -20,6 +20,14 @@ var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : con
 var hostedUrl = `${config ? `${config.current == "prod" ? config.prod.hosted_url : config.dev.hosted_url}` : 'https://interact.novapro.net/' }`
 // var params = new URLSearchParams(window.location.search)
 var prevIndexID = 0;
+var followingFollowerData = {
+    userID: null,
+    prevIndexID: null,
+    userData: null,
+    currentlyBuilding: false,
+    type: 0
+}
+
 // API HEADERS
 var headers = {
     'Content-Type': 'application/json',
@@ -34,7 +42,11 @@ var searching
 var currentFeed 
 var currentFeedType
 var mobileClient = checkifMobile();
-
+var followingFollowerListStore = []
+var userData = {
+    userProfile: null,
+    userUpdates: null,
+}
 // LOCAL STORAGE
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 var LOCAL_STORAGE_LOGINS='social.loginAccounts'
@@ -51,7 +63,6 @@ function checkifMobile() {
         return false;
     }
 }
-
 
 // makes sure url is as expected
 if (location.protocol !== 'https:' && !((/localhost|(127|192\.168|10)\.(\d{1,3}\.?){2,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.(\d{1,3}\.?){2}/).test(location.hostname))) {
@@ -265,7 +276,7 @@ function postElementCreate({
                             </p>
                         ` : ''}
                     ` : ''}
-                    <p id="popupactions_${post._id}" class="posts_action-style" onclick="popupActions('${post._id}', '${options.hideParent}', '${options.hideReplies}', '${options.owner}', ${extraData.pinned}, ${extraData.saved})">${styleActionButton()}</p>
+                    <p id="popupactions_${post._id}" class="posts_action-style" onclick="popupActions('${post._id}', '${post.userID}', '${options.hideParent}', '${options.hideReplies}', ${owner}, ${extraData.pinned}, ${extraData.saved}, ${extraData.followed})">${styleActionButton()}</p>
                 </div>
             </div>
         </div>
@@ -328,14 +339,14 @@ function removeColorOption(pollID, optionID) {
     document.getElementById(elementID).classList.remove("voted");
 }
 
-async function popupActions(postID, hideParent, hideReplies, owner, pinned=false, saved=false) {
+async function popupActions(postID, userID, hideParent, hideReplies, owner, pinned=false, saved=false, followed=false) {
     var elementPopup = document.getElementById(`popupOpen_${postID}`);
     if (elementPopup) {
         document.getElementById(`popupactions_${postID}`).innerHTML = styleActionButton(false)
         return elementPopup.remove();
     } else {
         document.getElementById(`popupactions_${postID}`).innerHTML = styleActionButton(true)
-    }   
+    }
 
     document.getElementById(`postElement_${postID}`).innerHTML+=`
         <div id="popupOpen_${postID}" class="publicPost posts-style no-select" style="position: element(#popupactions_${postID});">
@@ -351,6 +362,11 @@ async function popupActions(postID, hideParent, hideReplies, owner, pinned=false
             <p>---</p>
             <p class="pointerCursor" onclick="${pinned===true ? `unpinPost('${postID}')` : `pinPost('${postID}')` }" id="pin_post_${postID}">${pinned===true ? `Unpin from Profile` : `Pin to Profile` }</p>
             <p class="pointerCursor" onclick="${saved===true ? `unsaveBookmark('${postID}')` : `saveBookmark('${postID}')`}" id="saveBookmark_${postID}">${saved===true ? `Remove from Bookmarks`:`Save to Bookmarks`}</p>
+            <p class="pointerCursor" id="followUser_${postID}" onclick=
+            ${owner ? `` : `${followed===true ? 
+                `"unFollowUser('${userID}', 'followUser_${postID}')">Unfollow User` :
+                `"followUser('${userID}', 'followUser_${postID}')">Follow User`
+            }</p>`}
             <p class="pointerCursor" onclick="copyPostLink('${postID}')" id="post_copy_${postID}">Copy Post Link</p>
             <p class="pointerCursor" onclick="showEditHistory('${postID}')" id="editHistory_${postID}">Check Edit History</p>
             <p class="pointerCursor" onclick="showLikes('${postID}')" id="likedBy_${postID}">Check Who Liked</p>
@@ -386,6 +402,37 @@ async function unpinAllPosts() {
     if (req.error) return
 
     showModal(`<p>Success!</p>`)
+}
+
+async function followingFollowerList(userID, type=0, indexID=null) {
+    const res = await sendRequest(`/users/${type==0 ? "following" : "followers"}/${userID}${indexID ? `/${indexID}`:``}`, { method: "GET" });
+    if (res.error) return;
+
+    return res; 
+}
+
+async function followUser(userID, eleIdChange) {
+    const res = await sendRequest(`/users/follow/${userID}`, { method: "POST" });
+    if (res.error) return;
+
+    if (eleIdChange) {
+        document.getElementById(eleIdChange).innerText="Unfollow User";
+        document.getElementById(eleIdChange).onclick = () => unFollowUser(userID, eleIdChange);
+    } else {
+        showModal(`<p>Unfollowed User!</p>`);
+    }
+}
+
+async function unFollowUser(userID, eleIdChange) {
+    const res = await sendRequest(`/users/unfollow/${userID}`, { method: "DELETE" });
+    if (res.error) return;
+
+    if (eleIdChange) {
+        document.getElementById(eleIdChange).innerText="Follow User";
+        document.getElementById(eleIdChange).onclick = () => followUser(userID, eleIdChange);
+    } else {
+        showModal(`<p>Unfollowed User!</p>`);
+    }
 }
 
 async function viewParentPost(postID, parentPostID) {
@@ -664,13 +711,15 @@ async function voteOption(pollID, optionID) {
     if (debug) console.log("Voted!")
 }
 
+async function followingFollowerPage(userID, type=0) {
+    searching = true
+    followingFollowerHtml(userID, type)
+    return null;
+}
+
 async function userPage(userSearch) {
     searching = true
-
-    // const userData = await sendRequest(`/users/get/basic/${username}`, { method: 'GET' })
-    
     userHtml(userSearch)
-
     return null;
 }
 
@@ -861,6 +910,57 @@ async function profile() {
     currentPage = "profile"
 }
 
+function convertEpochToDate(epoch) {
+    // ms to mm-dd-yyyy
+    const newDate = new Date(epoch).toLocaleDateString()
+    return newDate;
+}
+
+function convertDateToEpoch(date) {
+    const newDate = new Date(date);
+    const timezoneOffset = newDate.getTimezoneOffset() * 60000;
+    const adjustedDate = newDate.getTime() + timezoneOffset;
+    return adjustedDate;
+}
+
+async function userEditV2() {
+    if (!userData || !userData.userUpdates) return showModal(`<p>Error: No user data found, reopen edit page.</p>`)
+
+    var editBody = {};
+
+    for (const update of userData.userUpdates) {
+        var value = document.getElementById(`userEdit_${update.dbName}_text`).value
+        console.log(value)
+
+        if (!value || (update.currentValue && update.currentValue == value)) continue;
+        if (update.type == "Date") value = convertDateToEpoch(value)
+
+        editBody[update.dbName] = value;
+    }
+
+    const newUser = await sendRequest(`/users/update`, {
+        method: 'POST',
+        body: editBody
+    });
+
+    if (!newUser || newUser.error) return console.log(newUser);
+    userData.userUpdates = newUser.newData;
+    
+    if (newUser.fails && newUser.fails[0]) {
+        for (const fail of newUser.fails) {
+            document.getElementById(`userEdit_update_${fail.field}`).innerText = fail.msg;
+        }
+    }
+
+    if (newUser.acceptedChanges && newUser.acceptedChanges[0]) {
+        for (const accepted of newUser.acceptedChanges) {
+            if (accepted.type == "Date") accepted.value = convertEpochToDate(accepted.value)
+            document.getElementById(`userEdit_${accepted.field}_text`).value = accepted.value;
+            document.getElementById(`userEdit_update_${accepted.field}`).innerText = `Updated to: ${accepted.value}`;
+        }
+    }
+}
+
 async function userEdit(action) {
     const possibleEdits = ["profileImage", "displayName", "username", "status", "description", "pronouns"];
     var actions = []; 
@@ -1045,6 +1145,7 @@ function generateRelatedPages() {
         { name: "Analytics", url: "https://interact-analytics.novapro.net" },
         { name: "Interact Info", url: "https://novapro.net/interact/" },
         { name: "Admin Page", url: "/admin/" },
+        { name: "Interact Staff", url: "/staff/" },
         { name: "GitHub", url: "https://github.com/social-novapro/" },
         { name: "Nova Productions", url: "https://novapro.net/" },
         { name: "dkravec site", url: "https://dkravec.net/" },
@@ -1194,8 +1295,97 @@ function switchDevMode() {
 }
 
 async function userEditPage() {
-    await userEditHtml(currentUserLogin.userID);
+    await userEditHtmlV2(currentUserLogin.userID);
     return true;
+}
+async function userEditHtmlV2(userID) {
+    if (userID != currentUserLogin.userID) return showModal("<div><p>Sorry, you can't edit this user!</p></div>");
+    changeHeader("?userEdit")
+
+    const updateData = await sendRequest(`/users/update/`, { method: 'GET' })
+    const profileData = await sendRequest(`/users/get/basic/${userID}`, { method: 'GET' })
+
+    userData.userProfile = profileData
+    userData.userUpdates = updateData
+
+    var timesince
+    if (profileData.creationTimestamp) timesince = checkDate(profileData.creationTimestamp)
+
+    if (profileData?.displayName) document.title = `${profileData?.displayName} | Interact`
+
+    console.log(updateData)
+    var ele = `
+        <div class="userEdit">
+            <div class="menu menu-style">
+                <h1 class="font_h1-style">Edit Profile</h1>
+            </div>
+            <div class="menu menu-style">
+                <p><b>Save any changes made</b></p>
+                <button class="menuButton menuButton-style" onclick="userEditV2()">Save</button>
+            </div>
+    `
+
+    for (const update of updateData) {
+        if (update.type=="Date") {
+            ele+=`
+                <div class="menu menu-style">
+                    <p><b>${update.title}</b></p>
+                    <p>${update.description}</p>
+                    <p id="userEdit_current_${update.dbName}">Current: ${update.currentValue ? convertEpochToDate(update.currentValue) : "No value set"}</p>
+                    <p id="userEdit_update_${update.dbName}"></p>
+                    <form id="userEdit_${update.dbName}" class="contentMessage" onsubmit="userEditV2()">
+                        <input type="date" id="userEdit_${update.dbName}_text" class="userEditForm menu-style" placeholder="${update.currentValue ? convertEpochToDate(update.currentValue) : update.title}" value="${update.currentValue ? convertEpochToDate(update.currentValue) : ""}">
+                    </form>
+                </div>
+            `
+            continue;
+        }
+
+        ele+=`
+            <div class="menu menu-style">
+                <p><b>${update.title}</b></p>
+                <p>${update.description}</p>
+                <p>Current: ${update.currentValue || "No value set"}</p>
+                ${update.dbName=="profileURL" && update.currentValue != null? `<img src="${update.currentValue}" class="profileImage">` : ""}
+                    <p id="userEdit_update_${update.dbName}"></p>
+                    <form id="userEdit_${update.dbName}" class="contentMessage" onsubmit="userEditV2Specific('${update.action}')">
+                    <input type="text" id="userEdit_${update.dbName}_text" class="userEditForm menu-style" placeholder="${update.currentValue || update.title}" value="${update.currentValue || ""}">
+                </form>
+            </div>
+        `
+    }
+
+    ele+=`
+        ${profileData.creationTimestamp ? `  
+            <div class="menu menu-style">
+                <p><b>Creation</b></p>
+                <p>${timesince}</p>
+            </div>
+        `: `` }
+        ${profileData.verified ? `
+            <div class="menu menu-style">
+                <p>Verified</p>
+            </div>
+        ` : `
+            <div class="menu menu-style">
+                <p><b>Verify ✔️</b></p>
+                <div class="searchSelect search menu-style">
+                    <input id="content_request_verification" class="menu-style" placeholder="Why do you want to verify?">
+                </div>
+                <button class="menuButton menuButton-style" onclick="requestVerification()">Request</button>
+            </div>
+        `}
+    </div>`
+
+    document.getElementById("mainFeed").innerHTML = ele;
+
+    for (const update of updateData) {
+        document.getElementById(`userEdit_${update.dbName}`).addEventListener("submit", function (e) { e.preventDefault()})
+    }
+}
+
+async function updateProfile(userID) {
+
 }
 
 async function userEditHtml(userID) {
@@ -1711,6 +1901,101 @@ function convertRGBToHex(rgb) {
     return hex;
 }
 
+async function followingFollowerHtml(userID, type=0) {
+    followingFollowerData.type=type;
+    followingFollowerData.userID=userID;
+    // type, 0=following, 1=followers
+    const followData = await followingFollowerList(userID, type);
+    console.log(followData)
+    if (!followData) return; //showModal(`<p>Error: ${userList.code}, ${userList.msg}</p>`);
+
+    if (followData.prevIndexID) followingFollowerData.prevIndexID = followData.prevIndexID;
+    if (followData.userData) followingFollowerData.userData = followData.userData;
+
+    document.getElementById("mainFeed").innerHTML =  `
+        <div class="menu menu-style">
+            <p><b>Profile</b></p>
+            <button class="menuButton menuButton-style" onclick="userPage('${userID}')">Profile Page</button>
+        </div>
+
+        <div class="menu menu-style">
+            <p><b><u>${type == 0 ? "Following" : "Followers"}</u></b></p>
+            <div>
+                <button class="menuButton menuButton-style" onclick="${type == 1 ? `followingFollowerHtml('${userID}', 0)` : ""}">${followingFollowerData.userData?.followingCount} Following</button>
+                <button class="menuButton menuButton-style" onclick="${type == 0 ? `followingFollowerHtml('${userID}', 1)` : ""}">${followingFollowerData.userData?.followerCount} Follower${followingFollowerData.userData?.followerCount ?? 0 == 1 ? "":"s"}</button>
+            </div>
+
+        </div>
+        <div id="followingFollowerList"></div>
+    `;
+
+    /*<div class="menu menu-style">
+        <div onclick="userPage('${user._id}')">
+            <p><b>${user.displayName}</b></p>
+            <p><b>@${user.username}</p>
+        </div>
+    </div>*/
+    
+    if (!followData.found || !followData?.data) return document.getElementById("followingFollowerList").innerHTML = `
+        <div class="publicPost posts-style">
+            <p>No ${type==0 ? "following" : "followers"} found</p>
+        </div>
+    `;
+
+    followingFollowerListStore = [...followData?.data];
+
+    listFollowingFollower();
+}
+
+function listFollowingFollower() {
+    followingFollowerData.currentlyBuilding = true;
+    var ele = ``;
+
+    for (const data of followingFollowerListStore) {
+        const user = data.userData;
+        const follow = data.followData;
+
+        var timesince
+        if (user.creationTimestamp) timesince = checkDate(user.creationTimestamp)
+
+        var timesinceFollow
+        if (follow.timestamp) timesinceFollow = checkDate(follow.timestamp)
+
+        ele += `
+            <div class="publicPost posts-style">
+                <p class="${user._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" onclick="userHtml('${user._id}')"> ${user.displayName} @${user.username} | ${user.creationTimestamp ? timesince : '' }</p>
+                <p>${user.description ? user.description : "no description"}</p>
+                <p>Following: ${user.followingCount} | Followers: ${user.followerCount}</p>
+                ${user._id == currentUserLogin.userID ? `` : `
+                    <p id="follow_search_id_${user._id}" onclick=
+                    ${user.followed===true ? 
+                        `"unFollowUser('${user._id}', 'follow_search_id_${user._id}')">Unfollow User` :
+                        `"followUser('${user._id}', 'follow_search_id_${user._id}')">Follow User`
+                    }</p>
+                `}
+                <p class="debug" onclick="copyToClipboard('${user._id}')">${user._id}</p>
+               ${follow.timestamp ? `<p>Followed: ${timesinceFollow}</p>` : ``}
+            </div>
+        `;
+    }
+
+    ele+=`<div id="addToBottomFollowingFollower"></div>`;
+    document.getElementById("followingFollowerList").innerHTML = ele;
+    followingFollowerData.currentlyBuilding=false;
+}
+
+async function nextFollowingFollowerList() {
+    if (!followingFollowerData.prevIndexID) return;
+    if (followingFollowerData.currentlyBuilding) return;
+    followingFollowerData.currentlyBuilding=true;
+    const followData = await followingFollowerList(followingFollowerData.userID, followingFollowerData.type, followingFollowerData.prevIndexID);
+    if (!followData) return; //showModal(`<p>Error: ${userList.code}, ${userList.msg}</p>`);
+
+    followingFollowerData.prevIndexID = followData.prevIndexID;
+    followingFollowerListStore = [...followingFollowerListStore, ...followData?.data];
+    listFollowingFollower();
+}
+
 async function userHtml(userSearch) {
     const profileData = await getFullUserData(userSearch)
     if (!profileData) return showModal("<div><p>Sorry, this user does not exist!</p></div>")
@@ -1725,6 +2010,8 @@ async function userHtml(userSearch) {
     
     if (!profileData.postData.error) profileData.postData.reverse()
     if (debug) console.log(profileData)
+    if (profileData.userData) followingFollowerData.userData = profileData.userData;
+
 
     document.getElementById("mainFeed").innerHTML =  `
         ${clientUser ? `
@@ -1745,6 +2032,18 @@ async function userHtml(userSearch) {
             ` : ``
         }
         <div class="menu menu-style">
+            <p><b>Follow Data</b><p>
+            <button class="menu menu-style" onclick="followingFollowerPage('${profileData.userData._id}', 0)">Following: ${profileData.userData.followingCount}</button>
+            <button class="menu menu-style" onclick="followingFollowerPage('${profileData.userData._id}', 1)">Followers: ${profileData.userData.followerCount}</button>
+            ${profileData.userData._id == currentUserLogin.userID ? `` : `
+                <button class="menu menu-style" id="follow_user_id_${profileData.userData._id}" onclick=
+                ${profileData.extraData.followed===true ? 
+                    `"unFollowUser('${profileData.userData._id}', 'follow_user_id_${profileData.userData._id}')">Unfollow User` :
+                    `"followUser('${profileData.userData._id}', 'follow_user_id_${profileData.userData._id}')">Follow User`
+                }</button>
+            `}
+        </div>
+        <div class="menu menu-style">
             <p><b>Notifications</b></p>
             <a id="notificationSub" onclick="subNotifi('${profileData.userData._id}')">Subscribe</a>
         </div>
@@ -1757,7 +2056,6 @@ async function userHtml(userSearch) {
             <p>${profileData.userData.username}</p>
         </div>
         ${profileData.userData.statusTitle ? 
-
             `
                 <div class="menu menu-style">
                     <p><b>Status</b></p>
@@ -3121,6 +3419,7 @@ function handleIntersection(entries, observer) {
     entries.forEach(entry => {
         if (entry.isIntersecting) {
             console.log('Bottom div is now in view!');
+            if (document.getElementById("addToBottomFollowingFollower")) return nextFollowingFollowerList()
             if (!buildingFeed) nextFeedPage(currentFeedType)
             // Do something when the bottom div is in view
         }
@@ -3399,12 +3698,19 @@ async function searchResult(input) {
         ${data.usersFound.reverse().map(function(user) {
             var timesince
             if (user.creationTimestamp) timesince = checkDate(user.creationTimestamp)
-            
+
             return `
                 <div class="publicPost posts-style">
                     <p class="${user._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" onclick="userHtml('${user._id}')"> ${user.displayName} @${user.username} | ${user.creationTimestamp ? timesince : '' }</p>
                     <p>${user.description ? user.description : "no description"}</p>
                     <p>Following: ${user.followingCount} | Followers: ${user.followerCount}</p>
+                    ${user._id == currentUserLogin.userID ? `` : `
+                        <p id="follow_search_id_${user._id}" onclick=
+                        ${user.followed===true ? 
+                            `"unFollowUser('${user._id}', 'follow_search_id_${user._id}')">Unfollow User` :
+                            `"followUser('${user._id}', 'follow_search_id_${user._id}')">Follow User`
+                        }</p>
+                    `}
                     <p class="debug" onclick="copyToClipboard('${user._id}')">${user._id}</p>
                 </div>
             `
