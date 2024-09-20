@@ -35,9 +35,10 @@ function loadFiles(dir, subdir) {
                 if (possibleExtensions.includes(splitFilePath[splitFilePath.length-1])) {
                     // Cache the files so we can serve them dynamically
                     files[`${subdir}${routePath}`] = filePath;
+                    files[`${subdir}${routePath}/`] = filePath;
                     if (file == "index.html") {
                         files[`${subdir}`] = filePath;
-                        files[`/${subdir}`] = filePath;
+                        files[`${subdir}/`] = filePath;
                     }
                 } else {
                     console.log('----')

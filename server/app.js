@@ -1,19 +1,35 @@
 const express = require('express');
 const path = require('path');
+const requestIp = require('request-ip');
 const {startUpLoading, files} = require('./loadFiles');
-const PORT = 5500;
 
 const app = express();
+const PORT = 5500;
+
+// require request-ip and register it as middleware
+app.use(requestIp.mw({ attributeName : 'user-x-address' }))
 
 // Call loadFiles at startup
 startUpLoading();
+
+// send the varible that stores all routes
+app.get('/allroutes', (req, res) => {
+    res.status(200).send(files);
+})
 
 // Serve dynamic files based on what's in the directory
 app.get('*', (req, res) => {
     console.log('----')
     console.log('new request')
+    const requestData = {
+        referer: req.headers.referer,
+        user_x_address: req['user-x-address'],
+        user_agent: req.headers['user-agent']
+    };
+
+    console.log(requestData)
     var fileName = req.path; // or originalUrl
-    console.log(req)
+    // console.log(req)
     console.log("fileName", fileName)
     console.log("referer", req.headers.referer)
 

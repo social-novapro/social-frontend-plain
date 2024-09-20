@@ -4,12 +4,13 @@
   "description": "This is Interact Frontend  created by Daniel Kravec",
   "main": "server/app.js",
   "scripts": {
-    "start" : "node .",
+    "start": "node .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.21.0"
+    "express": "^4.21.0",
+    "request-ip": "^3.3.0"
   }
 }
