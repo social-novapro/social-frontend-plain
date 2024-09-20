@@ -1,0 +1,15 @@
+{
+  "name": "social-frontend-plain",
+  "version": "1.0.0",
+  "description": "This is Interact Frontend  created by Daniel Kravec",
+  "main": "server/app.js",
+  "scripts": {
+    "start" : "node .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.0"
+  }
+}
