@@ -317,6 +317,31 @@
     padding: 0px;
 }
 
+/* article page*/
+.articleCreate {
+    width: 45%;
+}
+
+.articleCreationArea {
+    box-sizing: border-box;
+    border:1px solid white;
+    float: left;
+    margin: 0%;
+    padding: 0px;
+    width: 100%;
+}
+
+.articleCreate {
+    box-sizing: border-box;
+    float: left;
+    width: 50%;
+}
+.articlePreview {
+    box-sizing: border-box;
+    float: right;
+    width: 50%;
+}
+
 /* userEditPage */
 .userEdit {
     width: 100%;

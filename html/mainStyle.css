@@ -143,6 +143,9 @@ p {
 .spacer_2px {
     padding: 2px;
 }
+.spacer_10px {
+    padding: 10px;
+}
 .spacer {
     padding: 5px;
     background-color: red;

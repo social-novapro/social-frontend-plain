@@ -53,6 +53,10 @@ var LOCAL_STORAGE_LOGINS='social.loginAccounts'
 var LOCAL_STORAGE_THEME_SETTINGS = 'social.themeSettings'
 var LOCAL_STORAGE_THEME_POSSIBLE = 'social.themePossible'
 var buildingFeed = true;
+
+var articleComponentsStore = []
+var articleComponentsEditor = []
+var articleComponentsEditorIndex = 0
 // let loginUserToken = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
 
 function checkifMobile() {
@@ -96,6 +100,7 @@ async function checkURLParams() {
     const ifEmailSettings = params.has("emailSettings");
     const ifThemeSettings = params.has("themeEditor");
     const ifThemeDiscovery = params.has("themeDiscovery")
+    const ifCreateArticle = params.has("createArticle")
 
     if (ifUsername) {
         paramsFound = true
@@ -156,6 +161,11 @@ async function checkURLParams() {
         settingsPage();
         await viewThemesDiscovery()
         document.getElementById("themeDiscovery").scrollIntoView();
+    } else if (ifCreateArticle) {
+        paramsFound = true
+        paramsInfo.paramsFound = true
+
+        createArticlePage()
     }
    
     return paramsInfo
@@ -4353,6 +4363,130 @@ async function renameUsername() {
             <p>Changed username! from ${newData.before.username} to ${newData.new.username}</p>
         `
     }
+}
+
+// ARTICLES
+async function createArticlePage() {
+    const articleComponents = await sendRequest(`/articles/create/components`, { method: 'GET' });
+    console.log(articleComponents)
+    if (!articleComponents || articleComponents.error) return false;
+    if (articleComponents) articleComponentsStore = articleComponents;
+
+    const ele = `
+        <div class="menu menu-style">
+            <h1>Create a new Article</h1>
+        </div>
+        <div class="articleCreationArea"> 
+            <div class="articleCreate"> 
+                <div id="articleEditor">
+                    <div class="userInfo userInfo-style search">
+                        <p>Title:</p><input class="postTextArea" style="height: 30px;" onkeyup="renderPreview()" id="newArticleTitleText"></input>
+                    </div>
+                    <div id="newComp"></div>
+                </div>
+                
+                <div>${addArticleComponentOptionsEle()}</div>
+            </div>
+
+            <div class="articlePreview" id="articlePreview">
+        </div>
+        </div>
+
+    `;
+    
+    
+    // ADD component
+    // TITLE 
+    // SUBMIT
+    // ASSIGN to blog page  / topic
+    
+    document.getElementById("mainFeed").innerHTML = ele;
+    renderPreview();
+}
+
+function addArticleComponent(compId) {
+    // articleEditor
+    const componentId = articleComponentsEditorIndex;
+    articleComponentsEditorIndex++;
+    const newArticlePlacement = document.getElementById('newComp');
+    if (!newArticlePlacement) return false;
+
+    const foundComponent = articleComponentsStore.find(comp => comp.type.id == compId);
+    console.log("foundComponent", foundComponent)
+
+    if (!foundComponent) return false;
+    const ele = `
+        <div class="userInfo userInfo-style search" id="article_component_${componentId}">
+            <p>${foundComponent.type.name}</p><input class="postTextArea" style="height: 30px;" id="article_component_${componentId}_value" onkeyup="renderPreview()"${foundComponent.type.placeholder? `placeholder="${foundComponent.type.placeholder}"`: ``} ></input>
+        </div>
+        <div id="newComp"></div>
+    `;
+
+    articleComponentsEditor.push({ id: compId, type: foundComponent.type });
+    newArticlePlacement.outerHTML = ele;
+}
+
+function renderPreview() {
+    const title = document.getElementById('newArticleTitleText')?.value;
+    const components = [];
+
+    for (var i=0; i<articleComponentsEditorIndex; i++) {
+        const compData = articleComponentsEditor[i];
+        const compType = articleComponentsStore.find(comp => comp.type.id == compData.type.id);
+        const compValue = document.getElementById(`article_component_${i}_value`)?.value;
+        
+        if (!compValue) continue;
+        components.push({
+            type: compType.type,
+            value: compValue
+        });
+    }
+
+    const ele = articleViewEle({
+        title: title ? title : "New Article",
+        topic: "Test Topic",
+        components: components
+    });
+
+    document.getElementById("articlePreview").innerHTML = ele;
+}
+
+function addArticleComponentOptionsEle() {
+    var ele = ``;
+
+    for (const component of articleComponentsStore) {
+        ele += `<div class="menu menu-style" onclick="addArticleComponent('${component.type.id}')">
+            <h2>${component.type.name}</h2>
+            <p>${component.type.description}</p>
+        </div>`
+    }
+
+    return ele;
+}
+
+function articleViewEle(articleData, articleUser) {
+    var ele = ``
+    if (articleData.title) ele += `<h1>${articleData.title}</h1>`
+    if (articleData.topic) ele += `<p>Written for: ${articleData.topic}</p>`
+    
+    ele+=`<div class="spacer_10px"></div>`
+
+    if (articleData.components) {
+        for (const component of articleData.components) {
+            ele += `<div class="menu menu-style">` // for now
+            // ele+=`<div class="spacer_2px"></div>`
+            if (component.type.id==0) {
+                ele += `<h2>${component.value}</h2>`
+            } else if (component.type.id==1) {
+                ele += `<h3 style="color: var(--main-p-color);">${component.value}</h3>`
+            } else if (component.type.id==2) {
+                ele += `<p>${component.value}</p>`
+            }
+            ele += `</div>`
+        }
+    }
+
+    return ele;
 }
 
 // For API Use
