@@ -58,6 +58,7 @@ var articleComponentsStore = []
 var articleComponentsEditor = []
 var articleComponentsEditorIndex = 0
 // let loginUserToken = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
+const fakeArticleData = { title: 'this will be a test', topic: 'Test Topic', components: [{  type: { id: 0, order: 0, name: 'Header', description: 'Add a header to your article.', placeholder: 'New Header...'}, value: 'this is a article', options: { 'font_size': { dbName: 'font_size', value: '12' }, alignment: { dbName: 'alignment', value: 'center' }, 'padding_bottom': { dbName: 'padding_bottom', value: '4' }, indent: { dbName: 'indent', value: '4' } } }, { type: { id: 1, order: 1, name: 'Sub header', description: 'Add a sub header to your article.', placeholder: 'New Subheader...' }, value: 'I will use this as a test data lol', options: { 'font_size': { dbName: 'font_size', value: '12' }, alignment: { dbName: 'alignment', value: 'center' }, 'padding_bottom': { dbName: 'padding_bottom', value: '4' }, indent: { dbName: 'indent', value: '4' } } }, { type: { id: 2, order: 2, name: 'Paragraph', description: 'Add a compontent of text like a paragraph to your article.', placeholder: 'New Paragraph...' }, value: 'this data will be saved as articleData on the frontend to provide to the backend for me to send mtulple times ', options: { 'font_size': { dbName: 'font_size', value: '12' }, alignment: { dbName: 'alignment', value: 'center' }, 'padding_bottom': { dbName: 'padding_bottom', value: '4' }, indent: { dbName: 'indent', value: '4' } } } ]}
 
 function checkifMobile() {
     const width = document.getElementById("html").clientWidth
@@ -4365,6 +4366,15 @@ async function renameUsername() {
     }
 }
 
+async function uploadArticle(method = "draft") {
+   const articleData = collectEditArticleData();
+    console.log(articleData);
+
+
+    const articleUploaded = await sendRequest(`/articles/create/upload`, { body: { method, article: articleData }, method: 'POST' });
+    console.log(articleUploaded)
+};
+
 // ARTICLES
 async function createArticlePage() {
     const articleComponents = await sendRequest(`/articles/create/components`, { method: 'GET' });
@@ -4374,7 +4384,8 @@ async function createArticlePage() {
 
     const ele = `
         <div class="menu menu-style">
-            <h1>Create a new Article</h1>
+            <h1 onclick="uploadArticle('publish')">Publish Article</h1>
+            <h1 onclick="uploadArticle('draft')">Draft Article</h1>
         </div>
         <div class="articleCreationArea"> 
             <div class="articleCreate" style="overflow:scroll; height:100vh;"> 
@@ -4530,7 +4541,7 @@ function addArticleComponent(compId) {
     newArticlePlacement.outerHTML = ele;
 }
 
-function renderPreview() {
+function collectEditArticleData() {
     const title = document.getElementById('newArticleTitleText')?.value;
     const components = [];
 
@@ -4566,12 +4577,19 @@ function renderPreview() {
         });
     }
 
-    const ele = articleViewEle({
-        title: title ? title : "New Article",
+    const articleData = {
+        title : title ? title : "New Article",
         topic: "Test Topic",
-        components: components
-    });
+        components
+    }
 
+    // return fakeArticleData;
+    return articleData;
+}
+
+function renderPreview() {
+    const articleData = collectEditArticleData() 
+    const ele = articleViewEle(articleData);
     document.getElementById("articlePreview").innerHTML = ele;
 }
 
@@ -4618,9 +4636,9 @@ function articleViewEle(articleData, articleUser) {
             // styles
             ele += `<${eleType} style="
                 color: var(--main-p-color); 
-                font-size:${component.options["font-size"]?.value ?? 12}px;
+                font-size:${component.options["font_size"]?.value ?? 12}px;
                 text-align: ${component.options["alignment"]?.value ?? "left"};
-                padding-bottom: ${component.options["padding-bottom"]?.value ?? 0}px;
+                padding-bottom: ${component.options["padding_bottom"]?.value ?? 0}px;
                 text-indent: ${component.options["indent"]?.value ?? 0}px;
             ">${component.value}</${eleType}></div>`
         }
