@@ -4377,7 +4377,7 @@ async function createArticlePage() {
             <h1>Create a new Article</h1>
         </div>
         <div class="articleCreationArea"> 
-            <div class="articleCreate"> 
+            <div class="articleCreate" style="overflow:scroll; height:100vh;"> 
                 <div id="articleEditor">
                     <div class="userInfo userInfo-style search">
                         <p>Title:</p><input class="postTextArea" style="height: 30px;" onkeyup="renderPreview()" id="newArticleTitleText"></input>
@@ -4391,9 +4391,7 @@ async function createArticlePage() {
             <div class="articlePreview" id="articlePreview">
         </div>
         </div>
-
     `;
-    
     
     // ADD component
     // TITLE 
@@ -4404,25 +4402,131 @@ async function createArticlePage() {
     renderPreview();
 }
 
+function dragArticleStart(event, compontentId) {
+    event.dataTransfer.setData("text/plain", event.target.id);
+}
+
+// This is necessary to allow a drop
+function dragArticleOver(event, compontentId) {
+    event.preventDefault();  
+}
+
+function dragArticleDrop(event, compontentId) {
+    event.preventDefault();
+    const draggedId = event.dataTransfer.getData("text");
+    const draggedElement = document.getElementById(draggedId);
+    const dropTarget = event.target.closest('.userInfo');  // Find the closest .menu target
+
+    if (dropTarget && draggedElement !== dropTarget) {
+        // swap comps in articleComponentsEditor array
+        const draggedCompId = draggedElement.id.replace("article_component_", "");
+        console.log("draggedCompId == compontentId", draggedCompId == compontentId)
+        const dropCompId = dropTarget.id.replace("article_component_", "");
+
+        var draggedComp = {
+            index: -1,
+            comp: {}
+        };
+
+        var dropComp= {
+            index: -1,
+            comp: {}
+        };
+
+        for (var i=0; i<articleComponentsEditor.length; i++) {
+            if (articleComponentsEditor[i].id == draggedCompId) draggedComp = {index: i, comp: articleComponentsEditor[i]};
+            if (articleComponentsEditor[i].id == dropCompId) dropComp = {index: i, comp: articleComponentsEditor[i]};
+        }
+
+        if (draggedComp.index == -1 || dropComp.index == -1) return false;
+
+        articleComponentsEditor[draggedComp.index] = dropComp.comp; // dragged replacing dropped
+        articleComponentsEditor[dropComp.index] = draggedComp.comp; // dropped replacing dragged
+
+        if (draggedComp.index > dropComp.index) {
+            dropTarget.parentNode.insertBefore(draggedElement, dropTarget);
+        } else if (draggedComp.index < dropComp.index) {
+            dropTarget.parentNode.insertBefore(dropTarget, draggedElement);
+        }
+
+        renderPreview();
+    }
+}
+
 function addArticleComponent(compId) {
     // articleEditor
     const componentId = articleComponentsEditorIndex;
-    articleComponentsEditorIndex++;
     const newArticlePlacement = document.getElementById('newComp');
     if (!newArticlePlacement) return false;
-
+    
+    articleComponentsEditorIndex++;
     const foundComponent = articleComponentsStore.find(comp => comp.type.id == compId);
-    console.log("foundComponent", foundComponent)
-
+    
     if (!foundComponent) return false;
     const ele = `
-        <div class="userInfo userInfo-style search" id="article_component_${componentId}">
-            <p>${foundComponent.type.name}</p><input class="postTextArea" style="height: 30px;" id="article_component_${componentId}_value" onkeyup="renderPreview()"${foundComponent.type.placeholder? `placeholder="${foundComponent.type.placeholder}"`: ``} ></input>
+        <div 
+            class="userInfo userInfo-style search"
+            id="article_component_${componentId}"
+            draggable="true" 
+            ondragstart="dragArticleStart(event, ${componentId})" 
+            ondragover="dragArticleOver(event, ${componentId})" 
+            ondrop="dragArticleDrop(event, ${componentId})" 
+
+        >
+            <p>${foundComponent.type.name}</p>
+            <!--<div
+                class=".article_component_drag_handle"
+                id="article_component_drag_handle_${componentId}"
+            >::</div>-->
+            <input 
+                class="postTextArea"
+                style="height: 30px;"
+                id="article_component_${componentId}_value"
+                onkeyup="renderPreview()"
+                ${foundComponent.type.placeholder? `
+                    placeholder="${foundComponent.type.placeholder}"
+                `: ``}
+            ></input>
+            ${foundComponent.options ? `
+                ${foundComponent.options.map(option => {
+                    return `
+                        <p>${option.name}</p>
+                            <input 
+                                oninput="renderPreview()"
+                                class="postTextArea" 
+                                style="height: 30px;"
+                                id="article_component_option_${componentId}_${option.id}" 
+                                name="article_component_option_${componentId}_${option.id}"
+                                ${option.default || option.placeholder ? `
+                                    placeholder="${option.placeholder ? option.placeholder : option.default}" 
+                                ` : ``}
+                                ${option.input == "number" ? `
+                                    value="${option.default}"
+                                    type="number">
+                                ` : ``}
+                                ${option.input == "text" ? `
+                                    type="text">
+                                ` : ``}
+                                ${option.input == "list" ? `
+                                    list="${option.dbName}">
+                                    <datalist id="${option.dbName}">
+                                    ${option.options.map(option => { 
+                                        return  `
+                                            <option value="${option.value}">${option.name}</option>
+                                        `
+                                    }).join("")}
+                                    </datalist>
+                                ` : ``}
+                        </input>
+                    `
+                }).join("")}
+            ` : ``}
+
         </div>
         <div id="newComp"></div>
     `;
 
-    articleComponentsEditor.push({ id: compId, type: foundComponent.type });
+    articleComponentsEditor.push({ id: componentId, type: foundComponent.type });
     newArticlePlacement.outerHTML = ele;
 }
 
@@ -4432,13 +4536,33 @@ function renderPreview() {
 
     for (var i=0; i<articleComponentsEditorIndex; i++) {
         const compData = articleComponentsEditor[i];
+        if (debug) console.log("related comp data", compData)
+        const compId = compData.id;
         const compType = articleComponentsStore.find(comp => comp.type.id == compData.type.id);
-        const compValue = document.getElementById(`article_component_${i}_value`)?.value;
-        
+        const compValue = document.getElementById(`article_component_${compId}_value`)?.value;
+        const foundOptions = {};
+
+        for (const option of compType.options) {
+            const optionValue = document.getElementById(`article_component_option_${compId}_${option.id}`)?.value;
+
+            if (optionValue) foundOptions[option.dbName] = {
+                dbName: option.dbName,
+                value: optionValue
+            }
+
+            else if (option.default) {
+                foundOptions[option.dbName] = {
+                    dbName: option.dbName,
+                    value: option.default
+                }
+            }
+        }
+
         if (!compValue) continue;
         components.push({
             type: compType.type,
-            value: compValue
+            value: compValue,
+            options: foundOptions
         });
     }
 
@@ -4455,7 +4579,11 @@ function addArticleComponentOptionsEle() {
     var ele = ``;
 
     for (const component of articleComponentsStore) {
-        ele += `<div class="menu menu-style" onclick="addArticleComponent('${component.type.id}')">
+        ele += `
+        <div 
+            class="menu menu-style" 
+            onclick="addArticleComponent('${component.type.id}')"
+        >
             <h2>${component.type.name}</h2>
             <p>${component.type.description}</p>
         </div>`
@@ -4473,16 +4601,28 @@ function articleViewEle(articleData, articleUser) {
 
     if (articleData.components) {
         for (const component of articleData.components) {
-            ele += `<div class="menu menu-style">` // for now
-            // ele+=`<div class="spacer_2px"></div>`
+            // ele += `<div class="menu menu-style">` // for now
+            ele+=`<div class="spacer_2px"></div>`
+
+            var eleType;
             if (component.type.id==0) {
-                ele += `<h2>${component.value}</h2>`
+                eleType = "h2"
             } else if (component.type.id==1) {
-                ele += `<h3 style="color: var(--main-p-color);">${component.value}</h3>`
+                eleType = "h3"
             } else if (component.type.id==2) {
-                ele += `<p>${component.value}</p>`
+                eleType = "p"
+            } else {
+                eleType = "p"
             }
-            ele += `</div>`
+
+            // styles
+            ele += `<${eleType} style="
+                color: var(--main-p-color); 
+                font-size:${component.options["font-size"]?.value ?? 12}px;
+                text-align: ${component.options["alignment"]?.value ?? "left"};
+                padding-bottom: ${component.options["padding-bottom"]?.value ?? 0}px;
+                text-indent: ${component.options["indent"]?.value ?? 0}px;
+            ">${component.value}</${eleType}></div>`
         }
     }
 
