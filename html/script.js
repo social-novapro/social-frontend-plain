@@ -102,6 +102,7 @@ async function checkURLParams() {
     const ifThemeSettings = params.has("themeEditor");
     const ifThemeDiscovery = params.has("themeDiscovery")
     const ifCreateArticle = params.has("createArticle")
+    const ifViewArticles = params.has("viewArticles")
 
     if (ifUsername) {
         paramsFound = true
@@ -167,6 +168,11 @@ async function checkURLParams() {
         paramsInfo.paramsFound = true
 
         createArticlePage()
+    } else if (ifViewArticles) {
+        paramsFound = true;
+        paramsInfo.paramsFound = true
+
+        viewArticles();
     }
    
     return paramsInfo
@@ -4556,24 +4562,17 @@ function collectEditArticleData() {
         for (const option of compType.options) {
             const optionValue = document.getElementById(`article_component_option_${compId}_${option.id}`)?.value;
 
-            if (optionValue) foundOptions[option.dbName] = {
-                dbName: option.dbName,
-                value: optionValue
-            }
-
-            else if (option.default) {
-                foundOptions[option.dbName] = {
-                    dbName: option.dbName,
-                    value: option.default
-                }
-            }
+            if (optionValue) foundOptions[option.dbName] = optionValue;
+            else if (option.default) foundOptions[option.dbName] = option.default;
         }
 
         if (!compValue) continue;
         components.push({
+            order: i,
             type: compType.type,
+            typeID: compType.type.id,
             value: compValue,
-            options: foundOptions
+            ...foundOptions
         });
     }
 
@@ -4613,6 +4612,8 @@ function addArticleComponentOptionsEle() {
 function articleViewEle(articleData, articleUser) {
     var ele = ``
     if (articleData.title) ele += `<h1>${articleData.title}</h1>`
+
+
     if (articleData.topic) ele += `<p>Written for: ${articleData.topic}</p>`
     
     ele+=`<div class="spacer_10px"></div>`
@@ -4623,11 +4624,11 @@ function articleViewEle(articleData, articleUser) {
             ele+=`<div class="spacer_2px"></div>`
 
             var eleType;
-            if (component.type.id==0) {
+            if (component.typeID==0) {
                 eleType = "h2"
-            } else if (component.type.id==1) {
+            } else if (component.typeID==1) {
                 eleType = "h3"
-            } else if (component.type.id==2) {
+            } else if (component.typeID==2) {
                 eleType = "p"
             } else {
                 eleType = "p"
@@ -4636,15 +4637,26 @@ function articleViewEle(articleData, articleUser) {
             // styles
             ele += `<${eleType} style="
                 color: var(--main-p-color); 
-                font-size:${component.options["font_size"]?.value ?? 12}px;
-                text-align: ${component.options["alignment"]?.value ?? "left"};
-                padding-bottom: ${component.options["padding_bottom"]?.value ?? 0}px;
-                text-indent: ${component.options["indent"]?.value ?? 0}px;
+                font-size:${component["font_size"] ?? 12}px;
+                text-align: ${component["alignment"] ?? "left"};
+                padding-bottom: ${component["padding_bottom"] ?? 0}px;
+                text-indent: ${component["indent"] ?? 0}px;
             ">${component.value}</${eleType}></div>`
         }
     }
 
     return ele;
+}
+
+async function viewArticles() {
+    const articleIndex = await sendRequest(`/articles/get`, { method: 'GET' });
+
+    var ele="";
+    for (const article of articleIndex) {
+        ele+=articleViewEle(article)+'<hr class="rounded">';
+    }
+
+    document.getElementById("mainFeed").innerHTML = ele;
 }
 
 // For API Use
