@@ -266,6 +266,12 @@ function newNavigation() {
                     <span class="material-symbols-outlined nav-button";>Settings</span>
                     <span class="link-text pointerCursor" id="page7">Settings</span>
                 </div>
+            </li>
+            <li class="nav-item pointerCursor" id="navSection6">
+                <div id="page6Nav" class="nav-link" onclick="switchNav(6)">
+                    <span class="material-symbols-outlined nav-button";>notifications</span>
+                    <span class="link-text pointerCursor" id="page6">Notifications</span>
+                </div>
             </li>`}
             ${pathArray[1] != "" ? `` : `
             <li class="nav-item pointerCursor" id="navSection5">
@@ -411,6 +417,9 @@ async function switchNav(pageVal) {
             break;
         case 5:
             window.location.href='/'
+            break;
+        case 6:
+            window.location.href='/?notifications'
             break;
         case 7: 
             window.location.href='/?settings'

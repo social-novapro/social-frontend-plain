@@ -96,6 +96,7 @@ async function checkURLParams() {
     const ifEmailSettings = params.has("emailSettings");
     const ifThemeSettings = params.has("themeEditor");
     const ifThemeDiscovery = params.has("themeDiscovery")
+    const ifNotificationPage = params.has("notifications")
 
     if (ifUsername) {
         paramsFound = true
@@ -156,6 +157,11 @@ async function checkURLParams() {
         settingsPage();
         await viewThemesDiscovery()
         document.getElementById("themeDiscovery").scrollIntoView();
+    } else if (ifNotificationPage) {
+        paramsFound = true
+        paramsInfo.paramsFound = true
+
+        notificationsPage();
     }
    
     return paramsInfo
@@ -2728,14 +2734,31 @@ function hideNotifications() {
     document.getElementById('showNotificationsButton').innerHTML="Show Notifications"
 }
 
+function notificationsPage() {
+    const ele = `
+        <div class="menu menu-style">
+            <p><b>Notifications</b></p>
+            <div>
+                <button class="menuButton menuButton-style" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
+                <div id="notificationsDiv"></div>
+            </div>
+            <div>
+                <button class="menuButton menuButton-style" id="showSubscriptionsButton" onclick="showSubscriptions()">Show Subscriptions</button>
+                <div id="subscriptionsDiv"></div>
+            </div>
+        </div>
+    `
+    document.getElementById("mainFeed").innerHTML = ele;
+}
+
 async function showNotifications() {
     if (document.getElementById('notificationsAreShown')) return hideNotifications()
     document.getElementById('showNotificationsButton').innerHTML="Hide Notifcations"
 
-    const res = await sendRequest(`/notifications/getList`, { method: 'GET' });
+    const res = await sendRequest(`/notificationCenter/notifications`, { method: 'GET' });
     if (!res || res.error) return document.getElementById('showNotificationsButton').innerHTML=`error`
     
-    var ele = `<hr class="rounded" id="notificationsAreShown"><p id="amount_notifications">${res.amountFound} Notifications</p><hr class="rounded">`
+    var ele = `<hr class="rounded" id="notificationsAreShown"><p id="amount_notifications">${res.notifs.length} Notifications</p><hr class="rounded">`
     ele = ele+`<div><a id="dismissAll" onclick="dismissAll()">dismiss all notifications.</a><hr class="rounded"></div>`;
     
     /*
@@ -2757,6 +2780,33 @@ async function showNotifications() {
 
     var foundUsers = {};
 
+    for (const notifType of res.sectionTypes) {
+        ele+=`
+            <div>
+                <p><u>${notifType.name}</u></p>
+                <p>${notifType.description}</p>
+            </div>
+        `
+    }
+
+    for (const notif of res.notifs.reverse()) {
+        ele+=`
+            <div class="buttonStyled" id="notification_${notif._id}">
+                <a onclick="showPost('${notif.postID}')"><b>${notif.postData.userData?.username ? notif.postData.userData.username : "Unknown User" }</b> has posted! (click to see)</a>
+                <p>${notif.content}</p>
+                <p onclick="dismissNotification('${notif._id}')">Dismiss Notification.</p>
+            </div>
+            <hr class="rounded">
+        `
+
+        // "subject": "@hyu posted",
+        // "content": "New test",
+    }
+    
+    
+    document.getElementById("notificationsDiv").innerHTML=ele
+
+    return;
     for (const notifi of res.notifications.reverse()) {
         switch (notifi.type) {
             case 5:
