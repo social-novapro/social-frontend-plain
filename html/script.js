@@ -97,6 +97,7 @@ async function checkURLParams() {
     const ifThemeSettings = params.has("themeEditor");
     const ifThemeDiscovery = params.has("themeDiscovery")
     const ifNotificationPage = params.has("notifications")
+    const ifBookmarksPage = params.has("bookmarks")
 
     if (ifUsername) {
         paramsFound = true
@@ -162,6 +163,11 @@ async function checkURLParams() {
         paramsInfo.paramsFound = true
 
         notificationsPage();
+    }else if (ifBookmarksPage) {
+        paramsFound = true
+        paramsInfo.paramsFound = true
+
+        bookmarksPage();
     }
    
     return paramsInfo
@@ -1144,6 +1150,22 @@ function settingsPage() {
     devMode();
 
     return true;
+}
+
+function bookmarksPage() {
+    changeHeader("?bookmarks")
+    const ele = `
+        <div id="bookmarksPage">
+            <div class="menu menu-style">
+                <p><b>Bookmarks</b></p>
+                <button class="menuButton menuButton-style" id="showBookmarksButton" onclick="showBookmarks()">Show Bookmarks</button>
+                <div id="bookmarksdiv"></div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById("mainFeed").innerHTML = ele;
+    showBookmarks()
 }
 
 function generateRelatedPages() {
@@ -2735,6 +2757,7 @@ function hideNotifications() {
 }
 
 function notificationsPage() {
+    changeHeader("?notifications")
     const ele = `
         <div class="menu menu-style">
             <p><b>Notifications</b></p>
@@ -2749,6 +2772,7 @@ function notificationsPage() {
         </div>
     `
     document.getElementById("mainFeed").innerHTML = ele;
+    showNotifications();
 }
 
 async function showNotifications() {

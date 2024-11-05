@@ -237,7 +237,7 @@ p {
     display: flex;
     flex-direction: column;
     align-items: center;
-    height: 100%;
+    height: 100vh;
 } 
 .nav-item {
     width: 100%;
@@ -252,11 +252,11 @@ p {
     margin-top: auto;
     transform: rotate(0deg);
 }
-.nav-item:last-child .nav-button {
+.nav-item:last-child .nav-button-final {
     transition: var(--transition-speed);
     transform: rotate(0deg);
 }
-.navbar-expanded .nav-item:last-child .nav-button{
+.navbar-expanded .nav-item:last-child .nav-button-final{
     transform: rotate(-180deg);
 }
 .navigation-style {
@@ -340,31 +340,43 @@ p {
     font-size: 15px;
 }
 
-/* SMALL SCREEN*/
+/* SMALL SCREEN */
 @media only screen and (max-width: 600px) {
     .navbar {
-        bottom: 0;
-        width: 100vw;
-        height: 5rem;
-        border-top: 2px solid var(--main-border-color);
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 3rem; /* Adjust the width as needed */
+        height: 100%;
+        border-right: 2px solid var(--main-border-color);
+        overflow-y: auto; /* Enable vertical scrolling */
+        overflow-x: hidden; /* Hide horizontal overflow */
+        transition: width 0.3s;
     }
-    .svg-image {
-        width: 5rem;
-    }
+    /* .nav-button {
+        width: 2rem;
+        height: 2rem;
+        padding: 0px;
+    } */
     .expanding-button {
         display: none;
     }
     .navbar-nav {
-        flex-direction: row;
+        flex-direction: column; /* Change direction to column */
     }
     .nav-link {
         justify-content: center;
-    }
-    main {
+        height: 3rem;
+        width: 3rem;
         margin: 0;
+        padding: 0;
     }
-    .end-page-padding {
-        padding-bottom: 7rem;
+    .material-symbols-outlined {
+        font-variation-settings:
+        'FILL' 0,
+        'wght' 100,
+        'GRAD' -25,
+        'opsz' 20
     }
     .logo p {
         text-align: center;
@@ -372,16 +384,20 @@ p {
         color: var(--main-h2-color);
     }
     .mainArea {
-        margin-left: 0rem;
+        margin-left: 3rem; 
         padding: 0rem;
     }
-    .main-header .navbar-expanded{
-        margin-left: 0rem;
+    .main-header .navbar-expanded {
+        margin-left: 3rem;
     }
-    .possibleFeeds .navbar-expanded{
-        margin-left: 0rem;
+    .possibleFeeds .navbar-expanded {
+        margin-left: 3rem;
+    }
+    .end-page-padding {
+        padding-bottom: 20px;
     }
 }
+
 /* BIG SCREENS */
 @media only screen and (min-width: 601px) {
     .mainArea {
@@ -403,10 +419,13 @@ p {
         margin-left: 0rem;
     }
     .navbar {
-        top: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        position: fixed;
         width: 5rem;
         height: 100vh;
         border-right: 2px solid var(--main-border-color);
+        transition: width 0.3s;
     }
     .navbar-expanded {
         width: 13rem;
