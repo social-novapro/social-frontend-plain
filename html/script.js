@@ -173,6 +173,20 @@ async function checkURLParams() {
     return paramsInfo
 }
 
+// makes it easy to render postElement without having to do a lot of work
+function postElementCreateFullEasy(postData) {
+    return postElementCreate({
+        post: postData.postData,
+        user: postData.userData, 
+        pollData: postData.type?.poll=="included" ? postData.pollData : null,
+        voteData: postData.type?.vote=="included" ? postData.voteData : null,
+        quoteData: postData.type?.quote=="included" ? postData.quoteData : null,
+        coposterData: postData.type?.coposter=="included" ? postData.coposterData : null,
+        tagData: postData.type?.tag=="included" ? postData.tagData : null,
+        extraData: postData.type?.extra=="included" ? postData.extraData : {},
+    })
+}
+
 function postElementCreate({
     post,
     user,
@@ -220,7 +234,7 @@ function postElementCreate({
             ${user ? `
             <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'} | ${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
             `:''}
-            <div class="postContent posts-style" id="postContentArea_${post._id}">
+            <div class="postContent" id="postContentArea_${post._id}">
                 <div class="textAreaPost posts_content-style">
                     <p id="postContent_${post._id}">${imageContent.content}</p>
                     ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
@@ -253,12 +267,11 @@ function postElementCreate({
                         <p id="postContent_${post._id}">${imageContent.content}</p>
                         ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
                     </div>
-                    ${post.replyingPostID ? `<a class="replyingPost" href="#postElement_${post.replyingPostID}">Press here</a>` : ``}
-                    ${quoteData && quoteData.quotePost ? `<hr><div>${postElementCreate({post: quoteData.quotePost, user: quoteData.quoteUser, type: "basic"})}</div>` : ''}
                     <div class="PostAttachments">
                         ${imageContent.image ? `<div>${imageContent.attachments.map(function(attachment) {return `${attachment}`}).join(" ")}</div>`:''}
                     </div>
                 </div>
+                ${quoteData && quoteData.quotePost ? `<hr><div>${postElementCreate({post: quoteData.quotePost, user: quoteData.quoteUser, type: "basic"})}</div>` : ''}
                 ${post.pollID ? `
                     <div class="poll_option posts-style" id="pollContainer_${post._id}">
                     ${pollData ? `
@@ -453,7 +466,7 @@ async function viewParentPost(postID, parentPostID) {
         return document.getElementById(`openedParent_${postID}`).remove();
     }
 
-    const postData = await sendRequest(`/posts/get/${parentPostID}`, { method: "GET" });
+    const postData = await sendRequest(`/posts/get/basic/${parentPostID}`, { method: "GET" });
 
     if (postData.deleted == true || !postData.userID) {
         //document.getElementById()
@@ -1011,10 +1024,9 @@ async function postHtml(postID) {
     const postData = await sendRequest(`/posts/get/${postID}`, { method: 'GET' })
     if (!postData || postData.deleted) return console.log("error with post");
 
-    const userData = await sendRequest(`/users/get/basic/${postData.userID}`, { method: 'GET' })
-    
-    const ele = postElementCreate({post: postData, user: userData});
+    const ele = postElementCreateFullEasy(postData);
     document.getElementById("mainFeed").innerHTML = ele
+    addDebug()
 
     return 
     /*
@@ -2165,6 +2177,7 @@ async function userHtml(userSearch) {
         ` : ``}
     `
 
+    addDebug();
     return;
 }
 
@@ -2775,91 +2788,40 @@ function notificationsPage() {
     showNotifications();
 }
 
-async function showNotifications() {
-    if (document.getElementById('notificationsAreShown')) return hideNotifications()
+async function showNotifications(indexID) {
+    const notificationAreShownID = `notificationsAreShown${indexID ? `_${indexID}`: '' }`
+    if (document.getElementById(notificationAreShownID)) return hideNotifications()
     document.getElementById('showNotificationsButton').innerHTML="Hide Notifcations"
 
-    const res = await sendRequest(`/notificationCenter/notifications`, { method: 'GET' });
+    const res = await sendRequest(`/notificationCenter/notifications/${indexID ? indexID : ''}`, { method: 'GET' });
     if (!res || res.error) return document.getElementById('showNotificationsButton').innerHTML=`error`
     
-    var ele = `<hr class="rounded" id="notificationsAreShown"><p id="amount_notifications">${res.notifs.length} Notifications</p><hr class="rounded">`
-    ele = ele+`<div><a id="dismissAll" onclick="dismissAll()">dismiss all notifications.</a><hr class="rounded"></div>`;
+    var ele = `
+        <hr class="rounded" id="${notificationAreShownID}">
+        <p id="amount_notifications">${res.notifs.length} Notifications</p>
+        ${res.prevIndex ? `<button class="menuButton menuButton-style" onclick="showNotifications('${res.prevIndex}')">Load previous notifications</button>` : ''}
+        ${res.nextIndex ? `<button class="menuButton menuButton-style" onclick="showNotifications('${res.nextIndex}')">Load next notificaitons</button>` : '' }
+        <hr class="rounded">
+        <div><a id="dismissAll" onclick="dismissAll()">dismiss all notifications.</a><hr class="rounded"></div>
+    `;
     
-    /*
-        type: String (one)
-            1: someone followed
-            2: someone unfollowed
-            3: someone liked post
-            4: someone unliked post
-            5: someone posted
-            6: someone mentioned you
-
-        var returnData = {
-            amountFound: interactUserNotifications.notifications.length,
-            notifications: []
-        };
-    */
-
-    // console.log(res)
-
-    var foundUsers = {};
-
-    for (const notifType of res.sectionTypes) {
-        ele+=`
-            <div>
-                <p><u>${notifType.name}</u></p>
-                <p>${notifType.description}</p>
-            </div>
-        `
-    }
-
     for (const notif of res.notifs.reverse()) {
         ele+=`
-            <div class="buttonStyled" id="notification_${notif._id}">
-                <a onclick="showPost('${notif.postID}')"><b>${notif.postData.userData?.username ? notif.postData.userData.username : "Unknown User" }</b> has posted! (click to see)</a>
-                <p>${notif.content}</p>
-                <p onclick="dismissNotification('${notif._id}')">Dismiss Notification.</p>
+            <div class="" id="notification_${notif._id}">
+                ${postElementCreateFullEasy(notif.postData)}
+                <div class="spacer_5px"></div>
+                <p class="debug">type: ${notif.notifType._id}</p>
+                <p>${notif.notifType.name}</p>
+                <p>${notif.subject}</p>
+                <button class="menuButton menuButton-style" onclick="dismissNotification('${notif._id}')">Dismiss Notification.</button>
             </div>
-            <hr class="rounded">
         `
-
-        // "subject": "@hyu posted",
-        // "content": "New test",
     }
     
-    
     document.getElementById("notificationsDiv").innerHTML=ele
+    addDebug()
 
     return;
-    for (const notifi of res.notifications.reverse()) {
-        switch (notifi.type) {
-            case 5:
-                if (!foundUsers[notifi.userID]) foundUsers[notifi.userID] = await getUserDataSimple(notifi.userID);
-                const userData = foundUsers[notifi.userID];
-
-                ele+=`
-                    <div class="buttonStyled" id="notification_${notifi._id}">
-                        <a onclick="showPost('${notifi.postID}')"><b>${userData?.username ? userData.username : "Unknown User" }</b> has posted! (click to see)</a>
-                        <p onclick="dismissNotification('${notifi._id}')">Dismiss Notification.</p>
-                    </div>
-                `
-                break;
-            case 7: 
-                if (!foundUsers[notifi.userID])  foundUsers[notifi.userID] = await getUserDataSimple(notifi.userID);
-                const userData2 = foundUsers[notifi.userID];
-
-                ele+=`
-                    <div class="buttonStyled" id="notification_${notifi._id}">
-                        <a onclick="showPost('${notifi.postID}')"><b>${userData2?.username ? userData2.username : "Unknown User" }</b> quoted your post!(click to see)</a>
-                        <p onclick="dismissNotification('${notifi._id}')">Dismiss Notification.</p> 
-                    </div>
-                `
-            default:
-                break;
-        }
-    }
-   
-    document.getElementById("notificationsDiv").innerHTML=ele
 }
 
 async function dismissNotification(notificationID) {
@@ -2884,7 +2846,7 @@ async function dismissAll() {
 }
 
 async function showPost(postID) {
-    const res = await sendRequest(`/posts/get/${postID}`, { method: 'GET' });
+    const res = await sendRequest(`/posts/get/basic/${postID}`, { method: 'GET' });
     if (!res || res.error) return showModal("<p>Post was not found</p>")
 
     const user = await getUserDataSimple(res.userID)
@@ -3094,7 +3056,7 @@ async function requestDevToken() {
 };
 
 async function getPostAndProfileData(postID) {
-    const postData = await sendRequest(`/posts/get/${postID}`, { method: 'GET', ignoreError: true});
+    const postData = await sendRequest(`/posts/get/basic/${postID}`, { method: 'GET', ignoreError: true});
 
     if (!postData || postData.error) return {error: `${postData.error ? postData.error : "an unknown error"}`};
     if (debug) console.log(postData);
@@ -3545,7 +3507,7 @@ function editPost(postID, edited) {
 async function cancelEdit(postID, content, edited) {
     if (debug) console.log(`cancelling edit of post ${postID}`)
 
-    const post = await sendRequest(`/posts/get/${postID}`, { method: 'GET' })
+    const post = await sendRequest(`/posts/get/basic/${postID}`, { method: 'GET' })
     if (!post || post.error) return false;
 
     document.getElementById(`postContentArea_${postID}`).innerHTML = `
@@ -3586,7 +3548,7 @@ async function submitEdit(postID) {
     `  
 }
 async function quotePost(postID) {
-    const post = await sendRequest(`/posts/get/${postID}`, { method: 'GET' })
+    const post = await sendRequest(`/posts/get/basic/${postID}`, { method: 'GET' })
     if (!post || post.error) return false;
     const user = await sendRequest(`/users/get/basic/${post.userID}`, { method: 'GET' })
     if (!user || user.error) return false;
@@ -3599,13 +3561,7 @@ async function quotePost(postID) {
         </div>
         <hr class="rounded">
         <div class="post">
-            <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'}</p>
-            <div class="postContent" id="postContentArea_${post._id}">
-                <div class="textAreaPost">
-                    <p id="postContent_${post._id}">${post.content}</p>
-                    ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
-                </div>
-            </div>
+            <div>${postElementCreate({post: post, user: user, type: "basic"})}</div>
         </div>
         <textarea class="postTextArea" id="newPostTextArea"></textarea>
         <div id="foundTaggings"></div>
@@ -3613,7 +3569,7 @@ async function quotePost(postID) {
 }
 
 async function replyPost(postID) {
-    const post = await sendRequest(`/posts/get/${postID}`, { method: 'GET', headers})
+    const post = await sendRequest(`/posts/get/basic/${postID}`, { method: 'GET', headers})
     if (!post || post.error) return false;
 
     const user = await sendRequest(`/users/get/basic/${post.userID}`, { method: 'GET', headers })
@@ -3627,13 +3583,7 @@ async function replyPost(postID) {
         </div>
         <hr class="rounded">
         <div class="post">
-            <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'}</p>
-            <div class="postContent" id="postContentArea_${post._id}">
-                <div class="textAreaPost">
-                    <p id="postContent_${post._id}">${post.content}</p>
-                    ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
-                </div>
-            </div>
+            <div>${postElementCreate({post: post, user: user, type: "basic"})}</div>
         </div>
         <textarea class="postTextArea" id="newPostTextArea"></textarea>
         <div id="foundTaggings"></div>
@@ -4430,6 +4380,7 @@ async function renameUsername() {
 }
 
 // For API Use
+// sendRequest("/notificationCenter/preferences/501", { method: 'POST', body: { "enabled": true, "systemType": 1 }});
 async function sendRequest(request, { method, body, extraHeaders, ignoreError=false }) {
     // add "version" as a possible header, and .replace on the apiURL
     // or force the version be in the request
