@@ -1992,36 +1992,40 @@ function listFollowingFollower() {
     var ele = ``;
 
     for (const data of followingFollowerListStore) {
-        const user = data.userData;
-        const follow = data.followData;
-
-        var timesince
-        if (user.creationTimestamp) timesince = checkDate(user.creationTimestamp)
-
-        var timesinceFollow
-        if (follow.timestamp) timesinceFollow = checkDate(follow.timestamp)
-
-        ele += `
-            <div class="publicPost posts-style">
-                <p class="${user._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" onclick="userHtml('${user._id}')"> ${user.displayName} @${user.username} | ${user.creationTimestamp ? timesince : '' }</p>
-                <p>${user.description ? user.description : "no description"}</p>
-                <p>Following: ${user.followingCount} | Followers: ${user.followerCount}</p>
-                ${user._id == currentUserLogin.userID ? `` : `
-                    <p id="follow_search_id_${user._id}" onclick=
-                    ${user.followed===true ? 
-                        `"unFollowUser('${user._id}', 'follow_search_id_${user._id}')">Unfollow User` :
-                        `"followUser('${user._id}', 'follow_search_id_${user._id}')">Follow User`
-                    }</p>
-                `}
-                <p class="debug" onclick="copyToClipboard('${user._id}')">${user._id}</p>
-               ${follow.timestamp ? `<p>Followed: ${timesinceFollow}</p>` : ``}
-            </div>
-        `;
+        ele += followingFollowerSingleElement(data.userData, data.followData);
     }
 
     ele+=`<div id="addToBottomFollowingFollower"></div>`;
     document.getElementById("followingFollowerList").innerHTML = ele;
     followingFollowerData.currentlyBuilding=false;
+}
+
+function followingFollowerSingleElement(user, follow) {
+    if (!user) return `<p>Error: No user data found</p>`;
+    if (!follow) return `<p>Error: No follow data found</p>`;
+    var timesince
+    if (user.creationTimestamp) timesince = checkDate(user.creationTimestamp)
+
+    var timesinceFollow
+    if (follow.timestamp) timesinceFollow = checkDate(follow.timestamp)
+
+    return ` 
+        <div class="publicPost posts-style">
+            ${follow.current != true ? `<p><i>Not current, might have unfollowed</i></p>` : ``}
+            <p class="${user._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" onclick="userHtml('${user._id}')"> ${user.displayName} @${user.username} | ${user.creationTimestamp ? timesince : '' }</p>
+            <p>${user.description ? user.description : "no description"}</p>
+            <p>Following: ${user.followingCount} | Followers: ${user.followerCount}</p>
+            ${user._id == currentUserLogin.userID ? `` : `
+                <p id="follow_search_id_${user._id}" onclick=
+                ${user.followed===true ? 
+                    `"unFollowUser('${user._id}', 'follow_search_id_${user._id}')">Unfollow User` :
+                    `"followUser('${user._id}', 'follow_search_id_${user._id}')">Follow User`
+                }</p>
+            `}
+            <p class="debug" onclick="copyToClipboard('${user._id}')">${user._id}</p>
+            ${follow.timestamp ? `<p>Followed: ${timesinceFollow}</p>` : ``}
+        </div>
+    `
 }
 
 async function nextFollowingFollowerList() {
@@ -2804,11 +2808,17 @@ async function showNotifications(indexID) {
         <hr class="rounded">
         <div><a id="dismissAll" onclick="dismissAll()">dismiss all notifications.</a><hr class="rounded"></div>
     `;
-    
+
     for (const notif of res.notifs.reverse()) {
-        ele+=`
-            <div class="" id="notification_${notif._id}">
-                ${postElementCreateFullEasy(notif.postData)}
+        ele+=`<div class="" id="notification_${notif._id}">`
+        
+        if (notif.notifSubType == 1) {
+            ele += postElementCreateFullEasy(notif.postData);
+        } else if (notif.notifSubType == 2) {
+            ele += followingFollowerSingleElement(notif.userData, notif?.followData);
+        }
+        
+        ele +=`
                 <div class="spacer_5px"></div>
                 <p class="debug">type: ${notif.notifType._id}</p>
                 <p>${notif.notifType.name}</p>
@@ -2819,8 +2829,7 @@ async function showNotifications(indexID) {
     }
     
     document.getElementById("notificationsDiv").innerHTML=ele
-    addDebug()
-
+    devMode();
     return;
 }
 
@@ -4380,7 +4389,7 @@ async function renameUsername() {
 }
 
 // For API Use
-// sendRequest("/notificationCenter/preferences/501", { method: 'POST', body: { "enabled": true, "systemType": 1 }});
+// sendRequest("/notificationCenter/preferences/601", { method: 'POST', body: { "enabled": true, "systemType": 1 }});
 async function sendRequest(request, { method, body, extraHeaders, ignoreError=false }) {
     // add "version" as a possible header, and .replace on the apiURL
     // or force the version be in the request
