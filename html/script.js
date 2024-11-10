@@ -1068,11 +1068,10 @@ function settingsPage() {
                         <p><b>Notifications</b></p>
                         <div>
                             <button class="menuButton menuButton-style" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
-                            <div id="notificationsDiv"></div>
+                            <button class="menuButton menuButton-style" id="showSubscriptionsButton" onclick="showSubscriptions()">Show Subscriptions</button>
                         </div>
                         <div>
-                            <button class="menuButton menuButton-style" id="showSubscriptionsButton" onclick="showSubscriptions()">Show Subscriptions</button>
-                            <div id="subscriptionsDiv"></div>
+                            <div id="notificationsDiv"></div>
                         </div>
                     </div>
                     <div class="menu menu-style">
@@ -1952,6 +1951,8 @@ async function followingFollowerHtml(userID, type=0) {
     if (followData.prevIndexID) followingFollowerData.prevIndexID = followData.prevIndexID;
     if (followData.userData) followingFollowerData.userData = followData.userData;
 
+    followingFollowerData.currentlyBuilding = true;
+
     document.getElementById("mainFeed").innerHTML =  `
         <div class="menu menu-style">
             <p><b>Profile</b></p>
@@ -2677,8 +2678,8 @@ async function unsubUser(userID, username) {
 async function unsubAll() {
     const res = await sendRequest(`/notifications/unsubAll/`, { method: 'DELETE' });
 
-    if (!res || res.error) return document.getElementById(`subscriptionsDiv`).innerHTML=`error while unsubscribing`
-    else return document.getElementById(`subscriptionsDiv`).innerHTML=`Unsubscribed from all users.`
+    if (!res || res.error) return document.getElementById(`notificationsDiv`).innerHTML=`error while unsubscribing`
+    else return document.getElementById(`notificationsDiv`).innerHTML=`Unsubscribed from all users.`
 }
 
 function hideBookmarks() {
@@ -2736,13 +2737,14 @@ async function showBookmarks() {
 }
 
 function hideSubscriptions() {
-    document.getElementById('subscriptionsDiv').innerHTML=""
+    document.getElementById('notificationsDiv').innerHTML=""
     document.getElementById('showSubscriptionsButton').innerHTML="Show Subscriptions"
 }
 
 async function showSubscriptions() {
     if (document.getElementById('subscriptionsAreShown')) return hideSubscriptions()
     document.getElementById('showSubscriptionsButton').innerHTML="Hide Subscriptions"
+    document.getElementById('showNotificationsButton').innerHTML="Show Notifications"
     
     const res = await sendRequest(`/notifications/subscriptions/`, { method: 'GET' });
     if (!res || res.error) return document.getElementById('showSubscriptionsButton').innerHTML=`error`
@@ -2752,19 +2754,31 @@ async function showSubscriptions() {
 
     for (const sub of res.reverse()) {
         const userData = await getUserDataSimple(sub._id) 
+        var timesince
+        if (userData.creationTimestamp) timesince = checkDate(userData.creationTimestamp)
+    
         ele = ele + `
             <div id="subList_${userData._id}">
-                <div>
-                    <a onclick="userHtml('${userData._id}')">${userData.username}</a>
-                </div>
-                <div>
+                <div class="publicPost posts-style">
+                    <p class="${userData._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" onclick="userHtml('${userData._id}')"> ${userData.displayName} @${userData.username} | ${userData.creationTimestamp ? timesince : '' }</p>
+                    <p>${userData.description ? userData.description : "no description"}</p>
+                    <p>Following: ${userData.followingCount} | Followers: ${userData.followerCount}</p>
+                    ${userData._id == currentUserLogin.userID ? `` : `
+                        <p id="follow_search_id_${userData._id}" onclick=
+                        ${userData.followed===true ? 
+                            `"unFollowUser('${userData._id}', 'follow_search_id_${userData._id}')">Unfollow User` :
+                            `"followUser('${userData._id}', 'follow_search_id_${userData._id}')">Follow User`
+                        }</p>
+                    `}
                     <a onclick="unsubUser('${userData._id}', '${userData.username}')">unsub from user.</a>
+                    <p class="debug" onclick="copyToClipboard('${userData._id}')">${userData._id}</p>
                 </div>
             </div>
         `
     }
 
-    document.getElementById("subscriptionsDiv").innerHTML=ele
+    document.getElementById("notificationsDiv").innerHTML=ele
+    devMode();
 }
 
 
@@ -2780,11 +2794,10 @@ function notificationsPage() {
             <p><b>Notifications</b></p>
             <div>
                 <button class="menuButton menuButton-style" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
-                <div id="notificationsDiv"></div>
+                <button class="menuButton menuButton-style" id="showSubscriptionsButton" onclick="showSubscriptions()">Show Subscriptions</button>
             </div>
             <div>
-                <button class="menuButton menuButton-style" id="showSubscriptionsButton" onclick="showSubscriptions()">Show Subscriptions</button>
-                <div id="subscriptionsDiv"></div>
+                <div id="notificationsDiv"></div>
             </div>
         </div>
     `
@@ -2796,6 +2809,7 @@ async function showNotifications(indexID) {
     const notificationAreShownID = `notificationsAreShown${indexID ? `_${indexID}`: '' }`
     if (document.getElementById(notificationAreShownID)) return hideNotifications()
     document.getElementById('showNotificationsButton').innerHTML="Hide Notifcations"
+    document.getElementById('showSubscriptionsButton').innerHTML="Show Subscriptions"
 
     const res = await sendRequest(`/notificationCenter/notifications/${indexID ? indexID : ''}`, { method: 'GET' });
     if (!res || res.error) return document.getElementById('showNotificationsButton').innerHTML=`error`
@@ -2834,7 +2848,7 @@ async function showNotifications(indexID) {
 }
 
 async function dismissNotification(notificationID) {
-    const res = await sendRequest(`/notifications/dismiss/${notificationID}`, { method: 'DELETE' });
+    const res = await sendRequest(`/notificationCenter/notifications/dismiss/${notificationID}`, { method: 'DELETE' });
     if (!res || res.error) return ;
 
     document.getElementById(`notification_${notificationID}`).remove();
@@ -2848,7 +2862,7 @@ async function dismissNotification(notificationID) {
 };
 
 async function dismissAll() {
-    const res = await sendRequest(`/notifications/dismissAll/`, { method: 'DELETE' });
+    const res = await sendRequest(`/notificationCenter/notifications/dismissAll`, { method: 'DELETE' });
 
     if (!res || res.error) return document.getElementById(`notificationsDiv`).innerHTML=`error while dismissing`
     else return document.getElementById(`notificationsDiv`).innerHTML=`Dismissed all notifications.`
@@ -3465,7 +3479,7 @@ function handleIntersection(entries, observer) {
         if (entry.isIntersecting) {
             console.log('Bottom div is now in view!');
             if (document.getElementById("addToBottomFollowingFollower")) return nextFollowingFollowerList()
-            if (!buildingFeed) nextFeedPage(currentFeedType)
+            if (!buildingFeed || followingFollowerData.currentlyBuilding) nextFeedPage(currentFeedType)
             // Do something when the bottom div is in view
         }
     });
@@ -3556,11 +3570,11 @@ async function submitEdit(postID) {
         </div>
     `  
 }
+
 async function quotePost(postID) {
-    const post = await sendRequest(`/posts/get/basic/${postID}`, { method: 'GET' })
-    if (!post || post.error) return false;
-    const user = await sendRequest(`/users/get/basic/${post.userID}`, { method: 'GET' })
-    if (!user || user.error) return false;
+    const postData = await sendRequest(`/posts/get/${postID}`, { method: 'GET', headers})
+    if (!postData || postData.error) return false;
+    const { postData:post, userData:user } = postData;
 
     await showModal(`
         <h1>Create a new Post</h1>
@@ -3578,11 +3592,9 @@ async function quotePost(postID) {
 }
 
 async function replyPost(postID) {
-    const post = await sendRequest(`/posts/get/basic/${postID}`, { method: 'GET', headers})
-    if (!post || post.error) return false;
-
-    const user = await sendRequest(`/users/get/basic/${post.userID}`, { method: 'GET', headers })
-    if (!user || user.error) return false;
+    const postData = await sendRequest(`/posts/get/${postID}`, { method: 'GET', headers})
+    if (!postData || postData.error) return false;
+    const { postData:post, userData:user } = postData;
 
     await showModal(`
         <h1>Create a new Reply</h1>
@@ -4389,7 +4401,7 @@ async function renameUsername() {
 }
 
 // For API Use
-// sendRequest("/notificationCenter/preferences/601", { method: 'POST', body: { "enabled": true, "systemType": 1 }});
+// sendRequest("/notificationCenter/preferences/403", { method: 'POST', body: { "enabled": true, "systemType": 1 }});
 async function sendRequest(request, { method, body, extraHeaders, ignoreError=false }) {
     // add "version" as a possible header, and .replace on the apiURL
     // or force the version be in the request
@@ -4414,14 +4426,14 @@ async function sendRequest(request, { method, body, extraHeaders, ignoreError=fa
         const data = await response.json();
         if (debug) console.log(data);
         if (data.error && !ignoreError) {
-            showModal(`<h1>Error</h1><p>${data.code}: ${data.msg}</p>`);
+            showModal(`<h1>Error Occurred</h1><p>${data.code}: ${data.msg}</p>`);
             return data;
         }
 
         return data;
     } catch(err) {
         if (!ignoreError) {
-            showModal(`<h1>Error</h1><p>Unknown Error.</p>`);
+            showModal(`<h1>Error Occurred</h1><p>Unknown Error.</p>`);
         }
         return { error : true };
     }
