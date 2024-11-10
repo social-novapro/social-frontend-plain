@@ -2664,19 +2664,19 @@ async function addEmailAccount({ email, password }) {
 }
 
 async function subNotifi(subUser) {
-    const res = await sendRequest(`/notifications/sub/${subUser}`, { method: 'POST' });
+    const res = await sendRequest(`/notificationCenter/subscriptions/sub/${subUser}`, { method: 'POST' });
     if (!res || res.error) return document.getElementById('notificationSub').innerHTML=`error`
     document.getElementById('notificationSub').innerHTML=`done`
 }
 
 async function unsubUser(userID, username) {
-    const res = await sendRequest(`/notifications/unsub/${userID}`, { method: 'DELETE' });
+    const res = await sendRequest(`/notificationCenter/subscriptions/unsub/${userID}`, { method: 'DELETE' });
     if (!res || res.error) return document.getElementById(`subList_${userID}`).innerHTML=`error while unsubscribing`
     document.getElementById(`subList_${userID}`).innerHTML=`Unsubscribed from <a onclick="userHtml('${userID}')">${username}</a>.`
 }
 
 async function unsubAll() {
-    const res = await sendRequest(`/notifications/unsubAll/`, { method: 'DELETE' });
+    const res = await sendRequest(`/notificationCenter/subscriptions/unsubAll/`, { method: 'DELETE' });
 
     if (!res || res.error) return document.getElementById(`notificationsDiv`).innerHTML=`error while unsubscribing`
     else return document.getElementById(`notificationsDiv`).innerHTML=`Unsubscribed from all users.`
@@ -2746,7 +2746,7 @@ async function showSubscriptions() {
     document.getElementById('showSubscriptionsButton').innerHTML="Hide Subscriptions"
     document.getElementById('showNotificationsButton').innerHTML="Show Notifications"
     
-    const res = await sendRequest(`/notifications/subscriptions/`, { method: 'GET' });
+    const res = await sendRequest(`/notificationCenter/subscriptions/`, { method: 'GET' });
     if (!res || res.error) return document.getElementById('showSubscriptionsButton').innerHTML=`error`
 
     var ele = `<hr class="rounded" id="subscriptionsAreShown"><p>${res.length} Subscriptions</p><hr class="rounded">`
@@ -2770,7 +2770,7 @@ async function showSubscriptions() {
                             `"followUser('${userData._id}', 'follow_search_id_${userData._id}')">Follow User`
                         }</p>
                     `}
-                    <a onclick="unsubUser('${userData._id}', '${userData.username}')">unsub from user.</a>
+                    <a onclick="unsubUser('${userData._id}', '${userData.username}')">Unsubscribe from User</a>
                     <p class="debug" onclick="copyToClipboard('${userData._id}')">${userData._id}</p>
                 </div>
             </div>
