@@ -761,21 +761,7 @@ async function userPage(userSearch) {
 // /*
 
 async function createPostModal() {
-    await showModal(`
-        <div id="postingModel">
-        <h1 class="font_h1-style">Create a new Post</h1>
-        <div id="postModel">
-            <button onclick="createPostPage()" class="menuButton menuButton-style">Open Post Page</button>
-            <button onclick="createPost()" class="menuButton menuButton-style">Upload Post</button>
-            <button onclick="closeModal()" class="menuButton menuButton-style">Close</button>
-        </div>
-        <div class="search">
-            <input type="text" class="addPollOption menu-style" id="pollCreateLink" placeholder="Link Poll via ID">
-        </div>
-        <textarea class="postTextArea" id="newPostTextArea"></textarea>
-        <div id="foundTaggings"></div>
-        </div>
-    `, "hide")
+    createPostPage(true);
 }
 
 async function socialTypePost(customInputID, forCoposter=false) {
@@ -1069,6 +1055,7 @@ function settingsPage() {
                         <div>
                             <button class="menuButton menuButton-style" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
                             <button class="menuButton menuButton-style" id="showSubscriptionsButton" onclick="showSubscriptions()">Show Subscriptions</button>
+                            <button class="menuButton menuButton-style" id="notificationSettingsPage" onclick="notificationSettingsPage()">Show Settings</button>
                         </div>
                         <div>
                             <div id="notificationsDiv"></div>
@@ -1168,7 +1155,9 @@ function bookmarksPage() {
     const ele = `
         <div id="bookmarksPage">
             <div class="menu menu-style">
-                <p><b>Bookmarks</b></p>
+                <h1>Bookmarks</h1>
+            </div>
+            <div class="menu menu-style">
                 <button class="menuButton menuButton-style" id="showBookmarksButton" onclick="showBookmarks()">Show Bookmarks</button>
                 <div id="bookmarksdiv"></div>
             </div>
@@ -2791,10 +2780,13 @@ function notificationsPage() {
     changeHeader("?notifications")
     const ele = `
         <div class="menu menu-style">
-            <p><b>Notifications</b></p>
+            <h1>Notifications</h1>
+        </div>
+            <div class="menu menu-style">
             <div>
                 <button class="menuButton menuButton-style" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
                 <button class="menuButton menuButton-style" id="showSubscriptionsButton" onclick="showSubscriptions()">Show Subscriptions</button>
+                <button class="menuButton menuButton-style" id="notificationSettingsPage" onclick="notificationSettingsPage()">Show Settings</button>
             </div>
             <div>
                 <div id="notificationsDiv"></div>
@@ -2803,6 +2795,52 @@ function notificationsPage() {
     `
     document.getElementById("mainFeed").innerHTML = ele;
     showNotifications();
+}
+
+async function notificationSettingsPage() {
+    const res = await sendRequest('/notificationCenter/preferences/', { method: 'GET' });
+    if (!res || res.error) return;
+
+    var ele = ``;
+    for (const system of res.systemPreferences) {
+        console.log(system)
+        ele+=notificationPreferenceSystem(system.preferences, system.preferences.sectionTypes, system.system)
+    }
+    document.getElementById("notificationsDiv").innerHTML = ele;
+}
+
+function notificationPreferenceSystem(userPreferences, sectionTypes, system) {
+    // if (!userPreferences || !sectionTypes || !system)
+    console.log(userPreferences)
+    return `
+        <div class="menu menu-style">
+            <div>
+                <p><b>${system.name}</b></p>
+                <p>${system.description}</p>
+                <button class="menuButton menuButton-style" onclick="revealNotifPrefrences('${system.systemType}')">Show Preferences</button>
+            </div>
+            <div id="notif_pref_${system.systemType}" style="display:none;>
+                <hr class="rounded">
+                <p><b>Preferences</b></p>
+                ${userPreferences.map((pref) => {
+                    return `
+                        <div class="menu menu-style">
+                            <p>${pref.setting.name}</p>
+                            <p>${pref.setting.description}</p>
+                            <p>Enabled: ${pref.setting.enabled}</p>
+                            <p>Last Updated: ${checkDate(pref.setting.timestampUpdated)}</p>
+                        </div>
+                    `
+                }).join(" ")}
+            </div>
+        </div>
+    `
+}
+
+function revealNotifPrefrences(systemType) {
+    const ele = document.getElementById(`notif_pref_${systemType}`);
+    if (ele.style.display == "none") ele.style.display = "";
+    else ele.style.display = "none";
 }
 
 async function showNotifications(indexID) {
@@ -3805,7 +3843,7 @@ async function searchResult(input) {
     searching = false
 }
 
-async function createPostPage() {
+async function createPostPage(useModal=false) {
     var preinput = false;
     var data = { };
     var paramsFound = [];
@@ -3898,8 +3936,11 @@ async function createPostPage() {
     if (debug) console.log("creating post")
 
     const ele = `
+        <div class="menu menu-style">
+            <h1>Create Post</h1>
+        </div>
         <div id="postPageDiv" class="menu menu-style">
-            <h1>Create a new Post</h1>
+            <p><b>Create a new Post</b></p>
             <div class="postPageInput">
             <textarea class="postTextArea" onkeyup="onTypePostPage()" id="newPostTextArea">${data?.content ? data.content : ""}</textarea>
             </div>
@@ -3923,7 +3964,14 @@ async function createPostPage() {
         </div>
     `;
 
-    document.getElementById("mainFeed").innerHTML = ele;
+    // if (useModal) {
+    //     document.getElementById('modalContainer').classList.add("showModal");
+    //     document.getElementById('modalContainer').innerHTML = `
+    //     <div class="main-feed modal_full">${ele}</div>
+    // `;
+    // } else {
+        document.getElementById("mainFeed").innerHTML = ele;
+    // }
 
     // add all data found from headers
     if (data.poll) {
@@ -4188,6 +4236,7 @@ function showPollCreation() {
 
     var ele = `
         <hr class="rounded">
+        <div class="menu menu-style">
         <h1>Create New Poll</h1>
         <hr class="rounded">
         <div class="mainActions">
@@ -4197,11 +4246,12 @@ function showPollCreation() {
         <hr class="rounded">
         <div id="pollCreation">
             <div id="optionAmount"></div>
-            <div>
+            <div class="menu menu-style">
                 <p><u>Question</u></p>
                 <input type="text" id="pollCreateTitle" class="addPollOption menu-style" placeholder="Question">
             </div>
             <div id="options">${addOption(1)}${addOption(2)}</div>
+        </div>
         </div>
     `;
 
@@ -4271,7 +4321,7 @@ function addExtraOption() {
 function addOption(num) {
     const amount = num || checkPollOptionAmount()+1;
     return `
-        <div class="pollOption" id="option_${num}">
+        <div class="pollOption menu menu-style" id="option_${num}">
             <p><u>Option ${amount}</u></p>
             <input type="text" class="addPollOption menu-style" id="poll_option_${num}" placeholder="Option ${amount}">
         </div>
