@@ -771,9 +771,12 @@ async function socialTypePost(customInputID, forCoposter=false) {
     const foundTags = await findTag(content)
     if (debug) console.log(foundTags)
 
+    const outputDivBox = customInputID ? `foundTaggings_${customInputID}` : "foundTaggings";
+    if (debug) console.log("input div output", outputDivBox)
+
     if (foundTags.found == false) {
         if (document.getElementById('taggingsOpened')) {
-            document.getElementById('foundTaggings').innerHTML=""
+            document.getElementById(outputDivBox).innerHTML=""
         }
         return false;
     };
@@ -802,7 +805,7 @@ async function socialTypePost(customInputID, forCoposter=false) {
     }
     
     if (debug) console.log(foundTags)
-    document.getElementById('foundTaggings').innerHTML=`
+    document.getElementById(outputDivBox).innerHTML=`
         <div id="taggingsOpened"></div>
         ${taggings}
     `
@@ -814,7 +817,7 @@ async function autoCompleteCoposter(username, userID) {
 
     // replaces with new value
     contentArgs[contentArgs.length-1] = `@${username} `;
-    document.getElementById('foundTaggings').innerHTML=""
+    document.getElementById('foundTaggings_coPostersInput').innerHTML=""
 
     document.getElementById('coPostersInput').value = contentArgs.join(" ")
     document.getElementById('coPostersInput').focus()
@@ -850,7 +853,7 @@ async function autoCompleteUser(username) {
     // replaces with new value
     if (contentArgs[contentArgs.length-1].startsWith("#")) contentArgs[contentArgs.length-1] = `${username} `;
     else contentArgs[contentArgs.length-1] = `@${username} `;
-    document.getElementById('foundTaggings').innerHTML=""
+    document.getElementById('foundTaggings').innerHTML="" // only for taggings
 
     
     document.getElementById('newPostTextArea').value = contentArgs.join(" ")
@@ -3945,23 +3948,21 @@ async function createPostPage(useModal=false) {
             <textarea class="postTextArea" onkeyup="onTypePostPage()" id="newPostTextArea">${data?.content ? data.content : ""}</textarea>
             </div>
             <div class="mainActions">
-                <p class="publicPost menuButton menuButton-style" onclick="leavePostPage()">Back</p>
-                <p class="publicPost menuButton menuButton-style" onclick="publishFromPostPage()">Upload Post</p>
-                <p class="publicPost menuButton menuButton-style" id="pollCreationButton" onclick="showPollCreation()">Add Poll</p>
-                <p class="publicPost menuButton menuButton-style" id="pollCreationButton" onclick="showCoPostersCreation()">Add Co-Posters</p>
-                <div class="publicPost menuButton menuButton-style">
+                <div id="foundTaggings"></div>
+                <p class="menuButton menuButton-style" onclick="leavePostPage()">Back</p>
+                <p class="menuButton menuButton-style" onclick="publishFromPostPage()">Upload Post</p>
+                <p class="menuButton menuButton-style" id="pollCreationButton" onclick="showPollCreation()">Add Poll</p>
+                <p class="menuButton menuButton-style" id="coposterCreationButton" onclick="showCoPostersCreation()">Add Co-Posters</p>
+                <div class="menuButton menuButton-style">
                     <p onclick="exportPostHeaderURL()">Create Post Template</p>
                     <p id="postURL_preview"></p>
                     <p id="postURL_messageURL"></p>
                 </div>
             </div>
-            <div>
-                <iv id="addCoPoster"></div>
-                <input type="text" id="pollCreateLink" class="addPollOption menu-style" placeholder="Link Poll via ID" ${data.pollID ? `value="${data.pollID}"` : ""}></input>
-            </div>
-            <div id="pollCreate"></div>
-            <div id="foundTaggings"></div>
+            <input type="text" id="pollCreateLink" class="addPollOption menu-style" placeholder="Link Poll via ID" ${data.pollID ? `value="${data.pollID}"` : ""}></input>
         </div>
+        <div id="coposterAddingArea"></div>
+        <div id="pollCreate"></div>
     `;
 
     // if (useModal) {
@@ -3995,6 +3996,28 @@ async function createPostPage(useModal=false) {
 };
 
 function showCoPostersCreation() {
+    if (debug) console.log("showing co-posters")
+    const coposterAddingArea = document.getElementById("coposterAddingArea");
+
+    if (coposterAddingArea.innerHTML!="") {
+        document.getElementById("coposterCreationButton").innerHTML = "Add Co-Posters"
+
+        coposterAddingArea.innerHTML = "";
+        return;
+    }
+    
+    coposterAddingArea.innerHTML = `
+        <hr class="rounded">
+        <div id="copostersShown" class="menu menu-style">
+            <h2>Add Coposters</h2><hr class="rounded">
+
+            <div id="addCoPoster">
+            </div>
+            <div id="foundTaggings_coPostersInput"></div>
+        </div>
+    `;
+
+    document.getElementById("coposterCreationButton").innerHTML = "Remove Co-Posters"
     const ele = `
         <div class="menu menu-style">
             <p>Co-Posters</p>
@@ -4004,18 +4027,6 @@ function showCoPostersCreation() {
     `;
 
     document.getElementById("addCoPoster").innerHTML = ele;
-}
-
-async function onTypeCoPosters() {
-    const input = document.getElementById('co-posters-input').value;
-    if (input == "") return document.getElementById('co-posters-div').innerHTML = "";
-    const foundTags = await findUserTag(content)
-    if (foundTags.found == false) {
-        if (document.getElementById('taggingsOpened')) {
-            document.getElementById('foundTaggings').innerHTML=""
-        }
-        return false;
-    };
 }
 
 function createPostPageHeaders() {
@@ -4237,7 +4248,7 @@ function showPollCreation() {
     var ele = `
         <hr class="rounded">
         <div class="menu menu-style">
-        <h1>Create New Poll</h1>
+        <h2>Create New Poll</h2>
         <hr class="rounded">
         <div class="mainActions">
             <p class="publicPost menuButton menuButton-style" onclick="addExtraOption()">Add Another Option</p>
@@ -4525,7 +4536,7 @@ function checkForImage(content, tags) {
                     (tag.tagTextOriginal == contentArgs[index])
                 ) {
                     if (tag.tagTextOriginal.startsWith("@")) {
-                        contentArgs[index] = `<a class="ownUser-style" onclick="userPage('${tag.tagTextOriginal.replace("@", "0")}')">${contentArgs[index]}</a>`
+                        contentArgs[index] = `<a class="ownUser-style" onclick="userPage('${tag.tagTextOriginal.replace("@", "")}')">${contentArgs[index]}</a>`
                     } else if (tag.tagTextOriginal.startsWith("#")) {
                         contentArgs[index] = `<a class="ownUser-style" onclick="searchResult('${tag.tagTextOriginal.replace("#", "1")}')">${contentArgs[index]}</a>`
                     }
