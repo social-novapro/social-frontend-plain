@@ -47,6 +47,13 @@ var userData = {
     userProfile: null,
     userUpdates: null,
 }
+
+var userProfieIndexData = {
+    indexID: null,
+    prevIndexID: null,
+    nextIndexID: null,
+    building: false,
+}
 // LOCAL STORAGE
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 var LOCAL_STORAGE_LOGINS='social.loginAccounts'
@@ -258,6 +265,7 @@ function postElementCreate({
                     <p onclick="copyToClipboard('${post._id}')">postID: ${post._id}</p>
                     <p onclick="copyToClipboard('${post.userID}')">userID: ${post.userID}</p>
                     ${post.indexID ? `<p onclick="copyToClipboard('${post.indexID}')">indexID: ${post.indexID}</p>` : `` }
+                    ${post.userPostIndexID ? `<p onclick="copyToClipboard('${post.userPostIndexID}')">userPostIndexID: ${post.userPostIndexID}</p>` : `` }
 
                     ${coposterData && coposterData[0] ? `${coposterData.map(function(coposter) {
                         return ` <p onclick="copyToClipboard('${coposter._id}')">coposter ${coposter.username}: ${coposter._id}</p>`
@@ -2013,6 +2021,16 @@ async function userHtml(userSearch) {
     if (profileData.userData) followingFollowerData.userData = profileData.userData;
 
 
+    if (profileData.included.userPostIndexData) {
+        userProfieIndexData.indexID = profileData.userPostIndexData.indexID;
+        if (profileData.userPostIndexData.prevIndexID) userProfieIndexData.prevIndexID = profileData.userPostIndexData.prevIndexID;
+        if (profileData.userPostIndexData.nextIndexID) userProfieIndexData.nextIndexID = profileData.userPostIndexData.nextIndexID;
+    } else {
+        profileData.prevIndexID = null;
+        profileData.nextIndexID = null;
+        profileData.totalPosts = 0;
+    }
+
     document.getElementById("mainFeed").innerHTML =  `
         ${clientUser ? `
             <div class="menu menu-style">
@@ -2119,7 +2137,7 @@ async function userHtml(userSearch) {
         ${!profileData.postData.error ? `
             <div class="menu menu-style">
                 <p><b>Posts</b></p>
-                <p>${profileData.postData.length}</p>
+                <p>${profileData.userData.totalPosts}</p>
             </div>
             <hr class="rounded">
             ${profileData.postData.map(function(post) {
@@ -2134,10 +2152,47 @@ async function userHtml(userSearch) {
                     extraData: post.type?.extra=="included" ? post.extraData : {},
                 })                
             }).join(" ")}
+            ${profileData.included.userPostIndexData && profileData.userPostIndexData.prevIndexID ? `
+                <div id="addToBottomProfile"></div>
+            `: ``}
         ` : ``}
     `
 
+    devMode()
     return;
+}
+
+async function addNextIndexProfile() {
+    console.log("BUILDING NEXT USERPOSTINDEX")
+    userProfieIndexData.currentlyBuilding = true;
+    if (!userProfieIndexData.prevIndexID) return;
+
+    const nextIndexData = await sendRequest(`/users/get/userPosts/${userProfieIndexData.prevIndexID}`, { method: 'GET' })
+    if (!nextIndexData || nextIndexData.error) return;
+
+    const myEle = `
+        ${nextIndexData.posts.map(function(post) {
+            return postElementCreate({
+                post: post.postData, 
+                user: post.userData,
+                pollData: post.type?.poll=="included" ? post.pollData : null,
+                voteData: post.type?.vote=="included" ? post.voteData : null,
+                quoteData: post.type?.quote=="included" ? post.quoteData : null,
+                coposterData: post.type?.copost=="included" ? post.coposterData : null,
+                tagData: post.type?.tag=="included" ? post.tagData : null,
+                extraData: post.type?.extra=="included" ? post.extraData : {},
+            })                
+        }).join(" ")}
+        <div id="addToBottomProfile"></div>
+    `;
+    
+    userProfieIndexData.indexID = nextIndexData.index._id;
+    userProfieIndexData.prevIndexID = nextIndexData.index.prevIndexID ?? null;
+    userProfieIndexData.nextIndexID = nextIndexData.index.nextIndexID ?? null;
+
+    document.getElementById("addToBottomProfile").outerHTML = myEle;
+    userProfieIndexData.currentlyBuilding = false;
+    devMode()
 }
 
 function showBadges() {
@@ -3420,6 +3475,7 @@ function handleIntersection(entries, observer) {
         if (entry.isIntersecting) {
             console.log('Bottom div is now in view!');
             if (document.getElementById("addToBottomFollowingFollower")) return nextFollowingFollowerList()
+            if (document.getElementById("addToBottomProfile")) return addNextIndexProfile();
             if (!buildingFeed) nextFeedPage(currentFeedType)
             // Do something when the bottom div is in view
         }
