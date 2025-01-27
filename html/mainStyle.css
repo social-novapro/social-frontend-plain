@@ -179,6 +179,7 @@ p {
 .menu-style {
     background-color:  var(--main-button-color);
 }
+/* Reply menu buttons */
 .menuButton {
     background-color:  var(--main-button-color);
     border: 2px solid var(--main-border-color);
@@ -279,7 +280,10 @@ p {
     font-size: 2rem;
     margin: 0 1.5rem;
 }
-/* modal styling */ 
+
+
+
+/* modal styling - Create post and reply styles*/ 
 .modalContainer {
     background-color: rgba(0,0,0,0.3);
     display: flex;
@@ -339,6 +343,12 @@ p {
 .modal p {
     font-size: 15px;
 }
+
+
+
+
+
+
 
 /* SMALL SCREEN*/
 @media only screen and (max-width: 600px) {
@@ -470,3 +480,6 @@ hr.rounded {
 .profileUserHtmlLarge {
     width: 200px;
 }
+
+
+

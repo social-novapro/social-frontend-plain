@@ -1,97 +1,247 @@
-.messageActions {
-    cursor: pointer;
-    user-select: none;
-}
-p {
-    color:rgb(107, 107, 107)
-}
-input {
-    color:rgb(107, 107, 107) 
-}
-.myMessage {
-    color: blue
-}
-.allMessages {
-    overflow-wrap: break-word;
-    height: 50vh; 
-    width: 100%;     
-    overflow-y: scroll;
-}
-.sendButton {
-    background-color:  var(--main-button-color);
-    border: 2px solid var(--main-border-color);
-    display: inline-block;
-    text-decoration: none;
-    color: var(--main-a-color);
-    text-align: center;
-    padding: 15px;
+:root {
+    --chat-primary: #383838;
+   
+    --chat-accent: #3498db;
+    --text-primary: #ecf0f1;
+    --text-secondary: #bdc3c7;
+    --border-color: rgba(218, 218, 218, 0.1);
+    --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Chat Container */
+  .chat-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: var(--chat-primary);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+  }
+  
+  /* Messages Area */
+  .allMessages {
+    height: 70vh;
+    padding: 20px;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    background: var(--chat-secondary);
     border-radius: 15px;
-    box-shadow: var(--main-shadow-color);
-}
-.contentMainArea {
-    display: flex;
-}
-.replyingEle {
-    background-color: var(--hover-nav-color);
-}
-.messageActions {
-    display: flex;
-}
-.messageActions p{
-    padding: 2px;
-    color: rgb(123, 123, 123);
-}
-.messageType {
-    background-color:  var(--main-button-color);
-    border: 2px solid var(--main-border-color);
-    display: inline-block;
-    text-decoration: none;
-    color: var(--main-a-color);
-    text-align: center;
+    margin: 15px;
+  }
+  
+  /* Message Bubbles */
+  .message {
+    margin: 15px 0;
     padding: 15px;
-    border-radius: 15px;
-    box-shadow: var(--main-shadow-color);
-}
-input {
-    width: 100vh;
-    height: 100%;
-    color: var(--main-a-color);
-    width: 90%;
-    background-color:  var(--main-button-color);
-    outline: none;
-    border: none;
-}
-.ownUser {
-    color: rgb(81, 144, 251);
-}
-.otherUser {
-    color: rgb(146, 146, 146)
-}
-.message {
-    border: 2px solid var(--main-border-color);
-    background-color:  var(--main-button-color);
-    margin-left: 2%;
-    margin-right: 2%;
+    border-radius: 12px;
+    background: var(--chat-primary);
+    border: 1px solid var(--border-color);
+    transition: transform 0.2s;
+  }
+  
+  .message:hover {
+    transform: translateX(5px);
+  }
+  
+  /* User Messages */
+  .ownUser-style {
+    color: var(--chat-accent);
+    font-weight: 600;
+  }
+  
+  .otherUser-style {
+    color: var(--text-secondary);
+  }
+  
+  /* Message Content */
+  .contentMessage {
+    color: var(--text-primary);
+    line-height: 1.5;
+    margin: 8px 0;
+  }
+  
+  /* Message Actions */
+  .messageActions {
+    display: flex;
+    gap: 15px;
     margin-top: 10px;
-    text-align: left;
-    text-decoration: none;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+  }
+  
+  .messageActions p {
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  
+  .messageActions p:hover {
+    color: var(--chat-accent);
+  }
+  
+  /* Input Area */
+  .messageType {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background: var(--chat-secondary);
+    border-radius: 12px;
+    margin: 15px;
+  }
+  
+  input {
+    flex: 1;
     padding: 12px;
-    border-radius: 15px;
+    border-radius: 8px;
+    background: var(--chat-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+  }
+  
+  .sendButton {
+    padding: 12px 25px;
+    background: var(--chat-accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  
+  .sendButton:hover {
+    transform: scale(1.05);
+  }
+  
+  /* Media */
+  .messageImage {
+    max-width: 300px;
+    border-radius: 8px;
+    margin: 10px 0;
+  }
+  
+  /* Typing Indicator */
+  .userTyping {
+    color: var(--text-secondary);
+    font-style: italic;
+    padding: 5px 15px;
+  }
+  
+  /* Reply Highlight */
+  .replyingEle {
+    background: rgba(52, 152, 219, 0.1);
+    border-left: 3px solid var(--chat-accent);
+  }
+  
+
+
+
+
+
+  /* CSS for Base Layout Below */
+
+  /* Base Layout */
+.allArea {
+    max-width: 1440px;
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
 }
-.subheaderMessage {
-    font-size: smaller;
-    padding: 3px
+
+.navbar {
+    width: 250px;
+    background: var(--nav-bg, #aa9f9f);
+    height: 100vh;
+    position: fixed;
+    transition: width 0.3s ease;
 }
-.contentMessage {
-    font-size: medium;
-    padding: 3px;
+
+.mainArea {
+    flex: 1;
+    margin-left: 250px;
+    padding: 20px;
 }
-.messageImage {
-    width: 40px;
+
+/* Head styles */
+.main-header {
+    font-size: 2.5rem;
+    color: var(--text-primary, #ffffff);
+    margin-bottom: 1.5rem;
+    font-weight: 600;
 }
-.edited i {
-    color: var(--hover-border-color)
+
+/* User Count & Action  */
+#userCount, #actiondescription {
+    font-size: 1rem;
+    color: var(--text-secondary, #a0a0a0);
+    margin: 10px 0;
+    padding: 8px;
+    background: var(--element-bg, #0f0f0f);
+    border-radius: 8px;
 }
-.userTyping {
-    display:inline-flex
+
+/* Input Area -Message  */
+.messageType {
+    position: sticky;
+    bottom: 20px;
+    background: var(--element-bg, #1e1e1e);
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.messageType form {
+    display: flex;
+    gap: 10px;
+}
+
+
+
+/* Online Users Section */
+.onlinePeople {
+    background: var(--element-bg, #1e1e1e);
+    padding: 15px;
+    border-radius: 12px;
+    margin: 20px 0;
+}
+
+
+
+/* Padding nElements */
+.top-page-padding {
+    height: 20px;
+}
+
+.end-page-padding {
+    height: 40px;
+}
+
+/* Responsive Design  for main parts */
+@media (max-width: 768px) {
+    .navbar {
+        width: 0;
+    }
+    
+    .mainArea {
+        margin-left: 0;
+    }
+    
+    .navbar.expanded {
+        width: 250px;
+    }
+    
+    .main-header {
+        font-size: 2rem;
+    }
+}
+
+/* Dark Mode stuffs */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --nav-bg: #1a1a1a;
+        --main-bg: #121212;
+        --element-bg: #1e1e1e;
+        --text-primary: #ffffff;
+        --text-secondary: #a0a0a0;
+        --accent-color: #007AFF;
+    }
 }

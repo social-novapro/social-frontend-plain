@@ -384,6 +384,9 @@ async function popupActions(postID, userID, hideParent, hideReplies, owner, pinn
     `;
 };
 
+
+
+
 function copyPostLink(postID) {
     const postLink = `${hostedUrl}?postID=${postID}`
     copyToClipboard(postLink)

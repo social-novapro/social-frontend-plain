@@ -1,3 +1,4 @@
+
 .search:hover {
     border-color:rgba(39, 113, 240, 0.9);
 }
@@ -343,3 +344,74 @@
         var(--main-shadow-color);
     transition: transform 400ms, border-color 400ms, background-color 400ms;
 }
+
+
+
+
+
+
+
+
+
+
+
+/* New testing Css will organize sometime  */
+
+
+
+/* NEW - Menu Actions dropdown  */
+.pointerCursor:hover {
+    text-decoration: underline;
+}
+
+#popupOpen_ {
+    display: block;
+}
+
+#popupOpen_ p {
+    margin: 5px 0;
+}
+
+#editButton_ {
+    margin-top: 10px;
+}
+
+.posts-style p {
+    margin-bottom: 10px;
+}
+
+#pin_post_, #saveBookmark_, #followUser_ {
+    color: #28a745;
+}
+
+#pin_post_:hover, #saveBookmark_:hover, #followUser_:hover {
+    color: #218838;
+}
+
+#deletePost_ {
+    color: #dc3545;
+}
+
+#deletePost_:hover {
+    color: #c82333;
+}
+
+#replies_, #quotes_, #post_copy_, #editHistory_, #likedBy_ {
+    color: #6c757d;
+}
+
+#replies_:hover, #quotes_:hover, #post_copy_:hover, #editHistory_:hover, #likedBy_:hover {
+    color: #343a40;
+}
+
+#popupactions_ {
+    display: none;
+}
+
+#popupOpen_ {
+    top: 50px; 
+    left: 50px; 
+}
+
+
+
