@@ -276,6 +276,7 @@ function postElementCreate({
                     <p onclick="likePost('${post._id}')" class="${extraData.liked == true ? 'ownUser-style likedColour':'posts_action-style'}" id="likePost_${post._id}">${styleLikedButton(extraData.liked, post.totalLikes ?? 0)}</p>
                     <p onclick="replyPost('${post._id}')" class="posts_action-style">${styleReplyButton(post.totalReplies)}</p>
                     <p onclick="quotePost('${post._id}')" class="posts_action-style">${styleQuoteButton(post.totalQuotes)}</p>
+                    <p id="aisummaryaction_${post._id}" onclick="aiSummaryAction('${post._id}')" class="posts_action-style">${styleSummaryButton()}</p>
                     ${!mobileClient ? `
                         ${post.userID == currentUserLogin.userID ? `
                             <p onclick="deletePost('${post._id}')" class="posts_action-style">${styleDeleteButton()}</p>
@@ -297,6 +298,16 @@ function postElementCreate({
     return element;
 }
 
+function styleSummaryButton() {
+    var returnElement = `<span>`;
+    returnElement+=`<span class="material-symbols-outlined">rocket_launch</span>`
+    return returnElement + `</span>`
+}
+function styleSummaryCloseButton() {
+    var returnElement = `<span>`;
+    returnElement+=`<span class="material-symbols-outlined">rocket</span>`
+    return returnElement + `</span>`
+}
 function styleLikedButton(liked, totalLikes) {
     var returnElement = `<span>`;
     if (totalLikes) returnElement+=`<span>${totalLikes}</span>`
@@ -384,6 +395,35 @@ async function popupActions(postID, userID, hideParent, hideReplies, owner, pinn
     `;
 };
 
+async function aiSummaryAction(postID, userID) {
+    var elementPopup = document.getElementById(`aisummaryOpen_${postID}`);
+    if (elementPopup) {
+        document.getElementById(`aisummaryaction_${postID}`).innerHTML = styleSummaryButton(false)
+        return elementPopup.remove();
+    } else {
+        document.getElementById(`aisummaryaction_${postID}`).innerHTML = styleSummaryCloseButton(true)
+    }
+
+    document.getElementById(`postElement_${postID}`).innerHTML+=`
+        <div id="aisummaryOpen_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
+            <p id="aisummaryOpenResult_${postID}">Please wait... Loading AI Summary</p>
+        </div>
+    `;
+
+
+    const summaryData = await sendRequest(`/ai/summary/${postID}`, {
+        method: 'GET'
+    });
+
+    if (!summaryData || summaryData.error || !summaryData.response) return document.getElementById(`aisummaryOpenResult_${postID}`).innerText = "Error while loading AI Summary, please try again later.";
+    document.getElementById(`aisummaryOpenResult_${postID}`).innerHTML = `
+    <div class="inline">
+        <p>AI Summary</p>
+        <hr class="rounded">
+        <p>${summaryData.response}</p>
+    </div>`;
+};
+
 function copyPostLink(postID) {
     const postLink = `${hostedUrl}?postID=${postID}`
     copyToClipboard(postLink)
@@ -469,7 +509,7 @@ async function viewParentPost(postID, parentPostID) {
    
     const postEle = postElementCreate({post: postData, user: userData});
     document.getElementById(`parent_${postID}`).innerHTML = `
-        <div class="publicPost areaPost posts-style" id="openedParent_${postID}">${postEle}</div>
+        <div class="" id="openedParent_${postID}">${postEle}</div>
     `;
     document.getElementById(`parentViewing_${postID}`).innerText = "Close parent post.";
 
@@ -4384,6 +4424,15 @@ function editUser() {
             <button class="buttonStyled" onclick=renameUsername()>Edit Username</button>
         </div>
     `
+}
+
+// AI FEATURES
+// summary of post/thread
+async function getSummary() {
+    const summaryData = await sendRequest(`/put/editUsername`, {
+        method: 'GET'
+    });
+
 }
 
 // EDIT DISPLAY NAME
