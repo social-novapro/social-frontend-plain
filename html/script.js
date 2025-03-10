@@ -54,6 +54,8 @@ var userProfieIndexData = {
     nextIndexID: null,
     building: false,
 }
+var aiSuggestions = [];
+var amountSuggestions = 0;
 // LOCAL STORAGE
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 var LOCAL_STORAGE_LOGINS='social.loginAccounts'
@@ -791,12 +793,14 @@ async function createPostModal() {
             <button onclick="createPostPage()" class="menuButton menuButton-style">Open Post Page</button>
             <button onclick="createPost()" class="menuButton menuButton-style">Upload Post</button>
             <button onclick="closeModal()" class="menuButton menuButton-style">Close</button>
+            <button onclick="getPostSuggestions('modal')" class="menuButton menuButton-style">Get Suggestions</button>
         </div>
         <div class="search">
             <input type="text" class="addPollOption menu-style" id="pollCreateLink" placeholder="Link Poll via ID">
         </div>
         <textarea class="postTextArea" id="newPostTextArea"></textarea>
         <div id="foundTaggings"></div>
+        <div id="foundAIPostSuggestions"></div>
         </div>
     `, "hide")
 }
@@ -3618,6 +3622,7 @@ async function quotePost(postID) {
         <div class="postModalActions">
             <button class="menuButton menuButton-style" onclick="createPost({'quoteID':'${postID}'})">Upload Post</button>
             <button class="menuButton menuButton-style" onclick="closeModal()">Close</button>
+            <button onclick="getPostSuggestions('modal', '${postID}')" class="menuButton menuButton-style">Get Suggestions</button>
         </div>
         <hr class="rounded">
         <div class="post">
@@ -3630,6 +3635,7 @@ async function quotePost(postID) {
             </div>
         </div>
         <textarea class="postTextArea" id="newPostTextArea"></textarea>
+        <div id="foundAIPostSuggestions"></div>
         <div id="foundTaggings"></div>
     `, "hide")
 }
@@ -3646,6 +3652,7 @@ async function replyPost(postID) {
         <div class="postModalActions">
             <button class="menuButton menuButton-style" onclick="createPost({'replyID':'${postID}'})">Upload Reply</button>
             <button class="menuButton menuButton-style" onclick="closeModal()">Close</button>
+            <button onclick="getPostSuggestions('modal', '${postID}')" class="menuButton menuButton-style">Get Suggestions</button>
         </div>
         <hr class="rounded">
         <div class="post">
@@ -3658,6 +3665,7 @@ async function replyPost(postID) {
             </div>
         </div>
         <textarea class="postTextArea" id="newPostTextArea"></textarea>
+        <div id="foundAIPostSuggestions"></div>
         <div id="foundTaggings"></div>
     `, "hide")
 }
@@ -3959,12 +3967,14 @@ async function createPostPage() {
                 <p class="publicPost menuButton menuButton-style" onclick="publishFromPostPage()">Upload Post</p>
                 <p class="publicPost menuButton menuButton-style" id="pollCreationButton" onclick="showPollCreation()">Add Poll</p>
                 <p class="publicPost menuButton menuButton-style" id="pollCreationButton" onclick="showCoPostersCreation()">Add Co-Posters</p>
+                <p class="publicPost menuButton menuButton-style" id="getSuggestionsButton" onclick="getPostSuggestions('main', '')">Get Suggestions</p>
                 <div class="publicPost menuButton menuButton-style">
                     <p onclick="exportPostHeaderURL()">Create Post Template</p>
                     <p id="postURL_preview"></p>
                     <p id="postURL_messageURL"></p>
                 </div>
             </div>
+            <div id="foundAIPostSuggestions"></div>
             <div>
                 <iv id="addCoPoster"></div>
                 <input type="text" id="pollCreateLink" class="addPollOption menu-style" placeholder="Link Poll via ID" ${data.pollID ? `value="${data.pollID}"` : ""}></input>
@@ -4428,11 +4438,33 @@ function editUser() {
 
 // AI FEATURES
 // summary of post/thread
-async function getSummary() {
-    const summaryData = await sendRequest(`/put/editUsername`, {
-        method: 'GET'
+async function getPostSuggestions(type, postID) {
+    const suggestionsDiv = document.getElementById('foundAIPostSuggestions');
+    
+    suggestionsDiv.innerHTML = `<p>Loading Suggestions...</p>`;
+    const suggestionPost = await sendRequest(`/ai/suggestion`, {
+        method: 'POST'
     });
 
+    if (!suggestionPost || suggestionPost.error) {
+        return suggestionsDiv.innerHTML = `<p>Suggestions Failed</p>`;
+    }
+    
+    console.log(suggestionPost.response);
+    aiSuggestions.push(suggestionPost.response);
+    foundAIPostSuggestions.innerHTML = `
+        <div class="publicPost posts-style">
+            <p>AI Suggestion</p>
+            <hr class="rounded">
+            <p onclick="useSuggestion(${amountSuggestions})">${suggestionPost.response}</p>
+        </div>
+    `;
+    amountSuggestions++;
+}
+
+function useSuggestion(suggestion) {
+    document.getElementById('newPostTextArea').value = aiSuggestions[suggestion];
+    document.getElementById('foundAIPostSuggestions').innerHTML = "";
 }
 
 // EDIT DISPLAY NAME
