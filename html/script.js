@@ -4493,6 +4493,13 @@ function checkForImage(content, tags) {
             }
         }
         //if (contentArgs[index].includes(' ')) contentArgs[index] = contentArgs[index].replace(' ', '')
+          if (contentArgs[index].startsWith("http://localhost:5005/v1/video/")) {
+                foundImage = true
+                const URL = contentArgs[index]
+                var videoID = URL.replace("http://localhost:5005/v1/video", "")
+                const iframeHuelet = `<video src="http://localhost:5005/v1/cdn/video${videoID}" width="320" height="240" frameborder="0" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen="true"></video>`
+                attachments.push(iframeHuelet)
+            }
         if (contentArgs[index].startsWith('https://')) {
             for (const imageFormat of imageFormats) {
                 if (contentArgs[index].endsWith(imageFormat)) {
@@ -4517,7 +4524,16 @@ function checkForImage(content, tags) {
                // contentArgs[index] = iframeMarkup
                 attachments.push(iframeMarkup)
             }
+            if (contentArgs[index].startsWith("https://interact-api.novapro.net/v1/cdn/video")) {
+                foundImage = true
 
+                const URL = contentArgs[index]
+                var videoID = URL.replace("https://interact-api.novapro.net/v1/cdn/video", "")
+
+                const iframeHuelet = `<iframe src="https://interact-api.novapro.net/v1/?embed=true&vuid=${videoID}" width="320" height="240" frameborder="0" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen="true"></iframe>`
+                attachments.push(iframeHuelet)
+            }
+          
             if (contentArgs[index].startsWith("https://huelet.net/w/")) {
                 foundImage = true
 
