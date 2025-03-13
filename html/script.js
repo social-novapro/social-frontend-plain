@@ -422,6 +422,7 @@ async function aiSummaryAction(postID, userID) {
     <div class="inline">
         <p>AI Summary</p>
         <hr class="rounded">
+        ${summaryData.totalPosts > 1 ? `<p>Based on ${summaryData.totalPosts} posts</p>` : ``}
         <p>${summaryData.response}</p>
     </div>`;
 };
@@ -4440,17 +4441,18 @@ function editUser() {
 // summary of post/thread
 async function getPostSuggestions(type, postID) {
     const suggestionsDiv = document.getElementById('foundAIPostSuggestions');
-    
+    const foundContent = document.getElementById('newPostTextArea').value;
     suggestionsDiv.innerHTML = `<p>Loading Suggestions...</p>`;
-    const suggestionPost = await sendRequest(`/ai/suggestion`, {
-        method: 'POST'
+    
+    const suggestionPost = await sendRequest(`/ai/suggestion/${postID ? postID : ""}`, {
+        method: 'POST',
+        body: { content: foundContent }
     });
 
     if (!suggestionPost || suggestionPost.error) {
         return suggestionsDiv.innerHTML = `<p>Suggestions Failed</p>`;
     }
     
-    console.log(suggestionPost.response);
     aiSuggestions.push(suggestionPost.response);
     foundAIPostSuggestions.innerHTML = `
         <div class="publicPost posts-style">
