@@ -3917,6 +3917,7 @@ async function createPostPage() {
             <div class="mainActions">
                 <p class="publicPost menuButton menuButton-style" onclick="leavePostPage()">Back</p>
                 <p class="publicPost menuButton menuButton-style" onclick="publishFromPostPage()">Upload Post</p>
+                <p class="publicPost menuButton menuButton-style" id="mediaCreationButton" onclick="showMediaCreation()">Add Media</p>
                 <p class="publicPost menuButton menuButton-style" id="pollCreationButton" onclick="showPollCreation()">Add Poll</p>
                 <p class="publicPost menuButton menuButton-style" id="pollCreationButton" onclick="showCoPostersCreation()">Add Co-Posters</p>
                 <div class="publicPost menuButton menuButton-style">
@@ -3929,6 +3930,7 @@ async function createPostPage() {
                 <iv id="addCoPoster"></div>
                 <input type="text" id="pollCreateLink" class="addPollOption menu-style" placeholder="Link Poll via ID" ${data.pollID ? `value="${data.pollID}"` : ""}></input>
             </div>
+            <div id="mediaAdd"></div>
             <div id="pollCreate"></div>
             <div id="foundTaggings"></div>
         </div>
@@ -4182,6 +4184,113 @@ async function leavePostPage() {
     getFeed()
 }
 
+function removeMediaCreation() {
+    if (debug) console.log("creating media")
+    document.getElementById("mediaAdd").innerHTML = "";
+    document.getElementById("mediaCreationButton").onclick=showMediaCreation;
+    document.getElementById("mediaCreationButton").innerHTML="Add Media";
+}
+
+function showMediaCreation() {
+    if (debug) console.log("creating media")
+    document.getElementById("mediaCreationButton").onclick=removeMediaCreation;
+    document.getElementById("mediaCreationButton").innerHTML="Remove Media";
+
+    const ele = `
+        <div class="menu menu-style">
+            <input type="file" id="interactFile">
+            <button id="uploadMedia">Upload</button>
+            <small id="status"></small>
+        </div>
+    `
+    document.getElementById("mediaAdd").innerHTML = ele;
+
+    document.getElementById("uploadMedia").addEventListener('click', async () => {
+        await uploadFile();
+        console.log('clicked the upload button!');
+    });
+}
+
+async function uploadFile() {
+    const fileInput = document.getElementById('interactFile');
+    const selectFile = fileInput.files[fileInput.files.length-1];
+    if (!selectFile) {
+        console.error('No file selected');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', selectFile);
+
+    console.log('Uploading file:', selectFile);
+    try {
+        const fileType = await sendRequest('/cdn/fileType/' + selectFile.name, {method: "GET"});
+        console.log(fileType);
+
+        if (fileType.error) {
+            console.error('Error verifying file:', fileType.error);
+            return;
+        }
+        
+        const finalRes = await sendRequest('/cdn/'+fileType.type, {
+            method: 'POST',
+            body: formData,
+            file: true
+        });
+
+        
+        console.log('finalRes:', finalRes);
+           
+    } catch (error) {
+        console.error('Error uploading file:', error);
+    }
+}
+
+async function getFile(fileID) {
+    try {
+        const response = await fetch(`http://localhost:3000/v1/get/${fileID}`);
+        if (response.ok) {
+            const fileBlob = await response.blob();
+            console.log('file:', fileBlob);
+            const fileURL = URL.createObjectURL(fileBlob);
+            displayFile(fileURL, fileBlob.type);
+        } else {
+            console.error('Error getting file:', response.statusText);
+        }
+    } catch (error) {
+        console.error('Error getting file:', error);
+    }
+}
+
+function displayFile(fileURL, mimeType) {
+    fileContainer.innerHTML = ''; // Clear any previous content
+    console.log(mimeType);
+    if (mimeType.startsWith('image/')) {
+        const img = document.createElement('img');
+        img.src = fileURL;
+        img.alt = 'Uploaded Image';
+        fileContainer.appendChild(img);
+    } else if (mimeType === 'application/pdf') {
+        const iframe = document.createElement('iframe');
+        iframe.src = fileURL;
+        iframe.width = '100%';
+        iframe.height = '600px';
+        fileContainer.appendChild(iframe);
+    } else if (mimeType.startsWith('video/')) {
+        const video = document.createElement('video');
+        video.src = fileURL;
+        video.width = '100%';
+        video.controls = true;
+        fileContainer.appendChild(video);
+    }else{
+        const a = document.createElement('a');
+        a.href = fileURL;
+        a.textContent = 'Download File';
+        a.download = 'file';
+        fileContainer.appendChild(a);
+    }
+}
+
 function removePollCreation() {
     if (debug) console.log("removing poll")
     document.getElementById("pollCreate").innerHTML = "";
@@ -4412,24 +4521,40 @@ async function renameUsername() {
 }
 
 // For API Use
-async function sendRequest(request, { method, body, extraHeaders, ignoreError=false }) {
+async function sendRequest(request, { method, body, file, extraHeaders, ignoreError=false }) {
     // add "version" as a possible header, and .replace on the apiURL
     // or force the version be in the request
     var headersEdited = {};
 
-    if (extraHeaders) {
+    if (extraHeaders || file) {
         headersEdited = { ...headers };
-        for (const header in extraHeaders) {
-            headersEdited[header] = extraHeaders[header];
+        if (extraHeaders) {
+            for (const header in extraHeaders) {
+                headersEdited[header] = extraHeaders[header];
+            }
+        }
+
+        if (file) {
+            for (const header in headersEdited) {
+                console.log(headers)
+                if (header == 'Content-Type') {
+                    // remove header
+                    delete headersEdited[header];
+                }
+            }
         }
     }
+
+    console.log(headersEdited)
+    console.log(headers)
+    
 
     if (debug) console.log(`Sending Request: ${method} ${apiURL}${request}`);
 
     const response = await fetch(`${apiURL}${request}`, {
         method: method || 'GET',
-        body: body ? JSON.stringify(body) : null,
-        headers : extraHeaders ? headersEdited : headers
+        body: body ? !file ? JSON.stringify(body) : body : null,
+        headers : extraHeaders || file ? headersEdited : headers
     });
     
     try {
@@ -4452,6 +4577,7 @@ async function sendRequest(request, { method, body, extraHeaders, ignoreError=fa
 function getId(url) {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = url.match(regExp);
+    if (!match || match.length < 2) return undefined;
 
     return (match && match[2].length === 11) ? match[2] : undefined;
 }
@@ -4493,14 +4619,7 @@ function checkForImage(content, tags) {
             }
         }
         //if (contentArgs[index].includes(' ')) contentArgs[index] = contentArgs[index].replace(' ', '')
-          if (contentArgs[index].startsWith("http://localhost:5005/v1/video/")) {
-                foundImage = true
-                const URL = contentArgs[index]
-                var videoID = URL.replace("http://localhost:5005/v1/video", "")
-                const iframeHuelet = `<video src="http://localhost:5005/v1/cdn/video${videoID}" width="320" height="240" frameborder="0" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen="true"></video>`
-                attachments.push(iframeHuelet)
-            }
-        if (contentArgs[index].startsWith('https://')) {
+        if (contentArgs[index].startsWith('https://') || contentArgs[index].startsWith('http://')) {
             for (const imageFormat of imageFormats) {
                 if (contentArgs[index].endsWith(imageFormat)) {
                     foundImage = true
@@ -4509,14 +4628,34 @@ function checkForImage(content, tags) {
                 }
             }
 
+            const videoId = getId(contentArgs[index]);
             for (const videoFormat of videoFormats) {
-                if (contentArgs[index].endsWith(videoFormat.urlEnd)) {
+                // direct interact / huelet video
+                if (contentArgs[index].startsWith("http://localhost:5002/v1/cdn/static")) {
+                    foundImage = true
+    
+                    const URL = contentArgs[index]
+                    var videoID = URL.replace("http://localhost:5002/v1/cdn/static/", "")
+                    
+                    const iframeHuelet = `<iframe src="http://localhost:5002/v1/video_embed/?embed=true&vuid=${videoID}" width="320" height="240" frameborder="0" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen="true"></iframe>`
+                    attachments.push(iframeHuelet)
+                }
+                else if (contentArgs[index].startsWith("https://interact-api.novapro.net/v1/cdn/static")) {
+                    foundImage = true
+    
+                    const URL = contentArgs[index]
+                    var videoID = URL.replace("https://interact-api.novapro.net/v1/cdn/static/", "")
+                    
+                    const iframeHuelet = `<iframe src="https://interact-api.novapro.net/v1/video_embed/?embed=true&vuid=${videoID}" width="320" height="240" frameborder="0" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen="true"></iframe>`
+                    attachments.push(iframeHuelet)
+                }
+                else if (contentArgs[index].endsWith(videoFormat.urlEnd)) {
+                    // regular video 
                     foundImage = true
                     //contentArgs[index] = `\n<video width="320" height="240" controls><source src="${contentArgs[index]}" type="video/${videoFormat.type}"></video>`
                     attachments.push(`<video alt="uservideo" width="320" height="240" controls><source src="${contentArgs[index]}" type="video/${videoFormat.type}"></video>`)
                 }
             }
-            const videoId = getId(contentArgs[index]);
 
             if (videoId) {
                 foundImage = true
@@ -4524,16 +4663,15 @@ function checkForImage(content, tags) {
                // contentArgs[index] = iframeMarkup
                 attachments.push(iframeMarkup)
             }
-            if (contentArgs[index].startsWith("https://interact-api.novapro.net/v1/cdn/video")) {
-                foundImage = true
+            // if (contentArgs[index].startsWith("https://interact.novapro.net/?videoID=") || contentArgs[index].startsWith("https://interact-api.novapro.net/v1/cdn/static")) {
+            //     foundImage = true
 
-                const URL = contentArgs[index]
-                var videoID = URL.replace("https://interact-api.novapro.net/v1/cdn/video", "")
+            //     const URL = contentArgs[index]
+            //     var videoID = URL.replace("https://huelet.net/w/", "")
 
-                const iframeHuelet = `<iframe src="https://interact-api.novapro.net/v1/?embed=true&vuid=${videoID}" width="320" height="240" frameborder="0" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen="true"></iframe>`
-                attachments.push(iframeHuelet)
-            }
-          
+            //     const iframeHuelet = `<iframe src="https://publish.huelet.net/?embed=true&vuid=${videoID}" width="320" height="240" frameborder="0" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen="true"></iframe>`
+            //     attachments.push(iframeHuelet)
+            // }
             if (contentArgs[index].startsWith("https://huelet.net/w/")) {
                 foundImage = true
 
