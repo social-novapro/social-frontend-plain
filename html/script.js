@@ -62,6 +62,8 @@ var LOCAL_STORAGE_THEME_POSSIBLE = 'social.themePossible'
 var buildingFeed = true;
 // let loginUserToken = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
 
+var mediaUploadLinks = [];
+
 function checkifMobile() {
     const width = document.getElementById("html").clientWidth
     if (width < 900) {
@@ -3916,7 +3918,7 @@ async function createPostPage() {
             </div>
             <div class="mainActions">
                 <p class="publicPost menuButton menuButton-style" onclick="leavePostPage()">Back</p>
-                <p class="publicPost menuButton menuButton-style" onclick="publishFromPostPage()">Upload Post</p>
+                <p class="publicPost menuButton menuButton-style" id="publishFromPostPage" onclick="publishFromPostPage()">Upload Post</p>
                 <p class="publicPost menuButton menuButton-style" id="mediaCreationButton" onclick="showMediaCreation()">Add Media</p>
                 <p class="publicPost menuButton menuButton-style" id="pollCreationButton" onclick="showPollCreation()">Add Poll</p>
                 <p class="publicPost menuButton menuButton-style" id="pollCreationButton" onclick="showCoPostersCreation()">Add Co-Posters</p>
@@ -4184,6 +4186,18 @@ async function leavePostPage() {
     getFeed()
 }
 
+function pausePostUploadButton() {
+    console.log("pausing post upload button")
+    document.getElementById('publishFromPostPage').innerHTML = "Please Wait"
+    document.getElementById('publishFromPostPage').onclick = null;
+}
+
+function resumePostUploadButton() {
+    console.log("resuming post upload button")
+    document.getElementById('publishFromPostPage').innerHTML = "Upload Post"
+    document.getElementById('publishFromPostPage').onclick = publishFromPostPage;
+}
+
 function removeMediaCreation() {
     if (debug) console.log("creating media")
     document.getElementById("mediaAdd").innerHTML = "";
@@ -4224,11 +4238,13 @@ async function uploadFile() {
 
     console.log('Uploading file:', selectFile);
     try {
+        pausePostUploadButton();
         const fileType = await sendRequest('/cdn/fileType/' + selectFile.name, {method: "GET"});
         console.log(fileType);
 
         if (fileType.error) {
             console.error('Error verifying file:', fileType.error);
+            document.getElementById("mediaAdd").innerHTML = `<p>Error uploading file</p>`;
             return;
         }
         
@@ -4238,10 +4254,17 @@ async function uploadFile() {
             file: true
         });
 
-        
         console.log('finalRes:', finalRes);
-           
+        mediaUploadLinks.push(finalRes.cdnURL);
+
+        document.getElementById('newPostTextArea').value = document.getElementById('newPostTextArea').value + `${config[config.current].api_url}/cdn${finalRes.cdnURL}`;
+        document.getElementById('newPostTextArea').focus()
+
+        resumePostUploadButton()
     } catch (error) {
+
+        document.getElementById("mediaAdd").innerHTML = `<p>Error uploading file</p>`;
+        resumePostUploadButton();
         console.error('Error uploading file:', error);
     }
 }
