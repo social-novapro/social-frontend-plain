@@ -4616,6 +4616,10 @@ function unloadSpotify(amount, link) {
     document.getElementById(`spotify_frame_${amount}`).onclick = `loadSpotify(${amount}, '${link}')`
 }
 
+function openImagePreview(imageURL) {
+    showModal(`<div><h1>Image</h1><hr class="rounded"h><img src="${imageURL}"></img></div>`)
+}
+
 function checkForImage(content, tags) {
     const imageFormats = ['.jpg', '.png','.jpeg', '.svg', '.gif']
     const videoFormats = [{'urlEnd': '.mp4', "type": 'mp4'}, {'urlEnd':'.mov','type':'mp4'}, {'urlEnd':'.ogg', 'type': 'ogg'}]
@@ -4647,16 +4651,18 @@ function checkForImage(content, tags) {
                 if (contentArgs[index].endsWith(imageFormat)) {
                     foundImage = true
                    // contentArgs[index] = `<img class="messageImage" src="${contentArgs[index]}"></img>`
-                    attachments.push(`<img alt="userImage" class="messageImage" width="100px" src="${contentArgs[index]}"></img>`)
+                    attachments.push(`<img alt="userImage" class="messageImage" width="100px" src="${contentArgs[index]}" onclick="openImagePreview('${contentArgs[index]}')"></img>`)
                 }
             }
 
             const videoId = getId(contentArgs[index]);
+            var foundVideo = false;
             for (const videoFormat of videoFormats) {
-                // direct interact / huelet video
-                if (contentArgs[index].startsWith("http://localhost:5002/v1/cdn/static")) {
+                if (foundVideo || !contentArgs[index].includes(videoFormat.urlEnd)) {
+                }
+                else if (contentArgs[index].startsWith("http://localhost:5002/v1/cdn/static")) {
                     foundImage = true
-    
+                    foundVideo = true
                     const URL = contentArgs[index]
                     var videoID = URL.replace("http://localhost:5002/v1/cdn/static/", "")
                     
@@ -4665,6 +4671,7 @@ function checkForImage(content, tags) {
                 }
                 else if (contentArgs[index].startsWith("https://interact-api.novapro.net/v1/cdn/static")) {
                     foundImage = true
+                    foundVideo = true
     
                     const URL = contentArgs[index]
                     var videoID = URL.replace("https://interact-api.novapro.net/v1/cdn/static/", "")
@@ -4675,6 +4682,7 @@ function checkForImage(content, tags) {
                 else if (contentArgs[index].endsWith(videoFormat.urlEnd)) {
                     // regular video 
                     foundImage = true
+                    foundVideo = true
                     //contentArgs[index] = `\n<video width="320" height="240" controls><source src="${contentArgs[index]}" type="video/${videoFormat.type}"></video>`
                     attachments.push(`<video alt="uservideo" width="320" height="240" controls><source src="${contentArgs[index]}" type="video/${videoFormat.type}"></video>`)
                 }
