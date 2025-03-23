@@ -4212,17 +4212,14 @@ function showMediaCreation() {
 
     const ele = `
         <div class="menu menu-style">
-            <input type="file" id="interactFile">
-            <button id="uploadMedia">Upload</button>
-            <small id="status"></small>
+            <h1 class="font_h1-style">Add Media</h1>
+        </div>
+        <div class="menu menu-style">
+            <input type="file" id="interactFile" class="menuButton menuButton-style">
+            <button onclick="uploadFile()" id="uploadMedia" class="menuButton menuButton-style">Upload Media</button>
         </div>
     `
     document.getElementById("mediaAdd").innerHTML = ele;
-
-    document.getElementById("uploadMedia").addEventListener('click', async () => {
-        await uploadFile();
-        console.log('clicked the upload button!');
-    });
 }
 
 async function uploadFile() {
@@ -4259,7 +4256,8 @@ async function uploadFile() {
 
         document.getElementById('newPostTextArea').value = document.getElementById('newPostTextArea').value + `${config[config.current].api_url}/cdn${finalRes.cdnURL}`;
         document.getElementById('newPostTextArea').focus()
-
+        displayFile(`http://localhost:5002/v1/cdn${finalRes.cdnURL}`);
+        
         resumePostUploadButton()
     } catch (error) {
 
@@ -4269,49 +4267,13 @@ async function uploadFile() {
     }
 }
 
-async function getFile(fileID) {
-    try {
-        const response = await fetch(`http://localhost:3000/v1/get/${fileID}`);
-        if (response.ok) {
-            const fileBlob = await response.blob();
-            console.log('file:', fileBlob);
-            const fileURL = URL.createObjectURL(fileBlob);
-            displayFile(fileURL, fileBlob.type);
-        } else {
-            console.error('Error getting file:', response.statusText);
-        }
-    } catch (error) {
-        console.error('Error getting file:', error);
-    }
-}
-
-function displayFile(fileURL, mimeType) {
-    fileContainer.innerHTML = ''; // Clear any previous content
-    console.log(mimeType);
-    if (mimeType.startsWith('image/')) {
-        const img = document.createElement('img');
-        img.src = fileURL;
-        img.alt = 'Uploaded Image';
-        fileContainer.appendChild(img);
-    } else if (mimeType === 'application/pdf') {
-        const iframe = document.createElement('iframe');
-        iframe.src = fileURL;
-        iframe.width = '100%';
-        iframe.height = '600px';
-        fileContainer.appendChild(iframe);
-    } else if (mimeType.startsWith('video/')) {
-        const video = document.createElement('video');
-        video.src = fileURL;
-        video.width = '100%';
-        video.controls = true;
-        fileContainer.appendChild(video);
-    }else{
-        const a = document.createElement('a');
-        a.href = fileURL;
-        a.textContent = 'Download File';
-        a.download = 'file';
-        fileContainer.appendChild(a);
-    }
+function displayFile(fileURL) {
+    const fileContainer = document.getElementById('mediaAdd');
+    // fileContainer.innerHTML = ''; // Clear any previous content
+    const imageContent = checkForImage(fileURL)
+    const img = document.createElement('div');
+    img.innerHTML = imageContent.attachments.map(function(attachment) {return `${attachment}`}).join(" ");
+    fileContainer.appendChild(img);
 }
 
 function removePollCreation() {
@@ -4651,7 +4613,7 @@ function checkForImage(content, tags) {
                 if (contentArgs[index].endsWith(imageFormat)) {
                     foundImage = true
                    // contentArgs[index] = `<img class="messageImage" src="${contentArgs[index]}"></img>`
-                    attachments.push(`<img alt="userImage" class="messageImage" width="100px" src="${contentArgs[index]}" onclick="openImagePreview('${contentArgs[index]}')"></img>`)
+                    attachments.push(`<img alt="userImage" class="messageImage" width="320px" src="${contentArgs[index]}" onclick="openImagePreview('${contentArgs[index]}')"></img>`)
                 }
             }
 
