@@ -4630,7 +4630,7 @@ function checkForImage(content, tags) {
             }
         }
         //if (contentArgs[index].includes(' ')) contentArgs[index] = contentArgs[index].replace(' ', '')
-        if (contentArgs[index].startsWith('https://') || contentArgs[index].startsWith('http://')) {
+        if (contentArgs[index].startsWith('https://') || (config.current == 'dev' && contentArgs[index].startsWith('http://'))) {
             for (const imageFormat of imageFormats) {
                 if (contentArgs[index].endsWith(imageFormat)) {
                     foundImage = true
