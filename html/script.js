@@ -944,10 +944,7 @@ async function userEditV2() {
 
     for (const update of userData.userUpdates) {
         var value = document.getElementById(`userEdit_${update.dbName}_text`).value
-        console.log(value)
-        console.log(update)
         if (!value && update.dbName == "profileURL") {
-            console.log("profileURL")
             const file = await uploadFile(true)
             if (!file || file.error) continue;
             value = `${apiURL}${file.cdnURL}`;
@@ -1340,7 +1337,6 @@ async function userEditHtmlV2(userID) {
 
     if (profileData?.displayName) document.title = `${profileData?.displayName} | Interact`
 
-    console.log(updateData)
     var ele = `
         <div class="userEdit">
             <div class="menu menu-style">
@@ -1826,7 +1822,6 @@ function getThemeChanges(themeID, possibleThemeEdits, ignoreLock) {
 
     if (!ignoreLock) {
         const changeLock = document.getElementById(`themeSetting_locked`).value;
-        console.log(changeLock)
         if (changeLock) reqBody.push({ option: "locked", value: changeLock == 1 ? true : false});
     }
 
@@ -1935,7 +1930,6 @@ async function followingFollowerHtml(userID, type=0) {
     followingFollowerData.userID=userID;
     // type, 0=following, 1=followers
     const followData = await followingFollowerList(userID, type);
-    console.log(followData)
     if (!followData) return; //showModal(`<p>Error: ${userList.code}, ${userList.msg}</p>`);
 
     if (followData.prevIndexID) followingFollowerData.prevIndexID = followData.prevIndexID;
@@ -3723,7 +3717,6 @@ function hashtagElementCreate(tag) {
 }
 
 async function searchResult(input) {
-    console.log(input)
     if (!input) {
         if (debug) console.log("returning to feed")
         changeHeader('')
@@ -3736,7 +3729,6 @@ async function searchResult(input) {
     }
 
     var headerReplace = input;
-    console.log(headerReplace)
     
     currentSearch = input
     searching = true
@@ -4206,13 +4198,13 @@ async function leavePostPage() {
 }
 
 function pausePostUploadButton() {
-    console.log("pausing post upload button")
+    if (debug) console.log("pausing post upload button")
     document.getElementById('publishFromPostPage').innerHTML = "Please Wait"
     document.getElementById('publishFromPostPage').onclick = null;
 }
 
 function resumePostUploadButton() {
-    console.log("resuming post upload button")
+    if (debug) console.log("resuming post upload button")
     document.getElementById('publishFromPostPage').innerHTML = "Upload Post"
     document.getElementById('publishFromPostPage').onclick = publishFromPostPage;
 }
@@ -4252,11 +4244,11 @@ async function uploadFile(fromProfile=false) {
     const formData = new FormData();
     formData.append('file', selectFile);
 
-    console.log('Uploading file:', selectFile);
+    if (debug) console.log('Uploading file:', selectFile);
     try {
         if (!fromProfile) pausePostUploadButton();
         const fileType = await sendRequest('/cdn/fileType/' + selectFile.name, {method: "GET"});
-        console.log(fileType);
+        if (debug) console.log(fileType);
 
         if (fileType.error) {
             console.error('Error verifying file:', fileType.error);
@@ -4270,7 +4262,7 @@ async function uploadFile(fromProfile=false) {
             file: true
         });
 
-        console.log('finalRes:', finalRes);
+        if (debug) console.log('finalRes:', finalRes);
         
         mediaUploadLinks.push(finalRes.cdnURL);
         if (!fromProfile) {
@@ -4543,7 +4535,6 @@ async function sendRequest(request, { method, body, file, extraHeaders, ignoreEr
 
         if (file) {
             for (const header in headersEdited) {
-                console.log(headers)
                 if (header == 'Content-Type') {
                     // remove header
                     delete headersEdited[header];
@@ -4551,10 +4542,6 @@ async function sendRequest(request, { method, body, file, extraHeaders, ignoreEr
             }
         }
     }
-
-    console.log(headersEdited)
-    console.log(headers)
-    
 
     if (debug) console.log(`Sending Request: ${method} ${apiURL}${request}`);
 
