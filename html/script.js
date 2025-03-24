@@ -62,6 +62,8 @@ var LOCAL_STORAGE_THEME_POSSIBLE = 'social.themePossible'
 var buildingFeed = true;
 // let loginUserToken = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
 
+var mediaUploadLinks = [];
+
 function checkifMobile() {
     const width = document.getElementById("html").clientWidth
     if (width < 900) {
@@ -235,13 +237,17 @@ function postElementCreate({
                         <p onclick="viewParentPost('${post._id}', '${post.replyData.postID}')" id="parentViewing_${post._id}">This was a reply, click here to see.</p>
                     ` : ``}
                 `: ``}
-                <div>
-                    <p><span class="pointerCursor ${ user && (post.userID == currentUserLogin.userID )? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️' : ''}` : '>Unknown User'}</span>
-                    ${coposterData && coposterData[0] ? `${coposterData.map(function(coposter) {
-                        return `, <span class="spacer_2px pointerCursor ${ coposter._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${coposter ? ` onclick="userHtml('${coposter._id}')"> ${coposter.displayName} @${coposter.username}${coposter.verified ? ' ✔️ ' : ''}` : '>Unknown User'}</span>`
-                    }).join(" ")}`:``}
-                    </p>
-                    <p class="spacer_2px pointerCursor ${ user && (post.userID == currentUserLogin.userID )? "ownUser-style" : "otherUser-style"}">${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
+                <div class="post-header">
+                    ${user?.profileURL ? `<img src="${user.profileURL}" alt="${user.displayName}" class="profile-image">` : ""}
+                    <div class="post-user-info">
+                        <p>
+                            <span class="pointerCursor ${ user && (post.userID == currentUserLogin.userID )? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️' : ''}` : '>Unknown User'}</span>
+                            ${coposterData && coposterData[0] ? `${coposterData.map(function(coposter) {
+                                return `, <span class="spacer_2px pointerCursor ${ coposter._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${coposter ? ` onclick="userHtml('${coposter._id}')"> ${coposter.displayName} @${coposter.username}${coposter.verified ? ' ✔️ ' : ''}` : '>Unknown User'}</span>`
+                            }).join(" ")}`:``}
+                        </p>
+                        <p class="spacer_2px pointerCursor ${ user && (post.userID == currentUserLogin.userID )? "ownUser-style" : "otherUser-style"}">${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
+                    </div>
                 </div>
                 <div class="postContent" id="postContentArea_${post._id}">
                     <div class="textAreaPost posts_content-style">
@@ -938,10 +944,14 @@ async function userEditV2() {
 
     for (const update of userData.userUpdates) {
         var value = document.getElementById(`userEdit_${update.dbName}_text`).value
-        console.log(value)
+        if (!value && update.dbName == "profileURL") {
+            const file = await uploadFile(true)
+            if (!file || file.error) continue;
+            value = `${apiURL}${file.cdnURL}`;
+        }
 
         if (!value || (update.currentValue && update.currentValue == value)) continue;
-        if (update.type == "Date") value = convertDateToEpoch(value)
+        if (update.type == "Date") value = convertDateToEpoch(value);
 
         editBody[update.dbName] = value;
     }
@@ -990,6 +1000,12 @@ async function userEdit(action) {
     var tempHeaders = {};
 
     for (const actionData of actions) {
+        if (actionData == "profileImage") {
+            const file = await uploadFile("profileImage")
+            if (!file || file.error) return console.log(file)
+            tempHeaders[`new${actionData.action.toLowerCase()}`] = `${apiURL}${file.cdnURL}`;
+            continue;
+        }
         tempHeaders[`new${actionData.action.toLowerCase()}`] = actionData.value
     }
 
@@ -1321,7 +1337,6 @@ async function userEditHtmlV2(userID) {
 
     if (profileData?.displayName) document.title = `${profileData?.displayName} | Interact`
 
-    console.log(updateData)
     var ele = `
         <div class="userEdit">
             <div class="menu menu-style">
@@ -1358,6 +1373,7 @@ async function userEditHtmlV2(userID) {
                     <p id="userEdit_update_${update.dbName}"></p>
                     <form id="userEdit_${update.dbName}" class="contentMessage" onsubmit="userEditV2Specific('${update.action}')">
                     <input type="text" id="userEdit_${update.dbName}_text" class="userEditForm menu-style" placeholder="${update.currentValue || update.title}" value="${update.currentValue || ""}">
+                    ${update.dbName=="profileURL" ? `<input type="file" id="interactFile" class="menuButton menuButton-style">` : ""}
                 </form>
             </div>
         `
@@ -1423,6 +1439,7 @@ async function userEditHtml(userID) {
                 ${profileData.userData.profileURL ? `<img src="${profileData.userData.profileURL}" class="profileImage">` : "No image set"}
                 <form id="userEdit_profileImage" class="contentMessage" onsubmit="userEdit('profileImage')">
                     <input id="userEdit_profileImage_text" type="text" class="userEditForm menu-style" placeholder="Profile Image URL">
+                    <input type="file" id="interactFile" class="menuButton menuButton-style">
                 </form>
             </div>
             <div class="menu menu-style">
@@ -1805,7 +1822,6 @@ function getThemeChanges(themeID, possibleThemeEdits, ignoreLock) {
 
     if (!ignoreLock) {
         const changeLock = document.getElementById(`themeSetting_locked`).value;
-        console.log(changeLock)
         if (changeLock) reqBody.push({ option: "locked", value: changeLock == 1 ? true : false});
     }
 
@@ -1914,7 +1930,6 @@ async function followingFollowerHtml(userID, type=0) {
     followingFollowerData.userID=userID;
     // type, 0=following, 1=followers
     const followData = await followingFollowerList(userID, type);
-    console.log(followData)
     if (!followData) return; //showModal(`<p>Error: ${userList.code}, ${userList.msg}</p>`);
 
     if (followData.prevIndexID) followingFollowerData.prevIndexID = followData.prevIndexID;
@@ -3702,7 +3717,6 @@ function hashtagElementCreate(tag) {
 }
 
 async function searchResult(input) {
-    console.log(input)
     if (!input) {
         if (debug) console.log("returning to feed")
         changeHeader('')
@@ -3715,7 +3729,6 @@ async function searchResult(input) {
     }
 
     var headerReplace = input;
-    console.log(headerReplace)
     
     currentSearch = input
     searching = true
@@ -3916,7 +3929,8 @@ async function createPostPage() {
             </div>
             <div class="mainActions">
                 <p class="publicPost menuButton menuButton-style" onclick="leavePostPage()">Back</p>
-                <p class="publicPost menuButton menuButton-style" onclick="publishFromPostPage()">Upload Post</p>
+                <p class="publicPost menuButton menuButton-style" id="publishFromPostPage" onclick="publishFromPostPage()">Upload Post</p>
+                <p class="publicPost menuButton menuButton-style" id="mediaCreationButton" onclick="showMediaCreation()">Add Media</p>
                 <p class="publicPost menuButton menuButton-style" id="pollCreationButton" onclick="showPollCreation()">Add Poll</p>
                 <p class="publicPost menuButton menuButton-style" id="pollCreationButton" onclick="showCoPostersCreation()">Add Co-Posters</p>
                 <div class="publicPost menuButton menuButton-style">
@@ -3929,6 +3943,7 @@ async function createPostPage() {
                 <iv id="addCoPoster"></div>
                 <input type="text" id="pollCreateLink" class="addPollOption menu-style" placeholder="Link Poll via ID" ${data.pollID ? `value="${data.pollID}"` : ""}></input>
             </div>
+            <div id="mediaAdd"></div>
             <div id="pollCreate"></div>
             <div id="foundTaggings"></div>
         </div>
@@ -4182,6 +4197,99 @@ async function leavePostPage() {
     getFeed()
 }
 
+function pausePostUploadButton() {
+    if (debug) console.log("pausing post upload button")
+    document.getElementById('publishFromPostPage').innerHTML = "Please Wait"
+    document.getElementById('publishFromPostPage').onclick = null;
+}
+
+function resumePostUploadButton() {
+    if (debug) console.log("resuming post upload button")
+    document.getElementById('publishFromPostPage').innerHTML = "Upload Post"
+    document.getElementById('publishFromPostPage').onclick = publishFromPostPage;
+}
+
+function removeMediaCreation() {
+    if (debug) console.log("creating media")
+    document.getElementById("mediaAdd").innerHTML = "";
+    document.getElementById("mediaCreationButton").onclick=showMediaCreation;
+    document.getElementById("mediaCreationButton").innerHTML="Add Media";
+}
+
+function showMediaCreation() {
+    if (debug) console.log("creating media")
+    document.getElementById("mediaCreationButton").onclick=removeMediaCreation;
+    document.getElementById("mediaCreationButton").innerHTML="Remove Media";
+
+    const ele = `
+        <div class="menu menu-style">
+            <h1 class="font_h1-style">Add Media</h1>
+        </div>
+        <div class="menu menu-style">
+            <input type="file" id="interactFile" class="menuButton menuButton-style">
+            <button onclick="uploadFile()" id="uploadMedia" class="menuButton menuButton-style">Upload Media</button>
+        </div>
+    `
+    document.getElementById("mediaAdd").innerHTML = ele;
+}
+
+async function uploadFile(fromProfile=false) {
+    const fileInput = document.getElementById('interactFile');
+    const selectFile = fileInput.files[fileInput.files.length-1];
+    if (!selectFile) {
+        console.error('No file selected');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', selectFile);
+
+    if (debug) console.log('Uploading file:', selectFile);
+    try {
+        if (!fromProfile) pausePostUploadButton();
+        const fileType = await sendRequest('/cdn/fileType/' + selectFile.name, {method: "GET"});
+        if (debug) console.log(fileType);
+
+        if (fileType.error) {
+            console.error('Error verifying file:', fileType.error);
+            document.getElementById("mediaAdd").innerHTML = `<p>Error uploading file</p>`;
+            return;
+        }
+        
+        const finalRes = await sendRequest('/cdn/'+fileType.type, {
+            method: 'POST',
+            body: formData,
+            file: true
+        });
+
+        if (debug) console.log('finalRes:', finalRes);
+        
+        mediaUploadLinks.push(finalRes.cdnURL);
+        if (!fromProfile) {
+            document.getElementById('newPostTextArea').value = document.getElementById('newPostTextArea').value + `${config[config.current].api_url}/cdn${finalRes.cdnURL}`;
+            document.getElementById('newPostTextArea').focus()
+    
+            displayFile(`${apiURL}/cdn${finalRes.cdnURL}`);
+            resumePostUploadButton()
+        }
+        return finalRes;
+    } catch (error) {
+
+        document.getElementById("mediaAdd").innerHTML = `<p>Error uploading file</p>`;
+        resumePostUploadButton();
+        console.error('Error uploading file:', error);
+    }
+}
+
+function displayFile(fileURL) {
+    const fileContainer = document.getElementById('mediaAdd');
+    // fileContainer.innerHTML = ''; // Clear any previous content
+    const imageContent = checkForImage(fileURL)
+    const img = document.createElement('div');
+    img.innerHTML = imageContent.attachments.map(function(attachment) {return `${attachment}`}).join(" ");
+    fileContainer.appendChild(img);
+}
+
 function removePollCreation() {
     if (debug) console.log("removing poll")
     document.getElementById("pollCreate").innerHTML = "";
@@ -4412,15 +4520,26 @@ async function renameUsername() {
 }
 
 // For API Use
-async function sendRequest(request, { method, body, extraHeaders, ignoreError=false }) {
+async function sendRequest(request, { method, body, file, extraHeaders, ignoreError=false }) {
     // add "version" as a possible header, and .replace on the apiURL
     // or force the version be in the request
     var headersEdited = {};
 
-    if (extraHeaders) {
+    if (extraHeaders || file) {
         headersEdited = { ...headers };
-        for (const header in extraHeaders) {
-            headersEdited[header] = extraHeaders[header];
+        if (extraHeaders) {
+            for (const header in extraHeaders) {
+                headersEdited[header] = extraHeaders[header];
+            }
+        }
+
+        if (file) {
+            for (const header in headersEdited) {
+                if (header == 'Content-Type') {
+                    // remove header
+                    delete headersEdited[header];
+                }
+            }
         }
     }
 
@@ -4428,8 +4547,8 @@ async function sendRequest(request, { method, body, extraHeaders, ignoreError=fa
 
     const response = await fetch(`${apiURL}${request}`, {
         method: method || 'GET',
-        body: body ? JSON.stringify(body) : null,
-        headers : extraHeaders ? headersEdited : headers
+        body: body ? !file ? JSON.stringify(body) : body : null,
+        headers : extraHeaders || file ? headersEdited : headers
     });
     
     try {
@@ -4452,6 +4571,7 @@ async function sendRequest(request, { method, body, extraHeaders, ignoreError=fa
 function getId(url) {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = url.match(regExp);
+    if (!match || match.length < 2) return undefined;
 
     return (match && match[2].length === 11) ? match[2] : undefined;
 }
@@ -4465,6 +4585,10 @@ function loadSpotify(amount, link) {
 function unloadSpotify(amount, link) {
     document.getElementById(`spotify_frame_${amount}`).innerHTML = `Click to load spotify link #${amount}`
     document.getElementById(`spotify_frame_${amount}`).onclick = `loadSpotify(${amount}, '${link}')`
+}
+
+function openImagePreview(imageURL) {
+    showModal(`<div><h1>Image</h1><hr class="rounded"h><img src="${imageURL}"></img></div>`)
 }
 
 function checkForImage(content, tags) {
@@ -4485,7 +4609,7 @@ function checkForImage(content, tags) {
                     (tag.tagTextOriginal == contentArgs[index])
                 ) {
                     if (tag.tagTextOriginal.startsWith("@")) {
-                        contentArgs[index] = `<a class="ownUser-style" onclick="userPage('${tag.tagTextOriginal.replace("@", "0")}')">${contentArgs[index]}</a>`
+                        contentArgs[index] = `<a class="ownUser-style" onclick="userPage('${tag.tagTextOriginal.replace("@", "")}')">${contentArgs[index]}</a>`
                     } else if (tag.tagTextOriginal.startsWith("#")) {
                         contentArgs[index] = `<a class="ownUser-style" onclick="searchResult('${tag.tagTextOriginal.replace("#", "1")}')">${contentArgs[index]}</a>`
                     }
@@ -4493,23 +4617,47 @@ function checkForImage(content, tags) {
             }
         }
         //if (contentArgs[index].includes(' ')) contentArgs[index] = contentArgs[index].replace(' ', '')
-        if (contentArgs[index].startsWith('https://')) {
+        if (contentArgs[index].startsWith('https://') || (config.current == 'dev' && contentArgs[index].startsWith('http://'))) {
             for (const imageFormat of imageFormats) {
                 if (contentArgs[index].endsWith(imageFormat)) {
                     foundImage = true
                    // contentArgs[index] = `<img class="messageImage" src="${contentArgs[index]}"></img>`
-                    attachments.push(`<img alt="userImage" class="messageImage" width="100px" src="${contentArgs[index]}"></img>`)
+                    attachments.push(`<img alt="userImage" class="messageImage" width="320px" src="${contentArgs[index]}" onclick="openImagePreview('${contentArgs[index]}')"></img>`)
                 }
             }
 
+            const videoId = getId(contentArgs[index]);
+            var foundVideo = false;
             for (const videoFormat of videoFormats) {
-                if (contentArgs[index].endsWith(videoFormat.urlEnd)) {
+                if (foundVideo || !contentArgs[index].includes(videoFormat.urlEnd)) {
+                }
+                else if (contentArgs[index].startsWith("http://localhost:5002/v1/cdn/static")) {
                     foundImage = true
+                    foundVideo = true
+                    const URL = contentArgs[index]
+                    var videoID = URL.replace("http://localhost:5002/v1/cdn/static/", "")
+                    
+                    const iframeHuelet = `<iframe src="http://localhost:5002/v1/video_embed/?embed=true&vuid=${videoID}" width="320" height="240" frameborder="0" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen="true"></iframe>`
+                    attachments.push(iframeHuelet)
+                }
+                else if (contentArgs[index].startsWith("https://interact-api.novapro.net/v1/cdn/static")) {
+                    foundImage = true
+                    foundVideo = true
+    
+                    const URL = contentArgs[index]
+                    var videoID = URL.replace("https://interact-api.novapro.net/v1/cdn/static/", "")
+                    
+                    const iframeHuelet = `<iframe src="https://interact-api.novapro.net/v1/video_embed/?embed=true&vuid=${videoID}" width="320" height="240" frameborder="0" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen="true"></iframe>`
+                    attachments.push(iframeHuelet)
+                }
+                else if (contentArgs[index].endsWith(videoFormat.urlEnd)) {
+                    // regular video 
+                    foundImage = true
+                    foundVideo = true
                     //contentArgs[index] = `\n<video width="320" height="240" controls><source src="${contentArgs[index]}" type="video/${videoFormat.type}"></video>`
                     attachments.push(`<video alt="uservideo" width="320" height="240" controls><source src="${contentArgs[index]}" type="video/${videoFormat.type}"></video>`)
                 }
             }
-            const videoId = getId(contentArgs[index]);
 
             if (videoId) {
                 foundImage = true
@@ -4517,7 +4665,15 @@ function checkForImage(content, tags) {
                // contentArgs[index] = iframeMarkup
                 attachments.push(iframeMarkup)
             }
+            // if (contentArgs[index].startsWith("https://interact.novapro.net/?videoID=") || contentArgs[index].startsWith("https://interact-api.novapro.net/v1/cdn/static")) {
+            //     foundImage = true
 
+            //     const URL = contentArgs[index]
+            //     var videoID = URL.replace("https://huelet.net/w/", "")
+
+            //     const iframeHuelet = `<iframe src="https://publish.huelet.net/?embed=true&vuid=${videoID}" width="320" height="240" frameborder="0" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen="true"></iframe>`
+            //     attachments.push(iframeHuelet)
+            // }
             if (contentArgs[index].startsWith("https://huelet.net/w/")) {
                 foundImage = true
 
