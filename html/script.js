@@ -237,13 +237,17 @@ function postElementCreate({
                         <p onclick="viewParentPost('${post._id}', '${post.replyData.postID}')" id="parentViewing_${post._id}">This was a reply, click here to see.</p>
                     ` : ``}
                 `: ``}
-                <div>
-                    <p><span class="pointerCursor ${ user && (post.userID == currentUserLogin.userID )? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️' : ''}` : '>Unknown User'}</span>
-                    ${coposterData && coposterData[0] ? `${coposterData.map(function(coposter) {
-                        return `, <span class="spacer_2px pointerCursor ${ coposter._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${coposter ? ` onclick="userHtml('${coposter._id}')"> ${coposter.displayName} @${coposter.username}${coposter.verified ? ' ✔️ ' : ''}` : '>Unknown User'}</span>`
-                    }).join(" ")}`:``}
-                    </p>
-                    <p class="spacer_2px pointerCursor ${ user && (post.userID == currentUserLogin.userID )? "ownUser-style" : "otherUser-style"}">${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
+                <div class="post-header">
+                    ${user?.profileURL ? `<img src="${user.profileURL}" alt="${user.displayName}" class="profile-image">` : ""}
+                    <div class="post-user-info">
+                        <p>
+                            <span class="pointerCursor ${ user && (post.userID == currentUserLogin.userID )? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️' : ''}` : '>Unknown User'}</span>
+                            ${coposterData && coposterData[0] ? `${coposterData.map(function(coposter) {
+                                return `, <span class="spacer_2px pointerCursor ${ coposter._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${coposter ? ` onclick="userHtml('${coposter._id}')"> ${coposter.displayName} @${coposter.username}${coposter.verified ? ' ✔️ ' : ''}` : '>Unknown User'}</span>`
+                            }).join(" ")}`:``}
+                        </p>
+                        <p class="spacer_2px pointerCursor ${ user && (post.userID == currentUserLogin.userID )? "ownUser-style" : "otherUser-style"}">${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
+                    </div>
                 </div>
                 <div class="postContent" id="postContentArea_${post._id}">
                     <div class="textAreaPost posts_content-style">
@@ -941,9 +945,16 @@ async function userEditV2() {
     for (const update of userData.userUpdates) {
         var value = document.getElementById(`userEdit_${update.dbName}_text`).value
         console.log(value)
+        console.log(update)
+        if (!value && update.dbName == "profileURL") {
+            console.log("profileURL")
+            const file = await uploadFile(true)
+            if (!file || file.error) continue;
+            value = `${apiURL}${file.cdnURL}`;
+        }
 
         if (!value || (update.currentValue && update.currentValue == value)) continue;
-        if (update.type == "Date") value = convertDateToEpoch(value)
+        if (update.type == "Date") value = convertDateToEpoch(value);
 
         editBody[update.dbName] = value;
     }
@@ -992,6 +1003,12 @@ async function userEdit(action) {
     var tempHeaders = {};
 
     for (const actionData of actions) {
+        if (actionData == "profileImage") {
+            const file = await uploadFile("profileImage")
+            if (!file || file.error) return console.log(file)
+            tempHeaders[`new${actionData.action.toLowerCase()}`] = `${apiURL}${file.cdnURL}`;
+            continue;
+        }
         tempHeaders[`new${actionData.action.toLowerCase()}`] = actionData.value
     }
 
@@ -1360,6 +1377,7 @@ async function userEditHtmlV2(userID) {
                     <p id="userEdit_update_${update.dbName}"></p>
                     <form id="userEdit_${update.dbName}" class="contentMessage" onsubmit="userEditV2Specific('${update.action}')">
                     <input type="text" id="userEdit_${update.dbName}_text" class="userEditForm menu-style" placeholder="${update.currentValue || update.title}" value="${update.currentValue || ""}">
+                    ${update.dbName=="profileURL" ? `<input type="file" id="interactFile" class="menuButton menuButton-style">` : ""}
                 </form>
             </div>
         `
@@ -1425,6 +1443,7 @@ async function userEditHtml(userID) {
                 ${profileData.userData.profileURL ? `<img src="${profileData.userData.profileURL}" class="profileImage">` : "No image set"}
                 <form id="userEdit_profileImage" class="contentMessage" onsubmit="userEdit('profileImage')">
                     <input id="userEdit_profileImage_text" type="text" class="userEditForm menu-style" placeholder="Profile Image URL">
+                    <input type="file" id="interactFile" class="menuButton menuButton-style">
                 </form>
             </div>
             <div class="menu menu-style">
@@ -4222,7 +4241,7 @@ function showMediaCreation() {
     document.getElementById("mediaAdd").innerHTML = ele;
 }
 
-async function uploadFile() {
+async function uploadFile(fromProfile=false) {
     const fileInput = document.getElementById('interactFile');
     const selectFile = fileInput.files[fileInput.files.length-1];
     if (!selectFile) {
@@ -4235,7 +4254,7 @@ async function uploadFile() {
 
     console.log('Uploading file:', selectFile);
     try {
-        pausePostUploadButton();
+        if (!fromProfile) pausePostUploadButton();
         const fileType = await sendRequest('/cdn/fileType/' + selectFile.name, {method: "GET"});
         console.log(fileType);
 
@@ -4252,13 +4271,16 @@ async function uploadFile() {
         });
 
         console.log('finalRes:', finalRes);
-        mediaUploadLinks.push(finalRes.cdnURL);
-
-        document.getElementById('newPostTextArea').value = document.getElementById('newPostTextArea').value + `${config[config.current].api_url}/cdn${finalRes.cdnURL}`;
-        document.getElementById('newPostTextArea').focus()
-        displayFile(`http://localhost:5002/v1/cdn${finalRes.cdnURL}`);
         
-        resumePostUploadButton()
+        mediaUploadLinks.push(finalRes.cdnURL);
+        if (!fromProfile) {
+            document.getElementById('newPostTextArea').value = document.getElementById('newPostTextArea').value + `${config[config.current].api_url}/cdn${finalRes.cdnURL}`;
+            document.getElementById('newPostTextArea').focus()
+    
+            displayFile(`${apiURL}/cdn${finalRes.cdnURL}`);
+            resumePostUploadButton()
+        }
+        return finalRes;
     } catch (error) {
 
         document.getElementById("mediaAdd").innerHTML = `<p>Error uploading file</p>`;
@@ -4600,7 +4622,7 @@ function checkForImage(content, tags) {
                     (tag.tagTextOriginal == contentArgs[index])
                 ) {
                     if (tag.tagTextOriginal.startsWith("@")) {
-                        contentArgs[index] = `<a class="ownUser-style" onclick="userPage('${tag.tagTextOriginal.replace("@", "0")}')">${contentArgs[index]}</a>`
+                        contentArgs[index] = `<a class="ownUser-style" onclick="userPage('${tag.tagTextOriginal.replace("@", "")}')">${contentArgs[index]}</a>`
                     } else if (tag.tagTextOriginal.startsWith("#")) {
                         contentArgs[index] = `<a class="ownUser-style" onclick="searchResult('${tag.tagTextOriginal.replace("#", "1")}')">${contentArgs[index]}</a>`
                     }
