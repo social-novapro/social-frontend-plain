@@ -75,6 +75,9 @@
         var(--main-shadow-color);
     transition: transform 400ms, border-color 400ms, background-color 400ms;
 }
+.sliderInput {
+    width: 80%;
+}
 .mainButton {
     display: inline-block;
 }
