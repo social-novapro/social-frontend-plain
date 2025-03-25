@@ -12,8 +12,8 @@
     border: 2px solid var(--main-border-color);
     overflow-wrap: break-word;
     word-wrap: break-word;
-    margin-left: 10%;
-    margin-right: 10%;
+    margin-left: var(--mainMarginSides);
+    margin-right: var(--mainMarginSides);
     margin-top: 20px;
     text-decoration: none;
     color: var(--main-a-color);
@@ -29,8 +29,8 @@
     border: 2px solid var(--main-border-color);
     overflow-wrap: break-word;
     word-wrap: break-word;
-    margin-left: 10%;
-    margin-right: 10%;
+    margin-left: var(--mainMarginSides);
+    margin-right: var(--mainMarginSides);
     margin-top: 20px;
     text-decoration: none;
     color: var(--main-a-color);
@@ -63,8 +63,8 @@
     border: 2px solid var(--main-border-color);
     overflow-wrap: break-word;
     word-wrap: break-word;
-    margin-left: 10%;
-    margin-right: 10%;
+    margin-left: var(--mainMarginSides);
+    margin-right: var(--mainMarginSides);
     margin-top: 20px;
     text-decoration: none;
     color: var(--main-a-color);
@@ -326,8 +326,8 @@
     border: 2px solid var(--main-border-color);
     overflow-wrap: break-word;
     word-wrap: break-word;
-    margin-left: 10%;
-    margin-right: 10%;
+    margin-left: var(--mainMarginSides);
+    margin-right: var(--mainMarginSides);
     margin-top: 20px;
     /*
         display: inline-block;
