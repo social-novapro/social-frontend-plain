@@ -238,7 +238,7 @@ function postElementCreate({
                     ` : ``}
                 `: ``}
                 <div class="post-header">
-                    ${user?.profileURL ? `<img src="${user.profileURL}" alt="${user.displayName}" class="profile-image">` : ""}
+                    ${user?.profileURL ? `<img onclick="userHtml('${post.userID}')" src="${user.profileURL}" alt="${user.displayName}" class="profile-image">` : ""}
                     <div class="post-user-info">
                         <p>
                             <span class="pointerCursor ${ user && (post.userID == currentUserLogin.userID )? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️' : ''}` : '>Unknown User'}</span>
@@ -944,10 +944,10 @@ async function userEditV2() {
 
     for (const update of userData.userUpdates) {
         var value = document.getElementById(`userEdit_${update.dbName}_text`).value
-        if (!value && update.dbName == "profileURL") {
+        if ((!value || value==update.currentValue) && update.dbName == "profileURL") {
             const file = await uploadFile(true)
             if (!file || file.error) continue;
-            value = `${apiURL}${file.cdnURL}`;
+            value = `${apiURL}/cdn${file.cdnURL}`;
         }
 
         if (!value || (update.currentValue && update.currentValue == value)) continue;
@@ -1369,11 +1369,11 @@ async function userEditHtmlV2(userID) {
                 <p><b>${update.title}</b></p>
                 <p>${update.description}</p>
                 <p>Current: ${update.currentValue || "No value set"}</p>
-                ${update.dbName=="profileURL" && update.currentValue != null? `<img src="${update.currentValue}" class="profileImage">` : ""}
+                ${update.dbName=="profileURL" && update.currentValue != null? `<img width="30%" height="30%" src="${update.currentValue}" class="profileImage">` : ""}
                     <p id="userEdit_update_${update.dbName}"></p>
                     <form id="userEdit_${update.dbName}" class="contentMessage" onsubmit="userEditV2Specific('${update.action}')">
-                    <input type="text" id="userEdit_${update.dbName}_text" class="userEditForm menu-style" placeholder="${update.currentValue || update.title}" value="${update.currentValue || ""}">
-                    ${update.dbName=="profileURL" ? `<input type="file" id="interactFile" class="menuButton menuButton-style">` : ""}
+                    <div><input type="text" id="userEdit_${update.dbName}_text" class="userEditForm menu-style" placeholder="${update.currentValue || update.title}" value="${update.currentValue || ""}"></div>
+                    ${update.dbName=="profileURL" ? `<div><input type="file" id="interactFile" class="menuButton menuButton-style"></div>` : ""}
                 </form>
             </div>
         `
@@ -4588,7 +4588,7 @@ function unloadSpotify(amount, link) {
 }
 
 function openImagePreview(imageURL) {
-    showModal(`<div><h1>Image</h1><hr class="rounded"h><img src="${imageURL}"></img></div>`)
+    showModal(`<div><h1>Image</h1><hr class="rounded"h><img width="60%" height="60%" src="${imageURL}"></img></div>`)
 }
 
 function checkForImage(content, tags) {
