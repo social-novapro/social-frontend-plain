@@ -208,9 +208,14 @@ function postElementCreate({
     quoteData,
     coposterData,
     tagData,
-    extraData
+    extraData,
+    postData,
+    userData
 }) {
-    if (!post) return;
+    if (!post && postData) post = postData;
+    if (!user && userData) user = userData;
+
+    if (!post) return "";
     if (post.deleted) {
         const ele = `
             <div class="postContent posts-style" id="postContentArea_${post._id}">
@@ -222,7 +227,6 @@ function postElementCreate({
 
         return ele;
     }
-
     if (!extraData) extraData = { }
     var timesince
     if (post.timePosted) timesince = checkDate(post.timePosted)
@@ -523,8 +527,9 @@ async function viewParentPost(postID, parentPostID) {
         return document.getElementById(`openedParent_${postID}`).remove();
     }
 
-    const postData = await sendRequest(`/posts/get/basic/${parentPostID}`, { method: "GET" });
-
+    const postFound = await sendRequest(`/posts/get/full/${parentPostID}`, { method: "GET" });
+    if (!postFound || postFound.error) return "";
+    const {postData, userData} = postFound;
     if (postData.deleted == true || !postData.userID) {
         //document.getElementById()
         document.getElementById(`parent_${postID}`).innerHTML = `
@@ -539,8 +544,6 @@ async function viewParentPost(postID, parentPostID) {
         return;
     }
 
-    const userData = await sendRequest(`/users/get/basic/${postData.userID}`, { method: 'GET', });
-   
     const postEle = postElementCreate({post: postData, user: userData});
     document.getElementById(`parent_${postID}`).innerHTML = `
         <div class="" id="openedParent_${postID}">${postEle}</div>
@@ -989,7 +992,7 @@ function loginSplashScreen() {
 // USER PROFILE PAGE
 async function profile() {
     checkLogin()
-    removeSearchBar()
+    // removeSearchBar()
     searching = true
 
     userHtml(currentUserLogin.userID)
@@ -1093,7 +1096,7 @@ async function userEdit(action) {
 }
 
 async function postHtml(postID) {
-    const postData = await sendRequest(`/posts/get/${postID}`, { method: 'GET' })
+    const postData = await sendRequest(`/posts/get/full/${postID}`, { method: 'GET' })
     if (!postData || postData.deleted) return console.log("error with post");
 
     const ele = postElementCreateFullEasy(postData);
@@ -1141,7 +1144,7 @@ function settingsPage() {
                         <div>
                             <button class="menuButton menuButton-style" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
                             <button class="menuButton menuButton-style" id="showSubscriptionsButton" onclick="showSubscriptions()">Show Subscriptions</button>
-                            <button class="menuButton menuButton-style" id="notificationSettingsPage" onclick="notificationSettingsPage()">Show Settings</button>
+                            <!--<button class="menuButton menuButton-style" id="notificationSettingsPage" onclick="notificationSettingsPage()">Show Settings</button>-->
                         </div>
                         <div>
                             <div id="notificationsDiv"></div>
@@ -1432,9 +1435,11 @@ async function userEditHtmlV2(userID) {
             <div class="menu menu-style">
                 <h1 class="font_h1-style">Edit Profile</h1>
             </div>
+
             <div class="menu menu-style">
-                <p><b>Save any changes made</b></p>
-                <button class="menuButton menuButton-style" onclick="userEditV2()">Save</button>
+                <p><b>Go Back or Save Changes</b></p>
+                <button class="menuButton menuButton-style" onclick="userHtml('${userID}')"">Go Back</button>
+                <button class="menuButton menuButton-style" onclick="userEditV2()">Save Changes</button>
             </div>
     `
 
@@ -2143,6 +2148,9 @@ async function userHtml(userSearch) {
     }
 
     document.getElementById("mainFeed").innerHTML =  `
+        <div class="menu menu-style">
+            <h1>Profile</h1>
+        </div>
         ${clientUser ? `
             <div class="menu menu-style">
                 <p><b>Edit Profile</b></p>
@@ -2784,19 +2792,19 @@ async function addEmailAccount({ email, password }) {
 }
 
 async function subNotifi(subUser) {
-    const res = await sendRequest(`/notificationCenter/subscriptions/sub/${subUser}`, { method: 'POST' });
+    const res = await sendRequest(`/notifications/sub/${subUser}`, { method: 'POST' });
     if (!res || res.error) return document.getElementById('notificationSub').innerHTML=`error`
     document.getElementById('notificationSub').innerHTML=`done`
 }
 
 async function unsubUser(userID, username) {
-    const res = await sendRequest(`/notificationCenter/subscriptions/unsub/${userID}`, { method: 'DELETE' });
+    const res = await sendRequest(`/notifications/unsub/${userID}`, { method: 'DELETE' });
     if (!res || res.error) return document.getElementById(`subList_${userID}`).innerHTML=`error while unsubscribing`
     document.getElementById(`subList_${userID}`).innerHTML=`Unsubscribed from <a onclick="userHtml('${userID}')">${username}</a>.`
 }
 
 async function unsubAll() {
-    const res = await sendRequest(`/notificationCenter/subscriptions/unsubAll/`, { method: 'DELETE' });
+    const res = await sendRequest(`/notifications/unsubAll/`, { method: 'DELETE' });
 
     if (!res || res.error) return document.getElementById(`notificationsDiv`).innerHTML=`error while unsubscribing`
     else return document.getElementById(`notificationsDiv`).innerHTML=`Unsubscribed from all users.`
@@ -2811,7 +2819,8 @@ async function showBookmarks() {
     if (document.getElementById('bookmarksAreShown')) return hideBookmarks()
     document.getElementById('showBookmarksButton').innerHTML="Hide Bookmarks"
 
-    const res = await sendRequest(`/posts/bookmarks/`, { method: 'GET' });
+    const res = await sendRequest(`/posts/bookmarks/`, { method: 'GET', ignoreError: true });
+    if (!res || res.error) return document.getElementById("bookmarksdiv").innerHTML=`<div><hr class="rounded">No Bookmarks found.</div>`
 
     var obj = {} // { list: name, saves: [] }
     for (const list of res.lists) {
@@ -2829,21 +2838,18 @@ async function showBookmarks() {
         ele+=`
             <div>
                 <p>${listname}</p>
-                <hr class="rounded">
         `
         for (const save of list) {``
             if (debug) console.log(save)
             const newData = await getPostAndProfileData(save)
             ele+= `
-                <div class="menu menu-style" id="bookmarkView_${save}">
+                <hr class="rounded">
+
+                <div class="" id="bookmarkView_${save}">
                     ${newData.error ? `
                         <p>Deleted Post or Otherwise</p>
                     ` : `
-                        ${postElementCreate({
-                            post: newData.postData,
-                            user: newData.profileData,
-                            type : "basic"
-                        })}
+                        ${postElementCreate(newData)}
                     `}
                     <button class="menuButton menuButton-style" onclick="unsaveBookmark('${save}', null, 'bookmarks')">Remove ${newData.error ? `Broken` : ''} Bookmark</button>
                 </div>
@@ -2865,7 +2871,42 @@ async function showSubscriptions() {
     if (document.getElementById('subscriptionsAreShown')) return hideSubscriptions()
     document.getElementById('showSubscriptionsButton').innerHTML="Hide Subscriptions"
     document.getElementById('showNotificationsButton').innerHTML="Show Notifications"
+
+    const res = await sendRequest(`/notifications/subscriptions/`, { method: 'GET', ignoreError: true });
+    if (!res || res.error) return document.getElementById('notificationsDiv').innerHTML=`No Subscriptions Found`
+
+    var ele = `<hr class="rounded" id="subscriptionsAreShown"><p>${res.length} Subscriptions</p><hr class="rounded">`
+    ele = ele+`<div><a id="unsuballbutton" onclick="unsubAll()">unsub from all users.</a><hr class="rounded"></div>`;
+
+    for (const sub of res.reverse()) {
+        const userData = await getUserDataSimple(sub._id) 
+        var timesince
+        if (userData.creationTimestamp) timesince = checkDate(userData.creationTimestamp)
     
+        ele = ele + `
+            <div id="subList_${userData._id}">
+                <div class="publicPost posts-style">
+                    <p class="${userData._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" onclick="userHtml('${userData._id}')"> ${userData.displayName} @${userData.username} | ${userData.creationTimestamp ? timesince : '' }</p>
+                    <p>${userData.description ? userData.description : "no description"}</p>
+                    <p>Following: ${userData.followingCount} | Followers: ${userData.followerCount}</p>
+                    ${userData._id == currentUserLogin.userID ? `` : `
+                        <p id="follow_search_id_${userData._id}" onclick=
+                        ${userData.followed===true ? 
+                            `"unFollowUser('${userData._id}', 'follow_search_id_${userData._id}')">Unfollow User` :
+                            `"followUser('${userData._id}', 'follow_search_id_${userData._id}')">Follow User`
+                        }</p>
+                    `}
+                    <a onclick="unsubUser('${userData._id}', '${userData.username}')">Unsubscribe from User</a>
+                    <p class="debug" onclick="copyToClipboard('${userData._id}')">${userData._id}</p>
+                </div>
+            </div>
+        `
+    }
+
+    document.getElementById("notificationsDiv").innerHTML=ele
+}
+
+async function showSubscriptionsV2() {
     const res = await sendRequest(`/notificationCenter/subscriptions/`, { method: 'GET' });
     if (!res || res.error) return document.getElementById('showSubscriptionsButton').innerHTML=`error`
 
@@ -2917,7 +2958,7 @@ function notificationsPage() {
             <div>
                 <button class="menuButton menuButton-style" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
                 <button class="menuButton menuButton-style" id="showSubscriptionsButton" onclick="showSubscriptions()">Show Subscriptions</button>
-                <button class="menuButton menuButton-style" id="notificationSettingsPage" onclick="notificationSettingsPage()">Show Settings</button>
+                <!--<button class="menuButton menuButton-style" id="notificationSettingsPage" onclick="notificationSettingsPage()">Show Settings</button>-->
             </div>
             <div>
                 <div id="notificationsDiv"></div>
@@ -2974,7 +3015,57 @@ function revealNotifPrefrences(systemType) {
     else ele.style.display = "none";
 }
 
-async function showNotifications(indexID) {
+async function showNotifications() {
+    const notificationAreShownID = `notificationsAreShown`
+    if (document.getElementById(notificationAreShownID)) return hideNotifications()
+    document.getElementById('showNotificationsButton').innerHTML="Hide Notifcations"
+    document.getElementById('showSubscriptionsButton').innerHTML="Show Subscriptions"
+
+    const res = await sendRequest(`/notifications/getList`, { method: 'GET', ignoreError: true });
+    if (!res || res.error) return document.getElementById('notificationsDiv').innerHTML=`No Notifications Found`
+    
+    // var ele = `<hr class="rounded" id="notificationsAreShown"><p id="amount_notifications">${res.amountFound} Notifications</p><hr class="rounded">`
+    // ele = ele+`<div><a id="dismissAll" onclick="dismissAll()">dismiss all notifications.</a><hr class="rounded"></div>`;
+    var ele = `
+        <hr class="rounded" id="${notificationAreShownID}">
+        <p id="amount_notifications">${res.notifications.length} Notifications</p>
+        <hr class="rounded">
+        <div><a id="dismissAll" onclick="dismissAll()">dismiss all notifications.</a><hr class="rounded"></div>
+    `;
+    var foundUsers = {};
+
+    for (const notifi of res.notifications.reverse()) {
+        switch (notifi.type) {
+            case 5:
+                if (!foundUsers[notifi.userID]) foundUsers[notifi.userID] = await getUserDataSimple(notifi.userID);
+                const userData = foundUsers[notifi.userID];
+
+                ele+=`
+                    <div class="buttonStyled" id="notification_${notifi._id}">
+                        <a onclick="showPost('${notifi.postID}')"><b>${userData?.username ? userData.username : "Unknown User" }</b> has posted! (click to see)</a>
+                        <p onclick="dismissNotification('${notifi._id}')">Dismiss Notification.</p>
+                    </div>
+                `
+                break;
+            case 7: 
+                if (!foundUsers[notifi.userID])  foundUsers[notifi.userID] = await getUserDataSimple(notifi.userID);
+                const userData2 = foundUsers[notifi.userID];
+
+                ele+=`
+                    <div class="buttonStyled" id="notification_${notifi._id}">
+                        <a onclick="showPost('${notifi.postID}')"><b>${userData2?.username ? userData2.username : "Unknown User" }</b> quoted your post!(click to see)</a>
+                        <p onclick="dismissNotification('${notifi._id}')">Dismiss Notification.</p> 
+                    </div>
+                `
+            default:
+                break;
+        }
+    }
+   
+    document.getElementById("notificationsDiv").innerHTML=ele
+}
+
+async function showNotificationsV2(indexID) {
     const notificationAreShownID = `notificationsAreShown${indexID ? `_${indexID}`: '' }`
     if (document.getElementById(notificationAreShownID)) return hideNotifications()
     document.getElementById('showNotificationsButton').innerHTML="Hide Notifcations"
@@ -3017,7 +3108,7 @@ async function showNotifications(indexID) {
 }
 
 async function dismissNotification(notificationID) {
-    const res = await sendRequest(`/notificationCenter/notifications/dismiss/${notificationID}`, { method: 'DELETE' });
+    const res = await sendRequest(`/notifications/dismiss/${notificationID}`, { method: 'DELETE' });
     if (!res || res.error) return ;
 
     document.getElementById(`notification_${notificationID}`).remove();
@@ -3031,19 +3122,31 @@ async function dismissNotification(notificationID) {
 };
 
 async function dismissAll() {
-    const res = await sendRequest(`/notificationCenter/notifications/dismissAll`, { method: 'DELETE' });
+    const res = await sendRequest(`/notifications/dismissAll/`, { method: 'DELETE' });
 
     if (!res || res.error) return document.getElementById(`notificationsDiv`).innerHTML=`error while dismissing`
     else return document.getElementById(`notificationsDiv`).innerHTML=`Dismissed all notifications.`
 }
 
 async function showPost(postID) {
-    const res = await sendRequest(`/posts/get/basic/${postID}`, { method: 'GET' });
+    const res = await sendRequest(`/posts/get/full/${postID}`, { method: 'GET' });
     if (!res || res.error) return showModal("<p>Post was not found</p>")
 
-    const user = await getUserDataSimple(res.userID)
+    const user = res.userData
     if (debug) console.log(user)
-    const ele = postElementCreate({post: res, user: user})
+    const ele = postElementCreate(res)
+    // document.getElementById('mainFeed').innerHTML=ele
+    showModal(`<div><h1 class="font_h1-style">Post Found</h1><button class="menuButton menuButton-style" onclick="openPostSeperate('${postID}')">Open Post</button>${ele}</div>`)
+}
+
+async function openPostSeperate(postID) {
+    closeModal();
+    const res = await sendRequest(`/posts/get/full/${postID}`, { method: 'GET' });
+    if (!res || res.error) return showModal("<p>Post was not found</p>")
+
+    const user = res.userData
+    if (debug) console.log(user)
+    const ele = postElementCreate(res)
     document.getElementById('mainFeed').innerHTML=ele
 }
 
@@ -3248,15 +3351,12 @@ async function requestDevToken() {
 };
 
 async function getPostAndProfileData(postID) {
-    const postData = await sendRequest(`/posts/get/basic/${postID}`, { method: 'GET', ignoreError: true});
+    const postData = await sendRequest(`/posts/get/full/${postID}`, { method: 'GET', ignoreError: true});
 
     if (!postData || postData.error) return {error: `${postData.error ? postData.error : "an unknown error"}`};
     if (debug) console.log(postData);
-
-    const profileData = await sendRequest(`/users/get/basic/${postData.userID}`, { method: 'GET', ignoreError: true});
-    if (!profileData || profileData.error) return {error: `${profileData.error ? profileData.error : "an unknown error"}`};
-
-    return { "postData" : postData, "profileData": profileData };
+    
+    return postData;
 }
 
 async function requestVerification() {
@@ -3700,7 +3800,7 @@ function editPost(postID, edited) {
 async function cancelEdit(postID, content, edited) {
     if (debug) console.log(`cancelling edit of post ${postID}`)
 
-    const post = await sendRequest(`/posts/get/basic/${postID}`, { method: 'GET' })
+    const post = await sendRequest(`/posts/get/${postID}`, { method: 'GET' })
     if (!post || post.error) return false;
 
     document.getElementById(`postContentArea_${postID}`).innerHTML = `
@@ -3742,12 +3842,12 @@ async function submitEdit(postID) {
 }
 
 async function quotePost(postID) {
-    const postData = await sendRequest(`/posts/get/${postID}`, { method: 'GET', headers})
+    const postData = await sendRequest(`/posts/get/full/${postID}`, { method: 'GET', headers})
     if (!postData || postData.error) return false;
     const { postData:post, userData:user } = postData;
 
     await showModal(`
-        <h1>Create a new Post</h1>
+        <h1>Create a Quote Post</h1>
         <div class="postModalActions">
             <button class="menuButton menuButton-style" onclick="createPost({'quoteID':'${postID}'})">Upload Post</button>
             <button class="menuButton menuButton-style" onclick="closeModal()">Close</button>
@@ -3764,7 +3864,7 @@ async function quotePost(postID) {
 }
 
 async function replyPost(postID) {
-    const postData = await sendRequest(`/posts/get/${postID}`, { method: 'GET', headers})
+    const postData = await sendRequest(`/posts/get/full/${postID}`, { method: 'GET', headers})
     if (!postData || postData.error) return false;
     const { postData:post, userData:user } = postData;
 

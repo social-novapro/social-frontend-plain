@@ -324,6 +324,12 @@ function closeSubnav() {
 
 function showSubnav() {
     const ele = `
+        <li class="subnav-item nav-item pointerCursor" id="navSection10">
+            <div id="page7Nav" class="nav-link" onclick="switchNav(2)">
+                <span class="material-symbols-outlined nav-button";>person</span>
+                <span class="link-text pointerCursor" id="page7">Profile</span>
+            </div>
+        </li>
         <li class="subnav-item nav-item pointerCursor" id="navSection9">
             <div id="page9Nav" class="nav-link" onclick="switchNav(9)">
                 <span class="material-symbols-outlined nav-button";>bookmarks</span>
