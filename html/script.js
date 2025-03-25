@@ -54,6 +54,8 @@ var userProfieIndexData = {
     nextIndexID: null,
     building: false,
 }
+var aiSuggestions = [];
+var amountSuggestions = 0;
 // LOCAL STORAGE
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 var LOCAL_STORAGE_LOGINS='social.loginAccounts'
@@ -282,6 +284,7 @@ function postElementCreate({
                     <p onclick="likePost('${post._id}')" class="${extraData.liked == true ? 'ownUser-style likedColour':'posts_action-style'}" id="likePost_${post._id}">${styleLikedButton(extraData.liked, post.totalLikes ?? 0)}</p>
                     <p onclick="replyPost('${post._id}')" class="posts_action-style">${styleReplyButton(post.totalReplies)}</p>
                     <p onclick="quotePost('${post._id}')" class="posts_action-style">${styleQuoteButton(post.totalQuotes)}</p>
+                    <p id="aisummaryaction_${post._id}" onclick="aiSummaryAction('${post._id}')" class="posts_action-style">${styleSummaryButton()}</p>
                     ${!mobileClient ? `
                         ${post.userID == currentUserLogin.userID ? `
                             <p onclick="deletePost('${post._id}')" class="posts_action-style">${styleDeleteButton()}</p>
@@ -303,6 +306,16 @@ function postElementCreate({
     return element;
 }
 
+function styleSummaryButton() {
+    var returnElement = `<span>`;
+    returnElement+=`<span class="material-symbols-outlined">rocket_launch</span>`
+    return returnElement + `</span>`
+}
+function styleSummaryCloseButton() {
+    var returnElement = `<span>`;
+    returnElement+=`<span class="material-symbols-outlined">rocket</span>`
+    return returnElement + `</span>`
+}
 function styleLikedButton(liked, totalLikes) {
     var returnElement = `<span>`;
     if (totalLikes) returnElement+=`<span>${totalLikes}</span>`
@@ -390,6 +403,36 @@ async function popupActions(postID, userID, hideParent, hideReplies, owner, pinn
     `;
 };
 
+async function aiSummaryAction(postID, userID) {
+    var elementPopup = document.getElementById(`aisummaryOpen_${postID}`);
+    if (elementPopup) {
+        document.getElementById(`aisummaryaction_${postID}`).innerHTML = styleSummaryButton(false)
+        return elementPopup.remove();
+    } else {
+        document.getElementById(`aisummaryaction_${postID}`).innerHTML = styleSummaryCloseButton(true)
+    }
+
+    document.getElementById(`postElement_${postID}`).innerHTML+=`
+        <div id="aisummaryOpen_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
+            <p id="aisummaryOpenResult_${postID}">Please wait... Loading AI Summary</p>
+        </div>
+    `;
+
+
+    const summaryData = await sendRequest(`/ai/summary/${postID}`, {
+        method: 'GET'
+    });
+
+    if (!summaryData || summaryData.error || !summaryData.response) return document.getElementById(`aisummaryOpenResult_${postID}`).innerText = "Error while loading AI Summary, please try again later.";
+    document.getElementById(`aisummaryOpenResult_${postID}`).innerHTML = `
+    <div class="inline">
+        <p>AI Summary</p>
+        <hr class="rounded">
+        ${summaryData.totalPosts > 1 ? `<p>Based on ${summaryData.totalPosts} posts</p>` : ``}
+        <p>${summaryData.response}</p>
+    </div>`;
+};
+
 function copyPostLink(postID) {
     const postLink = `${hostedUrl}?postID=${postID}`
     copyToClipboard(postLink)
@@ -475,7 +518,7 @@ async function viewParentPost(postID, parentPostID) {
    
     const postEle = postElementCreate({post: postData, user: userData});
     document.getElementById(`parent_${postID}`).innerHTML = `
-        <div class="publicPost areaPost posts-style" id="openedParent_${postID}">${postEle}</div>
+        <div class="" id="openedParent_${postID}">${postEle}</div>
     `;
     document.getElementById(`parentViewing_${postID}`).innerText = "Close parent post.";
 
@@ -757,12 +800,14 @@ async function createPostModal() {
             <button onclick="createPostPage()" class="menuButton menuButton-style">Open Post Page</button>
             <button onclick="createPost()" class="menuButton menuButton-style">Upload Post</button>
             <button onclick="closeModal()" class="menuButton menuButton-style">Close</button>
+            <button onclick="getPostSuggestions('modal')" class="menuButton menuButton-style">Get Suggestion</button>
         </div>
         <div class="search">
             <input type="text" class="addPollOption menu-style" id="pollCreateLink" placeholder="Link Poll via ID">
         </div>
         <textarea class="postTextArea" id="newPostTextArea"></textarea>
         <div id="foundTaggings"></div>
+        <div id="foundAIPostSuggestions"></div>
         </div>
     `, "hide")
 }
@@ -3593,6 +3638,7 @@ async function quotePost(postID) {
         <div class="postModalActions">
             <button class="menuButton menuButton-style" onclick="createPost({'quoteID':'${postID}'})">Upload Post</button>
             <button class="menuButton menuButton-style" onclick="closeModal()">Close</button>
+            <button onclick="getPostSuggestions('modal', '${postID}')" class="menuButton menuButton-style">Get Suggestion</button>
         </div>
         <hr class="rounded">
         <div class="post">
@@ -3605,6 +3651,7 @@ async function quotePost(postID) {
             </div>
         </div>
         <textarea class="postTextArea" id="newPostTextArea"></textarea>
+        <div id="foundAIPostSuggestions"></div>
         <div id="foundTaggings"></div>
     `, "hide")
 }
@@ -3621,6 +3668,7 @@ async function replyPost(postID) {
         <div class="postModalActions">
             <button class="menuButton menuButton-style" onclick="createPost({'replyID':'${postID}'})">Upload Reply</button>
             <button class="menuButton menuButton-style" onclick="closeModal()">Close</button>
+            <button onclick="getPostSuggestions('modal', '${postID}')" class="menuButton menuButton-style">Get Suggestion</button>
         </div>
         <hr class="rounded">
         <div class="post">
@@ -3633,6 +3681,7 @@ async function replyPost(postID) {
             </div>
         </div>
         <textarea class="postTextArea" id="newPostTextArea"></textarea>
+        <div id="foundAIPostSuggestions"></div>
         <div id="foundTaggings"></div>
     `, "hide")
 }
@@ -3933,12 +3982,14 @@ async function createPostPage() {
                 <p class="publicPost menuButton menuButton-style" id="mediaCreationButton" onclick="showMediaCreation()">Add Media</p>
                 <p class="publicPost menuButton menuButton-style" id="pollCreationButton" onclick="showPollCreation()">Add Poll</p>
                 <p class="publicPost menuButton menuButton-style" id="pollCreationButton" onclick="showCoPostersCreation()">Add Co-Posters</p>
+                <p class="publicPost menuButton menuButton-style" id="getSuggestionsButton" onclick="getPostSuggestions('main', '')">Get Suggestion</p>
                 <div class="publicPost menuButton menuButton-style">
                     <p onclick="exportPostHeaderURL()">Create Post Template</p>
                     <p id="postURL_preview"></p>
                     <p id="postURL_messageURL"></p>
                 </div>
             </div>
+            <div id="foundAIPostSuggestions"></div>
             <div>
                 <iv id="addCoPoster"></div>
                 <input type="text" id="pollCreateLink" class="addPollOption menu-style" placeholder="Link Poll via ID" ${data.pollID ? `value="${data.pollID}"` : ""}></input>
@@ -4492,6 +4543,38 @@ function editUser() {
             <button class="buttonStyled" onclick=renameUsername()>Edit Username</button>
         </div>
     `
+}
+
+// AI FEATURES
+// summary of post/thread
+async function getPostSuggestions(type, postID) {
+    const suggestionsDiv = document.getElementById('foundAIPostSuggestions');
+    const foundContent = document.getElementById('newPostTextArea').value;
+    suggestionsDiv.innerHTML = `<p>Loading Suggestion...</p>`;
+    
+    const suggestionPost = await sendRequest(`/ai/suggestion/${postID ? postID : ""}`, {
+        method: 'POST',
+        body: { content: foundContent }
+    });
+
+    if (!suggestionPost || suggestionPost.error) {
+        return suggestionsDiv.innerHTML = `<p>Suggestion Failed</p>`;
+    }
+    
+    aiSuggestions.push(suggestionPost.response);
+    foundAIPostSuggestions.innerHTML = `
+        <div class="publicPost posts-style">
+            <p>AI Suggestion</p>
+            <hr class="rounded">
+            <p onclick="useSuggestion(${amountSuggestions})">${suggestionPost.response}</p>
+        </div>
+    `;
+    amountSuggestions++;
+}
+
+function useSuggestion(suggestion) {
+    document.getElementById('newPostTextArea').value = aiSuggestions[suggestion];
+    document.getElementById('foundAIPostSuggestions').innerHTML = "";
 }
 
 // EDIT DISPLAY NAME
