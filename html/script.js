@@ -63,7 +63,7 @@ var LOCAL_STORAGE_THEME_SETTINGS = 'social.themeSettings'
 var LOCAL_STORAGE_THEME_POSSIBLE = 'social.themePossible'
 var buildingFeed = true;
 // let loginUserToken = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
-
+var foundCategories = [];
 var mediaUploadLinks = [];
 
 function checkifMobile() {
@@ -1157,7 +1157,8 @@ function settingsPage() {
                     </div>
                     <div id="feedSettings" class="menu menu-style">
                         <p><b>Feed</b></p>
-                        <button class="menuButton menuButton-style" onclick="changeFeedSettings()">Feed Settings</p>
+                        <button class="menuButton menuButton-style" onclick="changeFeedSettings()" id="changeFeedSettings">Feed Settings</p>
+                        ${debug ? `<button class="menuButton menuButton-style" onclick="changePersonalizedFeed()" id="personalizeFeedSettings">Personalized Feed</p>` : ``}
                     </div>
                     <div id="feedPopup"></div>
                     <div id="searchSetting" class="menu menu-style">
@@ -1388,6 +1389,106 @@ async function requestDeleteAcc() {
     }
 
     return res;
+}
+
+function hidePersonalizeFeed() {
+    document.getElementById("feedPopup").innerHTML = "";
+    document.getElementById("personalizeFeedSettings").innerText = "Personalized Feed";
+    document.getElementById("personalizeFeedSettings").onclick = changePersonalizedFeed;
+}
+
+async function changePersonalizedFeed() {
+    // get all categories
+    if (!foundCategories || !foundCategories[0]) foundCategories = await sendRequest(`/users/personalize`, { method: 'GET' });
+    if (!foundCategories || foundCategories.error) return console.log("error with categories");
+    document.getElementById("personalizeFeedSettings").innerText = "Hide Personalization";
+    document.getElementById("personalizeFeedSettings").onclick = hidePersonalizeFeed;
+
+    /*
+    [
+  {
+    "id": 100,
+    "name": "art",
+    "version": 1.7,
+    "isSubCategory": false,
+    "parentCategoryID": null,
+    "subCategories": [
+      {
+        "id": 101,
+        "name": "painting",
+        "version": 1.7,
+        "isSubCategory": true,
+        "parentCategoryID": 100,
+        "subCategories": []
+      },
+      {
+        "id": 102,
+        "name": "sculpture",
+        "version": 1.7,
+        "isSubCategory": true,
+        "parentCategoryID": 100,
+        "subCategories": []
+      },
+      {
+        "id": 103,
+        "name": "photography",
+        "version": 1.7,
+        "isSubCategory": true,
+        "parentCategoryID": 100,
+        "subCategories": []
+      },
+      {
+        "id": 104,
+        "name": "drawing",*/
+
+    var ele = `
+        <div class="menu menu-style" id="feedSettings">
+            <p><b>Personalization Settings</b></p>
+            <p>Choose what categories you want to see in your feed.</p>
+    `;
+
+    for (const category of foundCategories) {
+        ele+=`
+            <div class="menu menu-style">
+            <p>${category.name}</p>
+                <input type="range" id="feedSettings_${category.id}" class="menu-style sliderInput" min="0" max="100" value="${category.value}">
+                ${category.subCategories && category.subCategories[0] ? `
+                    <div style="display: none;" id="feedSettings_${category.id}_subcategories">
+                    <hr class="rounded">                    
+                        ${category.subCategories.map(subCategory => {
+                            return `
+                                <p>${subCategory.name}</p>
+                                <input type="range" id="feedSettings_${subCategory.id}" class="menu-style sliderInput" min="0" max="100" value="${subCategory.value}">
+                            `;
+                        }).join('')}
+                    </div>
+                    <div>
+                        <button class="menuButton menuButton-style" id="reveal_subcategories_${category.id}" onclick="revealSubcategories(${category.id})">Reveal Subcategories</button>
+                    </div>
+                ` : ``}
+            </div>
+        `;
+    }
+
+    ele+=`
+        </div>
+    `;
+    document.getElementById("feedPopup").innerHTML = ele;
+
+}
+
+function revealSubcategories(id) {
+    const ele = document.getElementById(`feedSettings_${id}_subcategories`);
+    const reveal = document.getElementById(`reveal_subcategories_${id}`);
+
+    if (ele.style.display == "none") {
+        ele.style.display = "block";
+        reveal.innerText = "Hide Subcategories";
+    }
+    else {
+        ele.style.display = "none";
+        reveal.innerText = "Reveal Subcategories";
+    }
 }
 
 function devModePage() {
@@ -2523,13 +2624,22 @@ async function fetchClientEmailData() {
     return res
 }
 
+function hideChangeFeed() {
+    document.getElementById("feedPopup").innerHTML = "";
+    document.getElementById("changeFeedSettings").innerText = "Change Feed";
+    document.getElementById("changeFeedSettings").onclick = changeFeedSettings;
+}
+
 async function changeFeedSettings() {
     const allowed = await getPossibleFeeds();
     if (!allowed) return alert("Error getting feeds")
     const getPref = await getPrefAPI()
     const currentDefaultOption = allowed.find(allow => allow.name === getPref.preferredFeed);
     const selectedDate = getTimeSince(getPref.timestamp)
-    
+
+    document.getElementById("changeFeedSettings").innerText = "Hide Change Feed";
+    document.getElementById("changeFeedSettings").onclick = hideChangeFeed;
+
     var ele = `
         <div class="menu menu-style">
             <p><b>Change your default feed</p></b>
