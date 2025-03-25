@@ -800,7 +800,7 @@ async function createPostModal() {
             <button onclick="createPostPage()" class="menuButton menuButton-style">Open Post Page</button>
             <button onclick="createPost()" class="menuButton menuButton-style">Upload Post</button>
             <button onclick="closeModal()" class="menuButton menuButton-style">Close</button>
-            <button onclick="getPostSuggestions('modal')" class="menuButton menuButton-style">Get Suggestions</button>
+            <button onclick="getPostSuggestions('modal')" class="menuButton menuButton-style">Get Suggestion</button>
         </div>
         <div class="search">
             <input type="text" class="addPollOption menu-style" id="pollCreateLink" placeholder="Link Poll via ID">
@@ -3638,7 +3638,7 @@ async function quotePost(postID) {
         <div class="postModalActions">
             <button class="menuButton menuButton-style" onclick="createPost({'quoteID':'${postID}'})">Upload Post</button>
             <button class="menuButton menuButton-style" onclick="closeModal()">Close</button>
-            <button onclick="getPostSuggestions('modal', '${postID}')" class="menuButton menuButton-style">Get Suggestions</button>
+            <button onclick="getPostSuggestions('modal', '${postID}')" class="menuButton menuButton-style">Get Suggestion</button>
         </div>
         <hr class="rounded">
         <div class="post">
@@ -3668,7 +3668,7 @@ async function replyPost(postID) {
         <div class="postModalActions">
             <button class="menuButton menuButton-style" onclick="createPost({'replyID':'${postID}'})">Upload Reply</button>
             <button class="menuButton menuButton-style" onclick="closeModal()">Close</button>
-            <button onclick="getPostSuggestions('modal', '${postID}')" class="menuButton menuButton-style">Get Suggestions</button>
+            <button onclick="getPostSuggestions('modal', '${postID}')" class="menuButton menuButton-style">Get Suggestion</button>
         </div>
         <hr class="rounded">
         <div class="post">
@@ -3982,7 +3982,7 @@ async function createPostPage() {
                 <p class="publicPost menuButton menuButton-style" id="mediaCreationButton" onclick="showMediaCreation()">Add Media</p>
                 <p class="publicPost menuButton menuButton-style" id="pollCreationButton" onclick="showPollCreation()">Add Poll</p>
                 <p class="publicPost menuButton menuButton-style" id="pollCreationButton" onclick="showCoPostersCreation()">Add Co-Posters</p>
-                <p class="publicPost menuButton menuButton-style" id="getSuggestionsButton" onclick="getPostSuggestions('main', '')">Get Suggestions</p>
+                <p class="publicPost menuButton menuButton-style" id="getSuggestionsButton" onclick="getPostSuggestions('main', '')">Get Suggestion</p>
                 <div class="publicPost menuButton menuButton-style">
                     <p onclick="exportPostHeaderURL()">Create Post Template</p>
                     <p id="postURL_preview"></p>
@@ -4550,7 +4550,7 @@ function editUser() {
 async function getPostSuggestions(type, postID) {
     const suggestionsDiv = document.getElementById('foundAIPostSuggestions');
     const foundContent = document.getElementById('newPostTextArea').value;
-    suggestionsDiv.innerHTML = `<p>Loading Suggestions...</p>`;
+    suggestionsDiv.innerHTML = `<p>Loading Suggestion...</p>`;
     
     const suggestionPost = await sendRequest(`/ai/suggestion/${postID ? postID : ""}`, {
         method: 'POST',
@@ -4558,7 +4558,7 @@ async function getPostSuggestions(type, postID) {
     });
 
     if (!suggestionPost || suggestionPost.error) {
-        return suggestionsDiv.innerHTML = `<p>Suggestions Failed</p>`;
+        return suggestionsDiv.innerHTML = `<p>Suggestion Failed</p>`;
     }
     
     aiSuggestions.push(suggestionPost.response);
