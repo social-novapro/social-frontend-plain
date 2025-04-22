@@ -344,7 +344,22 @@ p {
 .modal p {
     font-size: 15px;
 }
+.post-header {
+    display: flex;
+    align-items: center;
+}
 
+.profile-image {
+    margin-right: 10px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+
+.post-user-info {
+    display: flex;
+    flex-direction: column;
+}
 /* SMALL SCREEN */
 @media only screen and (max-width: 600px) {
     .navbar {

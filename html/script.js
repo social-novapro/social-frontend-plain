@@ -54,6 +54,8 @@ var userProfieIndexData = {
     nextIndexID: null,
     building: false,
 }
+var aiSuggestions = [];
+var amountSuggestions = 0;
 // LOCAL STORAGE
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 var LOCAL_STORAGE_LOGINS='social.loginAccounts'
@@ -61,6 +63,8 @@ var LOCAL_STORAGE_THEME_SETTINGS = 'social.themeSettings'
 var LOCAL_STORAGE_THEME_POSSIBLE = 'social.themePossible'
 var buildingFeed = true;
 // let loginUserToken = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
+var foundCategories = [];
+var mediaUploadLinks = [];
 
 function checkifMobile() {
     const width = document.getElementById("html").clientWidth
@@ -204,9 +208,14 @@ function postElementCreate({
     quoteData,
     coposterData,
     tagData,
-    extraData
+    extraData,
+    postData,
+    userData
 }) {
-    if (!post) return;
+    if (!post && postData) post = postData;
+    if (!user && userData) user = userData;
+
+    if (!post) return "";
     if (post.deleted) {
         const ele = `
             <div class="postContent posts-style" id="postContentArea_${post._id}">
@@ -218,7 +227,6 @@ function postElementCreate({
 
         return ele;
     }
-
     if (!extraData) extraData = { }
     var timesince
     if (post.timePosted) timesince = checkDate(post.timePosted)
@@ -261,13 +269,17 @@ function postElementCreate({
                         <p onclick="viewParentPost('${post._id}', '${post.replyData.postID}')" id="parentViewing_${post._id}">This was a reply, click here to see.</p>
                     ` : ``}
                 `: ``}
-                <div>
-                    <p><span class="pointerCursor ${ user && (post.userID == currentUserLogin.userID )? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️' : ''}` : '>Unknown User'}</span>
-                    ${coposterData && coposterData[0] ? `${coposterData.map(function(coposter) {
-                        return `, <span class="spacer_2px pointerCursor ${ coposter._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${coposter ? ` onclick="userHtml('${coposter._id}')"> ${coposter.displayName} @${coposter.username}${coposter.verified ? ' ✔️ ' : ''}` : '>Unknown User'}</span>`
-                    }).join(" ")}`:``}
-                    </p>
-                    <p class="spacer_2px pointerCursor ${ user && (post.userID == currentUserLogin.userID )? "ownUser-style" : "otherUser-style"}">${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
+                <div class="post-header">
+                    ${user?.profileURL ? `<img onclick="userHtml('${post.userID}')" src="${user.profileURL}" alt="${user.displayName}" class="profile-image">` : ""}
+                    <div class="post-user-info">
+                        <p>
+                            <span class="pointerCursor ${ user && (post.userID == currentUserLogin.userID )? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️' : ''}` : '>Unknown User'}</span>
+                            ${coposterData && coposterData[0] ? `${coposterData.map(function(coposter) {
+                                return `, <span class="spacer_2px pointerCursor ${ coposter._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${coposter ? ` onclick="userHtml('${coposter._id}')"> ${coposter.displayName} @${coposter.username}${coposter.verified ? ' ✔️ ' : ''}` : '>Unknown User'}</span>`
+                            }).join(" ")}`:``}
+                        </p>
+                        <p class="spacer_2px pointerCursor ${ user && (post.userID == currentUserLogin.userID )? "ownUser-style" : "otherUser-style"}">${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
+                    </div>
                 </div>
                 <div class="postContent" id="postContentArea_${post._id}">
                     <div class="textAreaPost posts_content-style">
@@ -301,6 +313,7 @@ function postElementCreate({
                     <p onclick="likePost('${post._id}')" class="${extraData.liked == true ? 'ownUser-style likedColour':'posts_action-style'}" id="likePost_${post._id}">${styleLikedButton(extraData.liked, post.totalLikes ?? 0)}</p>
                     <p onclick="replyPost('${post._id}')" class="posts_action-style">${styleReplyButton(post.totalReplies)}</p>
                     <p onclick="quotePost('${post._id}')" class="posts_action-style">${styleQuoteButton(post.totalQuotes)}</p>
+                    <p id="aisummaryaction_${post._id}" onclick="aiSummaryAction('${post._id}')" class="posts_action-style">${styleSummaryButton()}</p>
                     ${!mobileClient ? `
                         ${post.userID == currentUserLogin.userID ? `
                             <p onclick="deletePost('${post._id}')" class="posts_action-style">${styleDeleteButton()}</p>
@@ -322,6 +335,16 @@ function postElementCreate({
     return element;
 }
 
+function styleSummaryButton() {
+    var returnElement = `<span>`;
+    returnElement+=`<span class="material-symbols-outlined">rocket_launch</span>`
+    return returnElement + `</span>`
+}
+function styleSummaryCloseButton() {
+    var returnElement = `<span>`;
+    returnElement+=`<span class="material-symbols-outlined">rocket</span>`
+    return returnElement + `</span>`
+}
 function styleLikedButton(liked, totalLikes) {
     var returnElement = `<span>`;
     if (totalLikes) returnElement+=`<span>${totalLikes}</span>`
@@ -409,6 +432,36 @@ async function popupActions(postID, userID, hideParent, hideReplies, owner, pinn
     `;
 };
 
+async function aiSummaryAction(postID, userID) {
+    var elementPopup = document.getElementById(`aisummaryOpen_${postID}`);
+    if (elementPopup) {
+        document.getElementById(`aisummaryaction_${postID}`).innerHTML = styleSummaryButton(false)
+        return elementPopup.remove();
+    } else {
+        document.getElementById(`aisummaryaction_${postID}`).innerHTML = styleSummaryCloseButton(true)
+    }
+
+    document.getElementById(`postElement_${postID}`).innerHTML+=`
+        <div id="aisummaryOpen_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
+            <p id="aisummaryOpenResult_${postID}">Please wait... Loading AI Summary</p>
+        </div>
+    `;
+
+
+    const summaryData = await sendRequest(`/ai/summary/${postID}`, {
+        method: 'GET'
+    });
+
+    if (!summaryData || summaryData.error || !summaryData.response) return document.getElementById(`aisummaryOpenResult_${postID}`).innerText = "Error while loading AI Summary, please try again later.";
+    document.getElementById(`aisummaryOpenResult_${postID}`).innerHTML = `
+    <div class="inline">
+        <p>AI Summary</p>
+        <hr class="rounded">
+        ${summaryData.totalPosts > 1 ? `<p>Based on ${summaryData.totalPosts} posts</p>` : ``}
+        <p>${summaryData.response}</p>
+    </div>`;
+};
+
 function copyPostLink(postID) {
     const postLink = `${hostedUrl}?postID=${postID}`
     copyToClipboard(postLink)
@@ -474,8 +527,9 @@ async function viewParentPost(postID, parentPostID) {
         return document.getElementById(`openedParent_${postID}`).remove();
     }
 
-    const postData = await sendRequest(`/posts/get/basic/${parentPostID}`, { method: "GET" });
-
+    const postFound = await sendRequest(`/posts/get/full/${parentPostID}`, { method: "GET" });
+    if (!postFound || postFound.error) return "";
+    const {postData, userData} = postFound;
     if (postData.deleted == true || !postData.userID) {
         //document.getElementById()
         document.getElementById(`parent_${postID}`).innerHTML = `
@@ -490,11 +544,9 @@ async function viewParentPost(postID, parentPostID) {
         return;
     }
 
-    const userData = await sendRequest(`/users/get/basic/${postData.userID}`, { method: 'GET', });
-   
     const postEle = postElementCreate({post: postData, user: userData});
     document.getElementById(`parent_${postID}`).innerHTML = `
-        <div class="publicPost areaPost posts-style" id="openedParent_${postID}">${postEle}</div>
+        <div class="" id="openedParent_${postID}">${postEle}</div>
     `;
     document.getElementById(`parentViewing_${postID}`).innerText = "Close parent post.";
 
@@ -770,6 +822,22 @@ async function userPage(userSearch) {
 
 async function createPostModal() {
     createPostPage(true);
+    return null;
+    await showModal(`
+        <div id="postingModel">
+        <h1 class="font_h1-style">Create a new Post</h1>
+        <div id="postModel">
+            <button onclick="createPostPage()" class="menuButton menuButton-style">Open Post Page</button>
+            <button onclick="createPost()" class="menuButton menuButton-style">Upload Post</button>
+            <button onclick="closeModal()" class="menuButton menuButton-style">Close</button>
+        </div>
+        <div class="search">
+            <input type="text" class="addPollOption menu-style" id="pollCreateLink" placeholder="Link Poll via ID">
+        </div>
+        <textarea class="postTextArea" id="newPostTextArea"></textarea>
+        <div id="foundTaggings"></div>
+        </div>
+    `, "hide")
 }
 
 async function socialTypePost(customInputID, forCoposter=false) {
@@ -924,7 +992,7 @@ function loginSplashScreen() {
 // USER PROFILE PAGE
 async function profile() {
     checkLogin()
-    removeSearchBar()
+    // removeSearchBar()
     searching = true
 
     userHtml(currentUserLogin.userID)
@@ -952,10 +1020,14 @@ async function userEditV2() {
 
     for (const update of userData.userUpdates) {
         var value = document.getElementById(`userEdit_${update.dbName}_text`).value
-        console.log(value)
+        if ((!value || value==update.currentValue) && update.dbName == "profileURL") {
+            const file = await uploadFile(true)
+            if (!file || file.error) continue;
+            value = `${apiURL}/cdn${file.cdnURL}`;
+        }
 
         if (!value || (update.currentValue && update.currentValue == value)) continue;
-        if (update.type == "Date") value = convertDateToEpoch(value)
+        if (update.type == "Date") value = convertDateToEpoch(value);
 
         editBody[update.dbName] = value;
     }
@@ -1004,6 +1076,12 @@ async function userEdit(action) {
     var tempHeaders = {};
 
     for (const actionData of actions) {
+        if (actionData == "profileImage") {
+            const file = await uploadFile("profileImage")
+            if (!file || file.error) return console.log(file)
+            tempHeaders[`new${actionData.action.toLowerCase()}`] = `${apiURL}${file.cdnURL}`;
+            continue;
+        }
         tempHeaders[`new${actionData.action.toLowerCase()}`] = actionData.value
     }
 
@@ -1018,7 +1096,7 @@ async function userEdit(action) {
 }
 
 async function postHtml(postID) {
-    const postData = await sendRequest(`/posts/get/${postID}`, { method: 'GET' })
+    const postData = await sendRequest(`/posts/get/full/${postID}`, { method: 'GET' })
     if (!postData || postData.deleted) return console.log("error with post");
 
     const ele = postElementCreateFullEasy(postData);
@@ -1066,7 +1144,7 @@ function settingsPage() {
                         <div>
                             <button class="menuButton menuButton-style" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
                             <button class="menuButton menuButton-style" id="showSubscriptionsButton" onclick="showSubscriptions()">Show Subscriptions</button>
-                            <button class="menuButton menuButton-style" id="notificationSettingsPage" onclick="notificationSettingsPage()">Show Settings</button>
+                            <!--<button class="menuButton menuButton-style" id="notificationSettingsPage" onclick="notificationSettingsPage()">Show Settings</button>-->
                         </div>
                         <div>
                             <div id="notificationsDiv"></div>
@@ -1079,7 +1157,8 @@ function settingsPage() {
                     </div>
                     <div id="feedSettings" class="menu menu-style">
                         <p><b>Feed</b></p>
-                        <button class="menuButton menuButton-style" onclick="changeFeedSettings()">Feed Settings</p>
+                        <button class="menuButton menuButton-style" onclick="changeFeedSettings()" id="changeFeedSettings">Feed Settings</p>
+                        ${debug ? `<button class="menuButton menuButton-style" onclick="changePersonalizedFeed()" id="personalizeFeedSettings">Personalized Feed</p>` : ``}
                     </div>
                     <div id="feedPopup"></div>
                     <div id="searchSetting" class="menu menu-style">
@@ -1312,6 +1391,106 @@ async function requestDeleteAcc() {
     return res;
 }
 
+function hidePersonalizeFeed() {
+    document.getElementById("feedPopup").innerHTML = "";
+    document.getElementById("personalizeFeedSettings").innerText = "Personalized Feed";
+    document.getElementById("personalizeFeedSettings").onclick = changePersonalizedFeed;
+}
+
+async function changePersonalizedFeed() {
+    // get all categories
+    if (!foundCategories || !foundCategories[0]) foundCategories = await sendRequest(`/users/personalize`, { method: 'GET' });
+    if (!foundCategories || foundCategories.error) return console.log("error with categories");
+    document.getElementById("personalizeFeedSettings").innerText = "Hide Personalization";
+    document.getElementById("personalizeFeedSettings").onclick = hidePersonalizeFeed;
+
+    /*
+    [
+  {
+    "id": 100,
+    "name": "art",
+    "version": 1.7,
+    "isSubCategory": false,
+    "parentCategoryID": null,
+    "subCategories": [
+      {
+        "id": 101,
+        "name": "painting",
+        "version": 1.7,
+        "isSubCategory": true,
+        "parentCategoryID": 100,
+        "subCategories": []
+      },
+      {
+        "id": 102,
+        "name": "sculpture",
+        "version": 1.7,
+        "isSubCategory": true,
+        "parentCategoryID": 100,
+        "subCategories": []
+      },
+      {
+        "id": 103,
+        "name": "photography",
+        "version": 1.7,
+        "isSubCategory": true,
+        "parentCategoryID": 100,
+        "subCategories": []
+      },
+      {
+        "id": 104,
+        "name": "drawing",*/
+
+    var ele = `
+        <div class="menu menu-style" id="feedSettings">
+            <p><b>Personalization Settings</b></p>
+            <p>Choose what categories you want to see in your feed.</p>
+    `;
+
+    for (const category of foundCategories) {
+        ele+=`
+            <div class="menu menu-style">
+            <p>${category.name}</p>
+                <input type="range" id="feedSettings_${category.id}" class="menu-style sliderInput" min="0" max="100" value="${category.value}">
+                ${category.subCategories && category.subCategories[0] ? `
+                    <div style="display: none;" id="feedSettings_${category.id}_subcategories">
+                    <hr class="rounded">                    
+                        ${category.subCategories.map(subCategory => {
+                            return `
+                                <p>${subCategory.name}</p>
+                                <input type="range" id="feedSettings_${subCategory.id}" class="menu-style sliderInput" min="0" max="100" value="${subCategory.value}">
+                            `;
+                        }).join('')}
+                    </div>
+                    <div>
+                        <button class="menuButton menuButton-style" id="reveal_subcategories_${category.id}" onclick="revealSubcategories(${category.id})">Reveal Subcategories</button>
+                    </div>
+                ` : ``}
+            </div>
+        `;
+    }
+
+    ele+=`
+        </div>
+    `;
+    document.getElementById("feedPopup").innerHTML = ele;
+
+}
+
+function revealSubcategories(id) {
+    const ele = document.getElementById(`feedSettings_${id}_subcategories`);
+    const reveal = document.getElementById(`reveal_subcategories_${id}`);
+
+    if (ele.style.display == "none") {
+        ele.style.display = "block";
+        reveal.innerText = "Hide Subcategories";
+    }
+    else {
+        ele.style.display = "none";
+        reveal.innerText = "Reveal Subcategories";
+    }
+}
+
 function devModePage() {
     const ele = `
         <div class="menu menu-style" id="devModePage">
@@ -1352,15 +1531,16 @@ async function userEditHtmlV2(userID) {
 
     if (profileData?.displayName) document.title = `${profileData?.displayName} | Interact`
 
-    console.log(updateData)
     var ele = `
         <div class="userEdit">
             <div class="menu menu-style">
                 <h1 class="font_h1-style">Edit Profile</h1>
             </div>
+
             <div class="menu menu-style">
-                <p><b>Save any changes made</b></p>
-                <button class="menuButton menuButton-style" onclick="userEditV2()">Save</button>
+                <p><b>Go Back or Save Changes</b></p>
+                <button class="menuButton menuButton-style" onclick="userHtml('${userID}')"">Go Back</button>
+                <button class="menuButton menuButton-style" onclick="userEditV2()">Save Changes</button>
             </div>
     `
 
@@ -1385,10 +1565,11 @@ async function userEditHtmlV2(userID) {
                 <p><b>${update.title}</b></p>
                 <p>${update.description}</p>
                 <p>Current: ${update.currentValue || "No value set"}</p>
-                ${update.dbName=="profileURL" && update.currentValue != null? `<img src="${update.currentValue}" class="profileImage">` : ""}
+                ${update.dbName=="profileURL" && update.currentValue != null? `<img width="30%" height="30%" src="${update.currentValue}" class="profileImage">` : ""}
                     <p id="userEdit_update_${update.dbName}"></p>
                     <form id="userEdit_${update.dbName}" class="contentMessage" onsubmit="userEditV2Specific('${update.action}')">
-                    <input type="text" id="userEdit_${update.dbName}_text" class="userEditForm menu-style" placeholder="${update.currentValue || update.title}" value="${update.currentValue || ""}">
+                    <div><input type="text" id="userEdit_${update.dbName}_text" class="userEditForm menu-style" placeholder="${update.currentValue || update.title}" value="${update.currentValue || ""}"></div>
+                    ${update.dbName=="profileURL" ? `<div><input type="file" id="interactFile" class="menuButton menuButton-style"></div>` : ""}
                 </form>
             </div>
         `
@@ -1454,6 +1635,7 @@ async function userEditHtml(userID) {
                 ${profileData.userData.profileURL ? `<img src="${profileData.userData.profileURL}" class="profileImage">` : "No image set"}
                 <form id="userEdit_profileImage" class="contentMessage" onsubmit="userEdit('profileImage')">
                     <input id="userEdit_profileImage_text" type="text" class="userEditForm menu-style" placeholder="Profile Image URL">
+                    <input type="file" id="interactFile" class="menuButton menuButton-style">
                 </form>
             </div>
             <div class="menu menu-style">
@@ -1836,7 +2018,6 @@ function getThemeChanges(themeID, possibleThemeEdits, ignoreLock) {
 
     if (!ignoreLock) {
         const changeLock = document.getElementById(`themeSetting_locked`).value;
-        console.log(changeLock)
         if (changeLock) reqBody.push({ option: "locked", value: changeLock == 1 ? true : false});
     }
 
@@ -1945,7 +2126,6 @@ async function followingFollowerHtml(userID, type=0) {
     followingFollowerData.userID=userID;
     // type, 0=following, 1=followers
     const followData = await followingFollowerList(userID, type);
-    console.log(followData)
     if (!followData) return; //showModal(`<p>Error: ${userList.code}, ${userList.msg}</p>`);
 
     if (followData.prevIndexID) followingFollowerData.prevIndexID = followData.prevIndexID;
@@ -2069,6 +2249,9 @@ async function userHtml(userSearch) {
     }
 
     document.getElementById("mainFeed").innerHTML =  `
+        <div class="menu menu-style">
+            <h1>Profile</h1>
+        </div>
         ${clientUser ? `
             <div class="menu menu-style">
                 <p><b>Edit Profile</b></p>
@@ -2441,13 +2624,22 @@ async function fetchClientEmailData() {
     return res
 }
 
+function hideChangeFeed() {
+    document.getElementById("feedPopup").innerHTML = "";
+    document.getElementById("changeFeedSettings").innerText = "Change Feed";
+    document.getElementById("changeFeedSettings").onclick = changeFeedSettings;
+}
+
 async function changeFeedSettings() {
     const allowed = await getPossibleFeeds();
     if (!allowed) return alert("Error getting feeds")
     const getPref = await getPrefAPI()
     const currentDefaultOption = allowed.find(allow => allow.name === getPref.preferredFeed);
     const selectedDate = getTimeSince(getPref.timestamp)
-    
+
+    document.getElementById("changeFeedSettings").innerText = "Hide Change Feed";
+    document.getElementById("changeFeedSettings").onclick = hideChangeFeed;
+
     var ele = `
         <div class="menu menu-style">
             <p><b>Change your default feed</p></b>
@@ -2710,19 +2902,19 @@ async function addEmailAccount({ email, password }) {
 }
 
 async function subNotifi(subUser) {
-    const res = await sendRequest(`/notificationCenter/subscriptions/sub/${subUser}`, { method: 'POST' });
+    const res = await sendRequest(`/notifications/sub/${subUser}`, { method: 'POST' });
     if (!res || res.error) return document.getElementById('notificationSub').innerHTML=`error`
     document.getElementById('notificationSub').innerHTML=`done`
 }
 
 async function unsubUser(userID, username) {
-    const res = await sendRequest(`/notificationCenter/subscriptions/unsub/${userID}`, { method: 'DELETE' });
+    const res = await sendRequest(`/notifications/unsub/${userID}`, { method: 'DELETE' });
     if (!res || res.error) return document.getElementById(`subList_${userID}`).innerHTML=`error while unsubscribing`
     document.getElementById(`subList_${userID}`).innerHTML=`Unsubscribed from <a onclick="userHtml('${userID}')">${username}</a>.`
 }
 
 async function unsubAll() {
-    const res = await sendRequest(`/notificationCenter/subscriptions/unsubAll/`, { method: 'DELETE' });
+    const res = await sendRequest(`/notifications/unsubAll/`, { method: 'DELETE' });
 
     if (!res || res.error) return document.getElementById(`notificationsDiv`).innerHTML=`error while unsubscribing`
     else return document.getElementById(`notificationsDiv`).innerHTML=`Unsubscribed from all users.`
@@ -2737,7 +2929,8 @@ async function showBookmarks() {
     if (document.getElementById('bookmarksAreShown')) return hideBookmarks()
     document.getElementById('showBookmarksButton').innerHTML="Hide Bookmarks"
 
-    const res = await sendRequest(`/posts/bookmarks/`, { method: 'GET' });
+    const res = await sendRequest(`/posts/bookmarks/`, { method: 'GET', ignoreError: true });
+    if (!res || res.error) return document.getElementById("bookmarksdiv").innerHTML=`<div><hr class="rounded">No Bookmarks found.</div>`
 
     var obj = {} // { list: name, saves: [] }
     for (const list of res.lists) {
@@ -2755,21 +2948,18 @@ async function showBookmarks() {
         ele+=`
             <div>
                 <p>${listname}</p>
-                <hr class="rounded">
         `
         for (const save of list) {``
             if (debug) console.log(save)
             const newData = await getPostAndProfileData(save)
             ele+= `
-                <div class="menu menu-style" id="bookmarkView_${save}">
+                <hr class="rounded">
+
+                <div class="" id="bookmarkView_${save}">
                     ${newData.error ? `
                         <p>Deleted Post or Otherwise</p>
                     ` : `
-                        ${postElementCreate({
-                            post: newData.postData,
-                            user: newData.profileData,
-                            type : "basic"
-                        })}
+                        ${postElementCreate(newData)}
                     `}
                     <button class="menuButton menuButton-style" onclick="unsaveBookmark('${save}', null, 'bookmarks')">Remove ${newData.error ? `Broken` : ''} Bookmark</button>
                 </div>
@@ -2791,7 +2981,42 @@ async function showSubscriptions() {
     if (document.getElementById('subscriptionsAreShown')) return hideSubscriptions()
     document.getElementById('showSubscriptionsButton').innerHTML="Hide Subscriptions"
     document.getElementById('showNotificationsButton').innerHTML="Show Notifications"
+
+    const res = await sendRequest(`/notifications/subscriptions/`, { method: 'GET', ignoreError: true });
+    if (!res || res.error) return document.getElementById('notificationsDiv').innerHTML=`No Subscriptions Found`
+
+    var ele = `<hr class="rounded" id="subscriptionsAreShown"><p>${res.length} Subscriptions</p><hr class="rounded">`
+    ele = ele+`<div><a id="unsuballbutton" onclick="unsubAll()">unsub from all users.</a><hr class="rounded"></div>`;
+
+    for (const sub of res.reverse()) {
+        const userData = await getUserDataSimple(sub._id) 
+        var timesince
+        if (userData.creationTimestamp) timesince = checkDate(userData.creationTimestamp)
     
+        ele = ele + `
+            <div id="subList_${userData._id}">
+                <div class="publicPost posts-style">
+                    <p class="${userData._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" onclick="userHtml('${userData._id}')"> ${userData.displayName} @${userData.username} | ${userData.creationTimestamp ? timesince : '' }</p>
+                    <p>${userData.description ? userData.description : "no description"}</p>
+                    <p>Following: ${userData.followingCount} | Followers: ${userData.followerCount}</p>
+                    ${userData._id == currentUserLogin.userID ? `` : `
+                        <p id="follow_search_id_${userData._id}" onclick=
+                        ${userData.followed===true ? 
+                            `"unFollowUser('${userData._id}', 'follow_search_id_${userData._id}')">Unfollow User` :
+                            `"followUser('${userData._id}', 'follow_search_id_${userData._id}')">Follow User`
+                        }</p>
+                    `}
+                    <a onclick="unsubUser('${userData._id}', '${userData.username}')">Unsubscribe from User</a>
+                    <p class="debug" onclick="copyToClipboard('${userData._id}')">${userData._id}</p>
+                </div>
+            </div>
+        `
+    }
+
+    document.getElementById("notificationsDiv").innerHTML=ele
+}
+
+async function showSubscriptionsV2() {
     const res = await sendRequest(`/notificationCenter/subscriptions/`, { method: 'GET' });
     if (!res || res.error) return document.getElementById('showSubscriptionsButton').innerHTML=`error`
 
@@ -2843,7 +3068,7 @@ function notificationsPage() {
             <div>
                 <button class="menuButton menuButton-style" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
                 <button class="menuButton menuButton-style" id="showSubscriptionsButton" onclick="showSubscriptions()">Show Subscriptions</button>
-                <button class="menuButton menuButton-style" id="notificationSettingsPage" onclick="notificationSettingsPage()">Show Settings</button>
+                <!--<button class="menuButton menuButton-style" id="notificationSettingsPage" onclick="notificationSettingsPage()">Show Settings</button>-->
             </div>
             <div>
                 <div id="notificationsDiv"></div>
@@ -2900,7 +3125,57 @@ function revealNotifPrefrences(systemType) {
     else ele.style.display = "none";
 }
 
-async function showNotifications(indexID) {
+async function showNotifications() {
+    const notificationAreShownID = `notificationsAreShown`
+    if (document.getElementById(notificationAreShownID)) return hideNotifications()
+    document.getElementById('showNotificationsButton').innerHTML="Hide Notifcations"
+    document.getElementById('showSubscriptionsButton').innerHTML="Show Subscriptions"
+
+    const res = await sendRequest(`/notifications/getList`, { method: 'GET', ignoreError: true });
+    if (!res || res.error) return document.getElementById('notificationsDiv').innerHTML=`No Notifications Found`
+    
+    // var ele = `<hr class="rounded" id="notificationsAreShown"><p id="amount_notifications">${res.amountFound} Notifications</p><hr class="rounded">`
+    // ele = ele+`<div><a id="dismissAll" onclick="dismissAll()">dismiss all notifications.</a><hr class="rounded"></div>`;
+    var ele = `
+        <hr class="rounded" id="${notificationAreShownID}">
+        <p id="amount_notifications">${res.notifications.length} Notifications</p>
+        <hr class="rounded">
+        <div><a id="dismissAll" onclick="dismissAll()">dismiss all notifications.</a><hr class="rounded"></div>
+    `;
+    var foundUsers = {};
+
+    for (const notifi of res.notifications.reverse()) {
+        switch (notifi.type) {
+            case 5:
+                if (!foundUsers[notifi.userID]) foundUsers[notifi.userID] = await getUserDataSimple(notifi.userID);
+                const userData = foundUsers[notifi.userID];
+
+                ele+=`
+                    <div class="buttonStyled" id="notification_${notifi._id}">
+                        <a onclick="showPost('${notifi.postID}')"><b>${userData?.username ? userData.username : "Unknown User" }</b> has posted! (click to see)</a>
+                        <p onclick="dismissNotification('${notifi._id}')">Dismiss Notification.</p>
+                    </div>
+                `
+                break;
+            case 7: 
+                if (!foundUsers[notifi.userID])  foundUsers[notifi.userID] = await getUserDataSimple(notifi.userID);
+                const userData2 = foundUsers[notifi.userID];
+
+                ele+=`
+                    <div class="buttonStyled" id="notification_${notifi._id}">
+                        <a onclick="showPost('${notifi.postID}')"><b>${userData2?.username ? userData2.username : "Unknown User" }</b> quoted your post!(click to see)</a>
+                        <p onclick="dismissNotification('${notifi._id}')">Dismiss Notification.</p> 
+                    </div>
+                `
+            default:
+                break;
+        }
+    }
+   
+    document.getElementById("notificationsDiv").innerHTML=ele
+}
+
+async function showNotificationsV2(indexID) {
     const notificationAreShownID = `notificationsAreShown${indexID ? `_${indexID}`: '' }`
     if (document.getElementById(notificationAreShownID)) return hideNotifications()
     document.getElementById('showNotificationsButton').innerHTML="Hide Notifcations"
@@ -2943,7 +3218,7 @@ async function showNotifications(indexID) {
 }
 
 async function dismissNotification(notificationID) {
-    const res = await sendRequest(`/notificationCenter/notifications/dismiss/${notificationID}`, { method: 'DELETE' });
+    const res = await sendRequest(`/notifications/dismiss/${notificationID}`, { method: 'DELETE' });
     if (!res || res.error) return ;
 
     document.getElementById(`notification_${notificationID}`).remove();
@@ -2957,19 +3232,31 @@ async function dismissNotification(notificationID) {
 };
 
 async function dismissAll() {
-    const res = await sendRequest(`/notificationCenter/notifications/dismissAll`, { method: 'DELETE' });
+    const res = await sendRequest(`/notifications/dismissAll/`, { method: 'DELETE' });
 
     if (!res || res.error) return document.getElementById(`notificationsDiv`).innerHTML=`error while dismissing`
     else return document.getElementById(`notificationsDiv`).innerHTML=`Dismissed all notifications.`
 }
 
 async function showPost(postID) {
-    const res = await sendRequest(`/posts/get/basic/${postID}`, { method: 'GET' });
+    const res = await sendRequest(`/posts/get/full/${postID}`, { method: 'GET' });
     if (!res || res.error) return showModal("<p>Post was not found</p>")
 
-    const user = await getUserDataSimple(res.userID)
+    const user = res.userData
     if (debug) console.log(user)
-    const ele = postElementCreate({post: res, user: user})
+    const ele = postElementCreate(res)
+    // document.getElementById('mainFeed').innerHTML=ele
+    showModal(`<div><h1 class="font_h1-style">Post Found</h1><button class="menuButton menuButton-style" onclick="openPostSeperate('${postID}')">Open Post</button>${ele}</div>`)
+}
+
+async function openPostSeperate(postID) {
+    closeModal();
+    const res = await sendRequest(`/posts/get/full/${postID}`, { method: 'GET' });
+    if (!res || res.error) return showModal("<p>Post was not found</p>")
+
+    const user = res.userData
+    if (debug) console.log(user)
+    const ele = postElementCreate(res)
     document.getElementById('mainFeed').innerHTML=ele
 }
 
@@ -3174,15 +3461,12 @@ async function requestDevToken() {
 };
 
 async function getPostAndProfileData(postID) {
-    const postData = await sendRequest(`/posts/get/basic/${postID}`, { method: 'GET', ignoreError: true});
+    const postData = await sendRequest(`/posts/get/full/${postID}`, { method: 'GET', ignoreError: true});
 
     if (!postData || postData.error) return {error: `${postData.error ? postData.error : "an unknown error"}`};
     if (debug) console.log(postData);
-
-    const profileData = await sendRequest(`/users/get/basic/${postData.userID}`, { method: 'GET', ignoreError: true});
-    if (!profileData || profileData.error) return {error: `${profileData.error ? profileData.error : "an unknown error"}`};
-
-    return { "postData" : postData, "profileData": profileData };
+    
+    return postData;
 }
 
 async function requestVerification() {
@@ -3626,7 +3910,7 @@ function editPost(postID, edited) {
 async function cancelEdit(postID, content, edited) {
     if (debug) console.log(`cancelling edit of post ${postID}`)
 
-    const post = await sendRequest(`/posts/get/basic/${postID}`, { method: 'GET' })
+    const post = await sendRequest(`/posts/get/${postID}`, { method: 'GET' })
     if (!post || post.error) return false;
 
     document.getElementById(`postContentArea_${postID}`).innerHTML = `
@@ -3668,27 +3952,29 @@ async function submitEdit(postID) {
 }
 
 async function quotePost(postID) {
-    const postData = await sendRequest(`/posts/get/${postID}`, { method: 'GET', headers})
+    const postData = await sendRequest(`/posts/get/full/${postID}`, { method: 'GET', headers})
     if (!postData || postData.error) return false;
     const { postData:post, userData:user } = postData;
 
     await showModal(`
-        <h1>Create a new Post</h1>
+        <h1>Create a Quote Post</h1>
         <div class="postModalActions">
             <button class="menuButton menuButton-style" onclick="createPost({'quoteID':'${postID}'})">Upload Post</button>
             <button class="menuButton menuButton-style" onclick="closeModal()">Close</button>
+            <button onclick="getPostSuggestions('modal', '${postID}')" class="menuButton menuButton-style">Get Suggestion</button>
         </div>
         <hr class="rounded">
         <div class="post">
             <div>${postElementCreate({post: post, user: user, type: "basic"})}</div>
         </div>
         <textarea class="postTextArea" id="newPostTextArea"></textarea>
+        <div id="foundAIPostSuggestions"></div>
         <div id="foundTaggings"></div>
     `, "hide")
 }
 
 async function replyPost(postID) {
-    const postData = await sendRequest(`/posts/get/${postID}`, { method: 'GET', headers})
+    const postData = await sendRequest(`/posts/get/full/${postID}`, { method: 'GET', headers})
     if (!postData || postData.error) return false;
     const { postData:post, userData:user } = postData;
 
@@ -3697,12 +3983,14 @@ async function replyPost(postID) {
         <div class="postModalActions">
             <button class="menuButton menuButton-style" onclick="createPost({'replyID':'${postID}'})">Upload Reply</button>
             <button class="menuButton menuButton-style" onclick="closeModal()">Close</button>
+            <button onclick="getPostSuggestions('modal', '${postID}')" class="menuButton menuButton-style">Get Suggestion</button>
         </div>
         <hr class="rounded">
         <div class="post">
             <div>${postElementCreate({post: post, user: user, type: "basic"})}</div>
         </div>
         <textarea class="postTextArea" id="newPostTextArea"></textarea>
+        <div id="foundAIPostSuggestions"></div>
         <div id="foundTaggings"></div>
     `, "hide")
 }
@@ -3787,7 +4075,6 @@ function hashtagElementCreate(tag) {
 }
 
 async function searchResult(input) {
-    console.log(input)
     if (!input) {
         if (debug) console.log("returning to feed")
         changeHeader('')
@@ -3800,7 +4087,6 @@ async function searchResult(input) {
     }
 
     var headerReplace = input;
-    console.log(headerReplace)
     
     currentSearch = input
     searching = true
@@ -4005,9 +4291,11 @@ async function createPostPage(useModal=false) {
             <div class="mainActions">
                 <div id="foundTaggings"></div>
                 <p class="menuButton menuButton-style" onclick="leavePostPage()">Back</p>
-                <p class="menuButton menuButton-style" onclick="publishFromPostPage()">Upload Post</p>
+                <p class="menuButton menuButton-style" id="publishFromPostPage" onclick="publishFromPostPage()">Upload Post</p>
+                <p class="menuButton menuButton-style" id="mediaCreationButton" onclick="showMediaCreation()">Add Media</p>
                 <p class="menuButton menuButton-style" id="pollCreationButton" onclick="showPollCreation()">Add Poll</p>
                 <p class="menuButton menuButton-style" id="coposterCreationButton" onclick="showCoPostersCreation()">Add Co-Posters</p>
+                <p class="menuButton menuButton-style" id="getSuggestionsButton" onclick="getPostSuggestions('main', '')">Get Suggestion</p>
                 <div class="menuButton menuButton-style">
                     <p onclick="exportPostHeaderURL()">Create Post Template</p>
                     <p id="postURL_preview"></p>
@@ -4015,19 +4303,14 @@ async function createPostPage(useModal=false) {
                 </div>
             </div>
             <input type="text" id="pollCreateLink" class="addPollOption menu-style" placeholder="Link Poll via ID" ${data.pollID ? `value="${data.pollID}"` : ""}></input>
+            <div id="foundAIPostSuggestions"></div>
+            <div id="mediaAdd"></div>
         </div>
         <div id="coposterAddingArea"></div>
         <div id="pollCreate"></div>
     `;
 
-    // if (useModal) {
-    //     document.getElementById('modalContainer').classList.add("showModal");
-    //     document.getElementById('modalContainer').innerHTML = `
-    //     <div class="main-feed modal_full">${ele}</div>
-    // `;
-    // } else {
-        document.getElementById("mainFeed").innerHTML = ele;
-    // }
+    document.getElementById("mainFeed").innerHTML = ele;
 
     // add all data found from headers
     if (data.poll) {
@@ -4285,6 +4568,99 @@ async function leavePostPage() {
     getFeed()
 }
 
+function pausePostUploadButton() {
+    if (debug) console.log("pausing post upload button")
+    document.getElementById('publishFromPostPage').innerHTML = "Please Wait"
+    document.getElementById('publishFromPostPage').onclick = null;
+}
+
+function resumePostUploadButton() {
+    if (debug) console.log("resuming post upload button")
+    document.getElementById('publishFromPostPage').innerHTML = "Upload Post"
+    document.getElementById('publishFromPostPage').onclick = publishFromPostPage;
+}
+
+function removeMediaCreation() {
+    if (debug) console.log("creating media")
+    document.getElementById("mediaAdd").innerHTML = "";
+    document.getElementById("mediaCreationButton").onclick=showMediaCreation;
+    document.getElementById("mediaCreationButton").innerHTML="Add Media";
+}
+
+function showMediaCreation() {
+    if (debug) console.log("creating media")
+    document.getElementById("mediaCreationButton").onclick=removeMediaCreation;
+    document.getElementById("mediaCreationButton").innerHTML="Remove Media";
+
+    const ele = `
+        <div class="menu menu-style">
+            <h1 class="font_h1-style">Add Media</h1>
+        </div>
+        <div class="menu menu-style">
+            <input type="file" id="interactFile" class="menuButton menuButton-style">
+            <button onclick="uploadFile()" id="uploadMedia" class="menuButton menuButton-style">Upload Media</button>
+        </div>
+    `
+    document.getElementById("mediaAdd").innerHTML = ele;
+}
+
+async function uploadFile(fromProfile=false) {
+    const fileInput = document.getElementById('interactFile');
+    const selectFile = fileInput.files[fileInput.files.length-1];
+    if (!selectFile) {
+        console.error('No file selected');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', selectFile);
+
+    if (debug) console.log('Uploading file:', selectFile);
+    try {
+        if (!fromProfile) pausePostUploadButton();
+        const fileType = await sendRequest('/cdn/fileType/' + selectFile.name, {method: "GET"});
+        if (debug) console.log(fileType);
+
+        if (fileType.error) {
+            console.error('Error verifying file:', fileType.error);
+            document.getElementById("mediaAdd").innerHTML = `<p>Error uploading file</p>`;
+            return;
+        }
+        
+        const finalRes = await sendRequest('/cdn/'+fileType.type, {
+            method: 'POST',
+            body: formData,
+            file: true
+        });
+
+        if (debug) console.log('finalRes:', finalRes);
+        
+        mediaUploadLinks.push(finalRes.cdnURL);
+        if (!fromProfile) {
+            document.getElementById('newPostTextArea').value = document.getElementById('newPostTextArea').value + `${config[config.current].api_url}/cdn${finalRes.cdnURL}`;
+            document.getElementById('newPostTextArea').focus()
+    
+            displayFile(`${apiURL}/cdn${finalRes.cdnURL}`);
+            resumePostUploadButton()
+        }
+        return finalRes;
+    } catch (error) {
+
+        document.getElementById("mediaAdd").innerHTML = `<p>Error uploading file</p>`;
+        resumePostUploadButton();
+        console.error('Error uploading file:', error);
+    }
+}
+
+function displayFile(fileURL) {
+    const fileContainer = document.getElementById('mediaAdd');
+    // fileContainer.innerHTML = ''; // Clear any previous content
+    const imageContent = checkForImage(fileURL)
+    const img = document.createElement('div');
+    img.innerHTML = imageContent.attachments.map(function(attachment) {return `${attachment}`}).join(" ");
+    fileContainer.appendChild(img);
+}
+
 function removePollCreation() {
     if (debug) console.log("removing poll")
     document.getElementById("pollCreate").innerHTML = "";
@@ -4491,6 +4867,38 @@ function editUser() {
     `
 }
 
+// AI FEATURES
+// summary of post/thread
+async function getPostSuggestions(type, postID) {
+    const suggestionsDiv = document.getElementById('foundAIPostSuggestions');
+    const foundContent = document.getElementById('newPostTextArea').value;
+    suggestionsDiv.innerHTML = `<p>Loading Suggestion...</p>`;
+    
+    const suggestionPost = await sendRequest(`/ai/suggestion/${postID ? postID : ""}`, {
+        method: 'POST',
+        body: { content: foundContent }
+    });
+
+    if (!suggestionPost || suggestionPost.error) {
+        return suggestionsDiv.innerHTML = `<p>Suggestion Failed</p>`;
+    }
+    
+    aiSuggestions.push(suggestionPost.response);
+    foundAIPostSuggestions.innerHTML = `
+        <div class="publicPost posts-style">
+            <p>AI Suggestion</p>
+            <hr class="rounded">
+            <p onclick="useSuggestion(${amountSuggestions})">${suggestionPost.response}</p>
+        </div>
+    `;
+    amountSuggestions++;
+}
+
+function useSuggestion(suggestion) {
+    document.getElementById('newPostTextArea').value = aiSuggestions[suggestion];
+    document.getElementById('foundAIPostSuggestions').innerHTML = "";
+}
+
 // EDIT DISPLAY NAME
 async function renameUsername() {
     const newUsername = document.getElementById('newUsername').value;
@@ -4517,16 +4925,26 @@ async function renameUsername() {
 }
 
 // For API Use
-// sendRequest("/notificationCenter/preferences/403", { method: 'POST', body: { "enabled": true, "systemType": 1 }});
-async function sendRequest(request, { method, body, extraHeaders, ignoreError=false }) {
+async function sendRequest(request, { method, body, file, extraHeaders, ignoreError=false }) {
     // add "version" as a possible header, and .replace on the apiURL
     // or force the version be in the request
     var headersEdited = {};
 
-    if (extraHeaders) {
+    if (extraHeaders || file) {
         headersEdited = { ...headers };
-        for (const header in extraHeaders) {
-            headersEdited[header] = extraHeaders[header];
+        if (extraHeaders) {
+            for (const header in extraHeaders) {
+                headersEdited[header] = extraHeaders[header];
+            }
+        }
+
+        if (file) {
+            for (const header in headersEdited) {
+                if (header == 'Content-Type') {
+                    // remove header
+                    delete headersEdited[header];
+                }
+            }
         }
     }
 
@@ -4534,8 +4952,8 @@ async function sendRequest(request, { method, body, extraHeaders, ignoreError=fa
 
     const response = await fetch(`${apiURL}${request}`, {
         method: method || 'GET',
-        body: body ? JSON.stringify(body) : null,
-        headers : extraHeaders ? headersEdited : headers
+        body: body ? !file ? JSON.stringify(body) : body : null,
+        headers : extraHeaders || file ? headersEdited : headers
     });
     
     try {
@@ -4558,6 +4976,7 @@ async function sendRequest(request, { method, body, extraHeaders, ignoreError=fa
 function getId(url) {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = url.match(regExp);
+    if (!match || match.length < 2) return undefined;
 
     return (match && match[2].length === 11) ? match[2] : undefined;
 }
@@ -4571,6 +4990,10 @@ function loadSpotify(amount, link) {
 function unloadSpotify(amount, link) {
     document.getElementById(`spotify_frame_${amount}`).innerHTML = `Click to load spotify link #${amount}`
     document.getElementById(`spotify_frame_${amount}`).onclick = `loadSpotify(${amount}, '${link}')`
+}
+
+function openImagePreview(imageURL) {
+    showModal(`<div><h1>Image</h1><hr class="rounded"h><img width="60%" height="60%" src="${imageURL}"></img></div>`)
 }
 
 function checkForImage(content, tags) {
@@ -4599,23 +5022,47 @@ function checkForImage(content, tags) {
             }
         }
         //if (contentArgs[index].includes(' ')) contentArgs[index] = contentArgs[index].replace(' ', '')
-        if (contentArgs[index].startsWith('https://')) {
+        if (contentArgs[index].startsWith('https://') || (config.current == 'dev' && contentArgs[index].startsWith('http://'))) {
             for (const imageFormat of imageFormats) {
                 if (contentArgs[index].endsWith(imageFormat)) {
                     foundImage = true
                    // contentArgs[index] = `<img class="messageImage" src="${contentArgs[index]}"></img>`
-                    attachments.push(`<img alt="userImage" class="messageImage" width="100px" src="${contentArgs[index]}"></img>`)
+                    attachments.push(`<img alt="userImage" class="messageImage" width="320px" src="${contentArgs[index]}" onclick="openImagePreview('${contentArgs[index]}')"></img>`)
                 }
             }
 
+            const videoId = getId(contentArgs[index]);
+            var foundVideo = false;
             for (const videoFormat of videoFormats) {
-                if (contentArgs[index].endsWith(videoFormat.urlEnd)) {
+                if (foundVideo || !contentArgs[index].includes(videoFormat.urlEnd)) {
+                }
+                else if (contentArgs[index].startsWith("http://localhost:5002/v1/cdn/static")) {
                     foundImage = true
+                    foundVideo = true
+                    const URL = contentArgs[index]
+                    var videoID = URL.replace("http://localhost:5002/v1/cdn/static/", "")
+                    
+                    const iframeHuelet = `<iframe src="http://localhost:5002/v1/video_embed/?embed=true&vuid=${videoID}" width="320" height="240" frameborder="0" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen="true"></iframe>`
+                    attachments.push(iframeHuelet)
+                }
+                else if (contentArgs[index].startsWith("https://interact-api.novapro.net/v1/cdn/static")) {
+                    foundImage = true
+                    foundVideo = true
+    
+                    const URL = contentArgs[index]
+                    var videoID = URL.replace("https://interact-api.novapro.net/v1/cdn/static/", "")
+                    
+                    const iframeHuelet = `<iframe src="https://interact-api.novapro.net/v1/video_embed/?embed=true&vuid=${videoID}" width="320" height="240" frameborder="0" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen="true"></iframe>`
+                    attachments.push(iframeHuelet)
+                }
+                else if (contentArgs[index].endsWith(videoFormat.urlEnd)) {
+                    // regular video 
+                    foundImage = true
+                    foundVideo = true
                     //contentArgs[index] = `\n<video width="320" height="240" controls><source src="${contentArgs[index]}" type="video/${videoFormat.type}"></video>`
                     attachments.push(`<video alt="uservideo" width="320" height="240" controls><source src="${contentArgs[index]}" type="video/${videoFormat.type}"></video>`)
                 }
             }
-            const videoId = getId(contentArgs[index]);
 
             if (videoId) {
                 foundImage = true
@@ -4623,7 +5070,15 @@ function checkForImage(content, tags) {
                // contentArgs[index] = iframeMarkup
                 attachments.push(iframeMarkup)
             }
+            // if (contentArgs[index].startsWith("https://interact.novapro.net/?videoID=") || contentArgs[index].startsWith("https://interact-api.novapro.net/v1/cdn/static")) {
+            //     foundImage = true
 
+            //     const URL = contentArgs[index]
+            //     var videoID = URL.replace("https://huelet.net/w/", "")
+
+            //     const iframeHuelet = `<iframe src="https://publish.huelet.net/?embed=true&vuid=${videoID}" width="320" height="240" frameborder="0" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen="true"></iframe>`
+            //     attachments.push(iframeHuelet)
+            // }
             if (contentArgs[index].startsWith("https://huelet.net/w/")) {
                 foundImage = true
 
