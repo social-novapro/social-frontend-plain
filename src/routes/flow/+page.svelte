@@ -20,3 +20,8 @@
         <button class="menuButton menuButton-style" on:click={createUserPage}>Create an Account</button>
     </div>
 </div>
+
+
+<div class="footer">
+    <p>Footer</p>
+  </div>

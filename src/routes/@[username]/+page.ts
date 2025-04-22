@@ -17,4 +17,5 @@ export const load: PageLoad = async ({ fetch, params }) => {
 	// 	video: video,
 	// 	creator: creator
 	// };
+	return username
 };
