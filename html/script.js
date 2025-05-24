@@ -66,6 +66,9 @@ var buildingFeed = true;
 var foundCategories = [];
 var mediaUploadLinks = [];
 
+updateMargin();
+window.addEventListener('resize', updateMargin);
+
 function checkifMobile() {
     const width = document.getElementById("html").clientWidth
     if (width < 900) {
@@ -109,6 +112,7 @@ async function checkURLParams() {
     const ifThemeDiscovery = params.has("themeDiscovery")
     const ifNotificationPage = params.has("notifications")
     const ifBookmarksPage = params.has("bookmarks")
+    const ifPersonalizedSetting = params.has("personalizedSettings")
 
     if (ifUsername) {
         paramsFound = true
@@ -152,14 +156,14 @@ async function checkURLParams() {
         paramsFound = true
         paramsInfo.paramsFound = true
 
-        settingsPage();
+        settingsPage(false);
         changeEmailPage();
         document.getElementById("emailSettings").scrollIntoView();
     } else if (ifThemeSettings) {
         paramsFound = true
         paramsInfo.paramsFound = true
 
-        settingsPage();
+        settingsPage(false);
         editThemePanel(headers.userid);
         document.getElementById("themeEditor").scrollIntoView();
     } else if (ifThemeDiscovery) {
@@ -179,9 +183,40 @@ async function checkURLParams() {
         paramsInfo.paramsFound = true
 
         bookmarksPage();
+    } else if (ifPersonalizedSetting) {
+        paramsFound = true
+        paramsInfo.paramsFound = true
+
+        settingsPage(false);
+        changePersonalizedFeed();
+
+        document.getElementById("feedSettings").scrollIntoView();
     }
-   
     return paramsInfo
+}
+
+// Update margin based on screen size
+function updateMargin() {
+    console.log("updating margin")
+    const root = document.documentElement;
+    const headerHeight = document.getElementsByClassName("main-header")[0]?.clientHeight ?? 0;
+    const feedHeaderHeight = document.getElementsByClassName("possibleFeeds")[0]?.clientHeight ?? 0;
+    const navWidth = document.getElementsByClassName("navbar-nav")[0]?.clientWidth ?? 0;
+    if (debug) console.log(`Header Height: ${headerHeight}, Feed Header Height: ${feedHeaderHeight}, Nav Width: ${navWidth}`);
+    if (debug) console.log(`Screen Width: ${window.innerWidth}, Screen Height: ${window.innerHeight}`);
+   
+    const screenWidth = window.innerWidth - navWidth;
+    const screenHeight = window.innerHeight - headerHeight - feedHeaderHeight;
+    const ratio = screenWidth / screenHeight;
+
+    // set margin based on screen ratio
+    if (ratio >= 1.4) {
+        root.style.setProperty('--mainMarginSides', '20%');
+    } else if (ratio >= 1.0) {
+        root.style.setProperty('--mainMarginSides', '10%');
+    } else {
+        root.style.setProperty('--mainMarginSides', '5%');
+    }
 }
 
 // makes it easy to render postElement without having to do a lot of work
@@ -1122,8 +1157,8 @@ async function getFullUserData(userSearch) {
     return profileData;
 }
 
-function settingsPage() {
-    changeHeader("?settings")
+function settingsPage(toChangeHeader=true) {
+    if (toChangeHeader) changeHeader("?settings")
 
     const ele = `
         <div id="settingsPage">
@@ -1158,7 +1193,7 @@ function settingsPage() {
                     <div id="feedSettings" class="menu menu-style">
                         <p><b>Feed</b></p>
                         <button class="menuButton menuButton-style" onclick="changeFeedSettings()" id="changeFeedSettings">Feed Settings</p>
-                        ${debug ? `<button class="menuButton menuButton-style" onclick="changePersonalizedFeed()" id="personalizeFeedSettings">Personalized Feed</p>` : ``}
+                        ${true ? `<button class="menuButton menuButton-style" onclick="changePersonalizedFeed()" id="personalizeFeedSettings">Personalized Feed</p>` : ``}
                     </div>
                     <div id="feedPopup"></div>
                     <div id="searchSetting" class="menu menu-style">
@@ -1396,7 +1431,9 @@ function hidePersonalizeFeed() {
     document.getElementById("personalizeFeedSettings").innerText = "Personalized Feed";
     document.getElementById("personalizeFeedSettings").onclick = changePersonalizedFeed;
 }
-
+function firstLetterUpperCase(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+}
 async function changePersonalizedFeed() {
     // get all categories
     if (!foundCategories || !foundCategories[0]) foundCategories = await sendRequest(`/users/personalize`, { method: 'GET' });
@@ -1445,36 +1482,81 @@ async function changePersonalizedFeed() {
         <div class="menu menu-style" id="feedSettings">
             <p><b>Personalization Settings</b></p>
             <p>Choose what categories you want to see in your feed.</p>
+            <hr class="rounded">                    
     `;
 
+    console.log("??")
     for (const category of foundCategories) {
         ele+=`
-            <div class="menu menu-style">
-            <p>${category.name}</p>
-                <input type="range" id="feedSettings_${category.id}" class="menu-style sliderInput" min="0" max="100" value="${category.value}">
-                ${category.subCategories && category.subCategories[0] ? `
-                    <div style="display: none;" id="feedSettings_${category.id}_subcategories">
-                    <hr class="rounded">                    
-                        ${category.subCategories.map(subCategory => {
-                            return `
-                                <p>${subCategory.name}</p>
-                                <input type="range" id="feedSettings_${subCategory.id}" class="menu-style sliderInput" min="0" max="100" value="${subCategory.value}">
-                            `;
-                        }).join('')}
-                    </div>
-                    <div>
-                        <button class="menuButton menuButton-style" id="reveal_subcategories_${category.id}" onclick="revealSubcategories(${category.id})">Reveal Subcategories</button>
-                    </div>
-                ` : ``}
+            <p style="text-align:left; padding-left:11%">${firstLetterUpperCase(category.name)} - <span id="categoryValue_${category.id}">${category.value}</span></p>
+            <div class="slider-labels">
+                <span>0</span>
+                <input
+                    type="range"
+                    id="feedSettings_${category.id}"
+                    class="menu-style sliderInput"
+                    min="0"
+                    max="10"
+                    value="${category.value}"
+                    onchange="updateCategory('${category.id}')"
+                >
+                <span>10</span>
             </div>
+            ${category.subCategories && category.subCategories[0] ? `
+              
+
+                <div style="display: none;" id="feedSettings_${category.id}_subcategories">
+                    <hr class="rounded">                    
+                    ${category.subCategories.map(subCategory => {
+                        return `
+                            <p>${subCategory.name}</p>
+                            <input 
+                                type="range"
+                                id="feedSettings_${subCategory.id}"
+                                class="menu-style sliderInput"
+                                min="0"
+                                max="10"
+                                value="${subCategory.value}
+                            ">
+                            <div class="slider-labels">
+                                <span>0</span>
+                                <span>100</span>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+               
+            ` : ``}
+            <div class="spacer_5px"></div>
+            <div class="spacer_5px"></div>
         `;
     }
 
     ele+=`
         </div>
     `;
+
     document.getElementById("feedPopup").innerHTML = ele;
 
+}
+
+async function updateCategory(id) {
+    const value = document.getElementById(`feedSettings_${id}`).value;
+    const body = {
+        categoryID: id,
+        value: value
+    }
+
+    const res = await sendRequest(`/users/personalize/`, {
+        method: 'POST',
+        body: body
+    });
+
+    if (!res || res.error) return console.log("error with categories");
+    
+    if (devMode) console.log("Updated category", id, value)
+    document.getElementById(`categoryValue_${id}`).innerText = value;
+    console.log(body)
 }
 
 function revealSubcategories(id) {
