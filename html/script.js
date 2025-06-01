@@ -334,6 +334,8 @@ function postElementCreate({
                     </div>
                 ` : `` }
                 <div class="debug">
+                    <p><u>Debug Info</u></p>
+                    ${post.hasCategory ? `<p>Category: ${post.category} - ${post.subCats.map(function(subcat) { return `${subcat}`}).join(", ")}</p>` : ``}
                     <p onclick="copyToClipboard('${post._id}')">postID: ${post._id}</p>
                     <p onclick="copyToClipboard('${post.userID}')">userID: ${post.userID}</p>
                     ${post.indexID ? `<p onclick="copyToClipboard('${post.indexID}')">indexID: ${post.indexID}</p>` : `` }
