@@ -1438,7 +1438,7 @@ function firstLetterUpperCase(string) {
 }
 async function changePersonalizedFeed() {
     // get all categories
-    if (!foundCategories || !foundCategories[0]) foundCategories = await sendRequest(`/users/personalize`, { method: 'GET' });
+    /*if (!foundCategories || !foundCategories[0]) */foundCategories = await sendRequest(`/users/personalize`, { method: 'GET' });
     if (!foundCategories || foundCategories.error) return console.log("error with categories");
     document.getElementById("personalizeFeedSettings").innerText = "Hide Personalization";
     document.getElementById("personalizeFeedSettings").onclick = hidePersonalizeFeed;
@@ -1487,7 +1487,6 @@ async function changePersonalizedFeed() {
             <hr class="rounded">                    
     `;
 
-    console.log("??")
     for (const category of foundCategories) {
         ele+=`
             <p style="text-align:left; padding-left:11%">${firstLetterUpperCase(category.name)} - <span id="categoryValue_${category.id}">${category.value}</span></p>
@@ -1505,8 +1504,6 @@ async function changePersonalizedFeed() {
                 <span>10</span>
             </div>
             ${category.subCategories && category.subCategories[0] ? `
-              
-
                 <div style="display: none;" id="feedSettings_${category.id}_subcategories">
                     <hr class="rounded">                    
                     ${category.subCategories.map(subCategory => {
