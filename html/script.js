@@ -2435,6 +2435,26 @@ async function userHtml(userSearch) {
                 })
             }).join(" ")}
         ` : ``}
+        <!-- Likes, TO FIX UI OF PROFILE, SELECTABLE, PINS, BADGES, POSTS, like mobile -->
+        ${profileData.included.likes ? `
+            <div class="menu menu-style">
+                <p><b>Likes</b></p>
+                <p>${profileData.userData.likedCount}</p>
+            </div>
+            <hr class="rounded">
+            ${profileData.likesData.postsLiked.map(function(like) {
+                return postElementCreate({
+                    post: like.postData,
+                    user: like.userData, 
+                    pollData: like.type?.poll=="included" ? like.pollData : null,
+                    voteData: like.type?.vote=="included" ? like.voteData : null,
+                    quoteData: like.type?.quote=="included" ? pinlikequoteData : null,
+                    coposterData: like.type?.coposter=="included" ? like.coposterData : null,
+                    tagData: like.type?.tag=="included" ? like.tagData : null,
+                    extraData: like.type?.extra=="included" ? like.extraData : {},
+                })
+            }).join(" ")}
+        ` : ``}
         ${!profileData.postData.error ? `
             <div class="menu menu-style">
                 <p><b>Posts</b></p>
