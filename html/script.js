@@ -66,6 +66,13 @@ var buildingFeed = true;
 var foundCategories = [];
 var mediaUploadLinks = [];
 
+var profileLikeIndexData = {
+    indexID: null,
+    prevIndexID: null,
+    nextIndexID: null,
+    building: false,
+}
+
 updateMargin();
 window.addEventListener('resize', updateMargin);
 
@@ -2329,6 +2336,12 @@ async function userHtml(userSearch) {
         profileData.totalPosts = 0;
     }
 
+    if (profileData.included.likeIndexData) {
+        profileLikeIndexData.indexID = profileData.likeIndexData.indexID;
+        if (profileData.likeIndexData.prevIndexID) profileLikeIndexData.prevIndexID = profileData.likeIndexData.prevIndexID;
+        if (profileData.likeIndexData.nextIndexID) profileLikeIndexData.nextIndexID = profileData.likeIndexData.nextIndexID;
+    }
+
     document.getElementById("mainFeed").innerHTML =  `
         <div class="menu menu-style">
             <h1>Profile</h1>
@@ -2435,6 +2448,20 @@ async function userHtml(userSearch) {
                 })
             }).join(" ")}
         ` : ``}
+        <!-- Likes, TO FIX UI OF PROFILE, SELECTABLE, PINS, BADGES, POSTS, like mobile -->
+        ${profileData.included.likes ? `
+            <div class="menu menu-style">
+                <p><b>Likes</b></p>
+                <p>${profileData.userData.likedCount}</p>
+                <div id="likeRenderActionButtons"> 
+                    ${likesRenderActionButtons()}
+                </div>
+            </div>
+            <hr class="rounded">
+            <div id="likesRenderPage">
+                ${likesRenderPage(profileData.likesData)}
+            </div>
+        ` : ``}
         ${!profileData.postData.error ? `
             <div class="menu menu-style">
                 <p><b>Posts</b></p>
@@ -2461,6 +2488,56 @@ async function userHtml(userSearch) {
 
     devMode()
     return;
+}
+function likesRenderActionButtons() {
+    return `
+        ${profileLikeIndexData.prevIndexID ? `<button class="menuButton menuButton-style" onclick="loadProfileLikeIndex('prev')">Previous Page</button>` : ''}
+        ${profileLikeIndexData.nextIndexID ? `<button class="menuButton menuButton-style" onclick="loadProfileLikeIndex('next')">Next Page</button>` : ''}
+    `
+}
+
+async function loadProfileLikeIndex(direction) {
+    if (profileLikeIndexData.currentlyBuilding) return;
+    profileLikeIndexData.currentlyBuilding = true;
+
+    var likesData = null;
+
+    if (direction == 'prev') {
+        if (!profileLikeIndexData.prevIndexID) return;
+        likesData = await sendRequest(`/users/likes/index/${profileLikeIndexData.prevIndexID}`, { method: 'GET' });
+    } else if (direction == 'next') {
+        if (!profileLikeIndexData.nextIndexID) return;
+        likesData = await sendRequest(`/users/likes/index/${profileLikeIndexData.nextIndexID}`, { method: 'GET' });
+    }
+
+    if (!likesData || likesData.error) return showModal(`<p>Error: ${likesData.code}, ${likesData.msg}</p>`);
+    
+    profileLikeIndexData.indexID = likesData._id;
+    profileLikeIndexData.prevIndexID = likesData.prevIndexID ?? null;
+    profileLikeIndexData.nextIndexID = likesData.nextIndexID ?? null;
+    
+    document.getElementById("likesRenderPage").innerHTML = likesRenderPage(likesData.postsLiked);
+    document.getElementById("likeRenderActionButtons").innerHTML = likesRenderActionButtons();
+    profileLikeIndexData.currentlyBuilding = false;
+}
+
+function likesRenderPage(likesData) {
+    if (!likesData || likesData.error) return '';//showModal(`<p>Error: ${likesData.code}, ${likesData.msg}</p>`);
+
+    return `
+        ${likesData.map(function(like) {
+            return postElementCreate({
+                post: like.postData,
+                user: like.userData, 
+                pollData: like.type?.poll=="included" ? like.pollData : null,
+                voteData: like.type?.vote=="included" ? like.voteData : null,
+                quoteData: like.type?.quote=="included" ? like.quoteData : null,
+                coposterData: like.type?.coposter=="included" ? like.coposterData : null,
+                tagData: like.type?.tag=="included" ? like.tagData : null,
+                extraData: like.type?.extra=="included" ? like.extraData : {},
+            })
+        }).join(" ")}
+    `
 }
 
 async function addNextIndexProfile() {
