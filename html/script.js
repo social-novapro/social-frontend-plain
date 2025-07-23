@@ -47,7 +47,7 @@ var userData = {
     userProfile: null,
     userUpdates: null,
 }
-
+var stopLoadingFeed = false; // this is used for drawing the circle, could use buildingFeed, but that includes other stuff
 var userProfieIndexData = {
     indexID: null,
     prevIndexID: null,
@@ -114,12 +114,8 @@ async function checkURLParams() {
     const ifPostPage = params.has("posting");
     const ifUserEdit = params.has("userEdit");
     const ifSettings = params.has("settings");
-    const ifEmailSettings = params.has("emailSettings");
-    const ifThemeSettings = params.has("themeEditor");
-    const ifThemeDiscovery = params.has("themeDiscovery")
     const ifNotificationPage = params.has("notifications")
     const ifBookmarksPage = params.has("bookmarks")
-    const ifPersonalizedSetting = params.has("personalizedSettings")
 
     if (ifUsername) {
         paramsFound = true
@@ -159,27 +155,6 @@ async function checkURLParams() {
         paramsInfo.paramsFound = true
 
         settingsPage()
-    } else if (ifEmailSettings) {
-        paramsFound = true
-        paramsInfo.paramsFound = true
-
-        settingsPage(false);
-        changeEmailPage();
-        document.getElementById("emailSettings").scrollIntoView();
-    } else if (ifThemeSettings) {
-        paramsFound = true
-        paramsInfo.paramsFound = true
-
-        settingsPage(false);
-        editThemePanel(headers.userid);
-        document.getElementById("themeEditor").scrollIntoView();
-    } else if (ifThemeDiscovery) {
-        paramsFound = true
-        paramsInfo.paramsFound = true
-
-        settingsPage();
-        await viewThemesDiscovery()
-        document.getElementById("themeDiscovery").scrollIntoView();
     } else if (ifNotificationPage) {
         paramsFound = true
         paramsInfo.paramsFound = true
@@ -190,14 +165,6 @@ async function checkURLParams() {
         paramsInfo.paramsFound = true
 
         bookmarksPage();
-    } else if (ifPersonalizedSetting) {
-        paramsFound = true
-        paramsInfo.paramsFound = true
-
-        settingsPage(false);
-        changePersonalizedFeed();
-
-        document.getElementById("feedSettings").scrollIntoView();
     }
     return paramsInfo
 }
@@ -1166,122 +1133,219 @@ async function getFullUserData(userSearch) {
     return profileData;
 }
 
-function settingsPage(toChangeHeader=true) {
-    if (toChangeHeader) changeHeader("?settings")
+function settingsPage(toChangeHeader=true, toReset=false, subCategory) {
+    const hash = window.location.search.split("=")[1];
+  
+    if ((toChangeHeader && !hash) || (toChangeHeader && toReset)) changeHeader("?settings");
+
+        console.log("settingsPage", hash, toChangeHeader, toReset)
 
     const ele = `
         <div id="settingsPage">
-            <div class="" id="settingsPageContent">
-                <div class="menu menu-style">
-                    <h1 class="font_h1-style">Settings</h1>
-                </div>
-                <div class="inline">
-                    <div class="menu menu-style">
-                        <p>View your profile. As shown to other users.</p>
-                        <button class="menuButton menuButton-style" onclick="profile()">View Profile</button>
-                        <hr class="rounded">
-                        <p>Edit your public profile.</p>
-                        <button class="menuButton menuButton-style" onclick="userEditPage()">Edit Profile</button>
-                    </div>
-                    <div class="menu menu-style">
-                        <p><b>Notifications</b></p>
-                        <div>
-                            <button class="menuButton menuButton-style" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
-                            <button class="menuButton menuButton-style" id="showSubscriptionsButton" onclick="showSubscriptions()">Show Subscriptions</button>
-                            <!--<button class="menuButton menuButton-style" id="notificationSettingsPage" onclick="notificationSettingsPage()">Show Settings</button>-->
-                        </div>
-                        <div>
-                            <div id="notificationsDiv"></div>
-                        </div>
-                    </div>
-                    <div class="menu menu-style">
-                        <p><b>Bookmarks</b></p>
-                        <button class="menuButton menuButton-style" id="showBookmarksButton" onclick="showBookmarks()">Show Bookmarks</button>
-                        <div id="bookmarksdiv"></div>
-                    </div>
-                    <div id="feedSettings" class="menu menu-style">
-                        <p><b>Feed</b></p>
-                        <button class="menuButton menuButton-style" onclick="changeFeedSettings()" id="changeFeedSettings">Feed Settings</p>
-                        ${true ? `<button class="menuButton menuButton-style" onclick="changePersonalizedFeed()" id="personalizeFeedSettings">Personalized Feed</p>` : ``}
-                    </div>
-                    <div id="feedPopup"></div>
-                    <div id="searchSetting" class="menu menu-style">
-                        <p><b>Search</b></p>
-                        <button class="menuButton menuButton-style" onclick="changeSearchSettings()">Search Settings</p>
-                    </div>
-                    <div id="searchSettingPopup"></div>
-                    <div id="themeEditor" class="menu menu-style"><p><b>Client Theme</b></p>
-                        <button class="menuButton menuButton-style" onclick='editThemePanel("${headers.userid}")'>Open Editor</button>
-                        <button class="menuButton menuButton-style" onclick='createTheme()'>Create Theme</button>
-                        <button class="menuButton menuButton-style" onclick='viewThemes("${headers.userid}")'>Existing Themes</button>
-                        <button class="menuButton menuButton-style" onclick='unsetThemeFrontend()'>Unset Theme</button>
-                        <button class="menuButton menuButton-style" onclick='viewThemesDiscovery()'>Discover Themes</button>
-                    </div> 
-                    <div id="userThemeEditor"></div>
-                    <div class="menu menu-style">
-                        <p><b>Privacy</b></p>
-                        <button class="menuButton menuButton-style" onclick="openPrivacyPage()">Open Privacy Page</p>
-                    </div>
-                    <div id="privacyPopup"></div>
-                    <div id="emailSettings" class="menu menu-style">
-                        <p><b>Email</b></p>
-                        <button class="menuButton menuButton-style" onclick="changeEmailPage()">Email Settings</p>
-                    </div>
-                    <div id="emailPopup"></div>
-                    <div class="menu menu-style">
-                        <p><b>Password</b></p>
-                        <button class="menuButton menuButton-style"  onclick="changePasswordPage()">Change Password</p>
-                    </div>
-                    <div id="passwordPopup"></div>
-                    <div class="menu menu-style">
-                        <p><b>User Login</b></p>
-                        <p>Sign into another account.</p>
-                        <button class="menuButton menuButton-style" onclick="redirectBegin()">Login</button>
-                        <hr class="rounded">
-                        <p><b>Switch Login</b></p>
-                        <p>Switch to another account.</p>
-                        <button class="menuButton menuButton-style" onclick="switchAccountPage()">View Accounts</button>
-                        <hr class="rounded">
-                        <p><b>Sign Out</b></p>
-                        <p>Open your sign out options.</p>
-                        <button class="menuButton menuButton-style" onclick="signOutPage()">Sign Out</button>
-                        <div id="signOutConfirm"></div>
-                    </div>
-                    <div class="menu menu-style">
-                        <p>Delete your account.</p>
-                        <button class="menuButton menuButton-style" onclick="deleteAccPage()">Delete Account</button>
-                        <div id="deleteAccConfirm"></div>
-                    </div>
-                    <div class="menu menu-style">
-                        <p><b>Other Pages</b></p>
-                        <p>These are other pages that are related to interact.</p>
-                        <button class="menuButton menuButton-style" onclick="generateRelatedPages()">Show Pages</button>
-                        <div id="generateRelatedPages"></div>
-                    </div>
-                    <div class="menu menu-style">
-                        <p><b>DevMode</b></p>
-                        <p>Enable / Disable dev mode. This will allow you to see more information about the different elements of Interact.<br><br>
-                        To view change live, open inspect element, and run <b>switchNav(3)</b><br><br>
-                        You can quickly copy values by pressing the IDs. This will copy the ID to your clipboard.</p>
-                        <button class="menuButton menuButton-style" onclick="devModePage()">Dev Mode Settings</button>
-                        <div id="devModeConfirm"></div>
-                    </div>
-                    <div class="menu menu-style">
-                        <p><b>Developer</b></p>
-                        <p>Access your developer account, and any apps that has access to your account</p>
-                        <button class="menuButton menuButton-style" id="showDevOptionsButton" onclick="showDevOptions()">Show Dev Settings</button>
-                        <div id="showDevDiv"></div>
-                    </div>
-                </div>
+            <div id="settingsHeader">
+                <div class="menu menu-style areaPost"><h1 class="font_h1-style">Settings</h1></div>
             </div>
-            <div id="settingsContent"></div>
+            <div id="settingsContent">
+                <div class="menu menu-style areaPost settingsCategory" onclick="openSettingsCategoryPage('accounts')"><p>👤 Accounts - Manage Accounts on Interact Website</p></div>
+                <div class="menu menu-style areaPost settingsCategory" onclick="openSettingsCategoryPage('feed')"><p>📰 Feed - Adjust Your Feed and Search to Your Liking</p></div>
+                <div class="menu menu-style areaPost settingsCategory" onclick="openSettingsCategoryPage('theme')"><p>🎨 Theme - Adjust Your Default Client</p></div>
+                <div class="menu menu-style areaPost settingsCategory" onclick="openSettingsCategoryPage('privacy')"><p>🔐 Privacy - Adjust Your Privacy Settings</p></div>
+                <div class="menu menu-style areaPost settingsCategory" onclick="openSettingsCategoryPage('developer')"><p>👨‍💻 Developer - Learn and Create using Interact API</p></div>
+                <div class="menu menu-style areaPost settingsCategory" onclick="openSettingsCategoryPage('email')"><p>📧 Email - Adjust Your Email Settings</p></div>
+                <div class="menu menu-style areaPost settingsCategory" onclick="openSettingsCategoryPage('other')"><p>📄 Other Pages - View Other Pages Related to Interact</p></div>
+            </div>
         </div>
     `;
 
     document.getElementById("mainFeed").innerHTML = ele;
     devMode();
+    if ((hash && !toReset) || subCategory) return openSettingsCategoryPage(hash ? hash : subCategory);
 
     return true;
+}
+
+async function openSettingsCategoryPage(category) {
+    const backBtn = `<div class="menu menu-style settingsCategory" onclick="settingsPage(true, true)"><p>Back to Settings Page</p></div>`
+    const headerTitle = `<div class="menu menu-style areaPost"><h1 class="font_h1-style">${firstLetterUpperCase(category)} ${category != "other" ? "Settings" : "Pages" }</h1></div>`
+    let header = `${headerTitle}${backBtn}`;
+    document.getElementById("settingsHeader").innerHTML = header;
+    document.getElementById("settingsContent").innerHTML = `<div class="menu menu-style areaPost"><p>Loading ${firstLetterUpperCase(category)} Settings...</p></div>`;
+    changeHeader(`?settings=${category}`)
+
+    let content = "";
+    switch (category) {
+        case "accounts":
+            content += profileSettingsCategoryPage();
+            break;
+        case "feed":
+            content += await feedSettingsCategoryPage();
+            break;
+        case "theme":
+            content += themeSettingsCategoryPage();
+            break;
+        case "privacy":
+            content += await privacySettingsCategoryPage();
+            break;
+        case "email":
+            content += await emailSettingsCategoryPage();
+            break;
+        case "developer":
+            content += await developerSettingsCategoryPage();
+            break;
+        case "other":
+            content += otherSettingsCategoryPage();
+            break;
+        default:
+            content += `<div class="menu menu-style"><p>Unknown category: '${category}'. Please report this to the developers, or check spelling.</p></div>`;
+            break;
+    }
+
+    document.getElementById("settingsContent").innerHTML = content;
+
+    if (category == "privacy") {
+        document.getElementById("userEdit_privacySettings").addEventListener("submit", function (e) { e.preventDefault()})
+    } else if (category == "email") {
+        if (document.getElementById("userEdit_emailSettings")) document.getElementById("userEdit_emailSettings").addEventListener("submit", function (e) { e.preventDefault()})
+        document.getElementById("userEdit_email").addEventListener("submit", function (e) { e.preventDefault()})
+        document.getElementById("userEdit_password").addEventListener("submit", function (e) { e.preventDefault()})
+        document.getElementById("userEdit_password_remove").addEventListener("submit", function (e) { e.preventDefault()})
+    }
+
+    devMode();
+}
+
+function profileSettingsCategoryPage() {
+    const ele = `
+        <div class="menu menu-style">
+            <p>View your profile. As shown to other users.</p>
+            <button class="menuButton menuButton-style" onclick="profile()">View Profile</button>
+            <hr class="rounded">
+            <p>Edit your public profile.</p>
+            <button class="menuButton menuButton-style" onclick="userEditPage()">Edit Profile</button>
+        </div>
+        <div class="menu menu-style">
+            <p><b>Interact Accounts</b></p>
+            <p>Sign into another account.</p>
+            <button class="menuButton menuButton-style" onclick="redirectBegin()">Login</button>
+            <hr class="rounded">
+
+            <p><b>Switch Login</b></p>
+            <p>Switch to another account.</p>
+            <button class="menuButton menuButton-style" onclick="switchAccountPage()">View Accounts</button>
+            <hr class="rounded">
+
+            <p><b>Sign Out</b></p>
+            <p>Open your sign out options.</p>
+            <button class="menuButton menuButton-style" onclick="signOutPage()">Sign Out</button>
+        </div>
+        <div id="signOutConfirm"></div>
+        <div class="menu menu-style">
+            <p><b>Delete Your Account</b></p>
+            <button class="menuButton menuButton-style" onclick="deleteAccPage()">Delete Account</button>
+        </div>
+        <div id="deleteAccConfirm"></div>
+        <div class="menu menu-style">
+            <p><b>Change Your Password</b></p>
+            <button class="menuButton menuButton-style" onclick="changePasswordPage()">Change Password</p>
+        </div>
+        <div id="passwordPopup"></div>
+    `
+    return ele;
+}
+
+async function feedSettingsCategoryPage() {
+    const changeFeedSettingsUI = await changeFeedSettings();
+    const changePersonalizedFeedUI = await changePersonalizedFeed();
+    const changeSearchSettingsUI = await changeSearchSettings();
+    const ele = `
+        <div class="menu menu-style" id="changeFeedSettingsUI">
+            ${changeFeedSettingsUI}
+        </div>
+        <div class="menu menu-style">
+            ${changePersonalizedFeedUI}
+        </div>
+        <div class="menu menu-style" id="changeSearchSettingsUI">
+            ${changeSearchSettingsUI}
+        </div>
+    `;
+    return ele;
+}
+
+function themeSettingsCategoryPage() {
+    const ele = `
+        <div id="themeEditor" class="menu menu-style"><p><b>Client Theme</b></p>
+            <button class="menuButton menuButton-style" onclick='editThemePanel("${headers.userid}")'>Open Editor</button>
+            <button class="menuButton menuButton-style" onclick='createTheme()'>Create Theme</button>
+            <button class="menuButton menuButton-style" onclick='viewThemes("${headers.userid}")'>Existing Themes</button>
+            <button class="menuButton menuButton-style" onclick='unsetThemeFrontend()'>Unset Theme</button>
+            <button class="menuButton menuButton-style" onclick='viewThemesDiscovery()'>Discover Themes</button>
+        </div> 
+        <div id="userThemeEditor"></div>
+    `;
+    return ele;
+}
+
+async function privacySettingsCategoryPage() {
+    const openPrivacyPageUI = await openPrivacyPage();
+    const ele = `
+        <div class="menu menu-style">
+            <p>Note: This feature is unfinished, and will have a later updates for better functionality.</p>
+        </div>
+        <div class="menu menu-style" id="privacySettingsUI">
+            ${openPrivacyPageUI}
+        </div>
+    `;
+    return ele;
+}
+
+function updateUIDevMode() {
+    const devModePageUI = devModePage();
+    document.getElementById("devModeStatus").innerHTML = devModePageUI;
+}
+
+async function developerSettingsCategoryPage() {
+    const devModePageUI = devModePage();
+    const showDevOptionsUI = await showDevOptions();
+    const ele = `
+        <div class="menu menu-style">
+            <p><b>DevMode</b></p>
+            <p>Enable / Disable dev mode. This will allow you to see more information about the different elements of Interact.<br><br>
+            To view change live, open inspect element, and run <b>switchNav(3)</b><br><br>
+            You can quickly copy values by pressing the IDs. This will copy the ID to your clipboard.</p>
+        </div>
+        <div id="devModeStatus" class="menu menu-style">
+            <div>${devModePageUI}</div>
+        </div>
+        <div class="menu menu-style">
+            <p><b>Developer</b></p>
+            <p>Access your developer account, and any apps that has access to your account</p>
+        </div>
+        <div class="menu menu-style">
+            <div id="showDevDiv">${showDevOptionsUI}</div>
+        </div>
+    `;
+    return ele;
+}
+
+async function emailSettingsCategoryPage() {
+    const changeEmailPageUI = await changeEmailPage();
+
+    const ele = `
+        <div class="menu menu-style">
+            ${changeEmailPageUI}
+        </div>
+    `;
+    return ele;
+}
+
+function otherSettingsCategoryPage() {
+    const generatedReleatedUI = generateRelatedPages();
+    const ele = `
+        <div class="menu menu-style areaPost settingsCategory" onclick="switchNav(6)"><p>Notifications - Check out your notifications and subscriptions</p></div>
+        <div class="menu menu-style areaPost settingsCategory" onclick="switchNav(9)"><p>Bookmarks - Check out your bookmarks</p></div>
+        ${generatedReleatedUI}
+    `
+    return ele;
 }
 
 function bookmarksPage() {
@@ -1304,24 +1368,24 @@ function bookmarksPage() {
 
 function generateRelatedPages() {
     const related = [
-        { name: "Analytics", url: "https://interact-analytics.novapro.net" },
-        { name: "Interact Info", url: "https://novapro.net/interact/" },
-        { name: "Admin Page", url: "/admin/" },
-        { name: "Interact Staff", url: "/staff/" },
-        { name: "GitHub", url: "https://github.com/social-novapro/" },
-        { name: "Nova Productions", url: "https://novapro.net/" },
-        { name: "dkravec site", url: "https://dkravec.net/" },
+        { name: "Analytics", url: "https://interact-analytics.novapro.net", description: "Check out Analytics about Interact" },
+        { name: "Interact Info", url: "https://novapro.net/interact/", description: "Check out the product page on novapro.net" },
+        { name: "Admin Page", url: "/admin/", description: "Check out the admin page, where you can see some runtime info" },
+        { name: "Interact Staff", url: "/staff/", description: "Check out the Interact staff page" },
+        { name: "GitHub", url: "https://github.com/social-novapro/", description: "Check out the social-novapro github page, where you can find many open source repos" },
+        { name: "Nova Productions", url: "https://novapro.net/", description: "Learn about the company that created Interact." },
+        { name: "dkravec site", url: "https://dkravec.net/", description: "Learn about me - Daniel Kravec, the creator of Interact." },
     ];
 
     var ele = '';
 
     for (const rel of related) {
         ele+=`
-            <button class="userInfo buttonStyled" onclick="relatedPagesSwitch('${rel.url}')">${rel.name}</button>
+            <div class="menu menu-style areaPost settingsCategory" onclick=relatedPagesSwitch('${rel.url}')"><p>${rel.name} - ${rel.description}</p></div>
         `
     }
 
-    document.getElementById("generateRelatedPages").innerHTML=ele;
+   return ele;
 }
 
 function relatedPagesSwitch(page) {
@@ -1345,7 +1409,7 @@ function removeDeleteAccConfirm() {
 
 function signOutPage() {
     const ele = `
-        <div class="menu menu-stye" id="signOutPage">
+        <div class="menu menu-style">
             <p><b>Sign Out</b></p>
             <p>Are you sure you want to sign out?</p>
             <button class="menuButton menuButton-style"onclick="signOut()">Sign Out</p>
@@ -1355,8 +1419,8 @@ function signOutPage() {
     `;
 
     document.getElementById("signOutConfirm").innerHTML = ele;
-    document.getElementById("signOutPage").classList.add("menu");
-    document.getElementById("signOutPage").classList.add("menu-style");
+    // document.getElementById("signOutPage").classList.add("menu");
+    // document.getElementById("signOutPage").classList.add("menu-style");
     return true;
 }
 
@@ -1368,7 +1432,7 @@ async function switchAccountPage() {
     if (!loginsParsed[0]) return showModal("<p>No other accounts found</p>")
 
     var ele = `
-        <div class="menu menu-style" id="switchAccountPage">
+        <div class="menu menu-style">
             <p><b>Switch Account</b></p>
             <p>Choose an account to switch to</p>
             <div class="inline">
@@ -1380,11 +1444,9 @@ async function switchAccountPage() {
             <button class="menuButton menuButton-style" onclick="switchAccount('${login.userID}')">${preview}</button>
         `;
     }
-    ele += `</div>`;
+    ele += `<button class="menuButton menuButton-style" onclick="removeSignOutConfirm()">Cancel</button></div></div>`;
 
     document.getElementById("signOutConfirm").innerHTML = ele;
-    document.getElementById("signOutPage").classList.add("menu");
-    document.getElementById("signOutPage").classList.add("menu-style");
 }
 
 async function miniPreviewUser(userID) {
@@ -1396,9 +1458,10 @@ async function miniPreviewUser(userID) {
 
 async function deleteAccPage() {
     const ele = `
-        <div class="" id="deleteAccPage">
+        <div class="menu menu-style">
             <p><b>Delete Account</b></p>
             <p>Are you sure you want to delete your account?<br>This will send an email and you will need to confirm.</p>
+            <hr class="rounded">
             <div class="signInDiv">
                 <form id="userEdit_password_delete" class="contentMessage">
                     <label for="userEdit_email_pass_delete"><p>Password</p></label>
@@ -1412,8 +1475,6 @@ async function deleteAccPage() {
     `;
     
     document.getElementById("deleteAccConfirm").innerHTML = ele;
-    document.getElementById("deleteAccConfirm").classList.add("menu");
-    document.getElementById("deleteAccConfirm").classList.add("menu-style");
     document.getElementById("userEdit_password_delete").addEventListener("submit", function (e) { e.preventDefault()})
 }
 
@@ -1435,11 +1496,6 @@ async function requestDeleteAcc() {
     return res;
 }
 
-function hidePersonalizeFeed() {
-    document.getElementById("feedPopup").innerHTML = "";
-    document.getElementById("personalizeFeedSettings").innerText = "Personalized Feed";
-    document.getElementById("personalizeFeedSettings").onclick = changePersonalizedFeed;
-}
 function firstLetterUpperCase(string) {
     return string.charAt(0).toUpperCase() + string.slice(1);
 }
@@ -1447,51 +1503,11 @@ async function changePersonalizedFeed() {
     // get all categories
     /*if (!foundCategories || !foundCategories[0]) */foundCategories = await sendRequest(`/users/personalize`, { method: 'GET' });
     if (!foundCategories || foundCategories.error) return console.log("error with categories");
-    document.getElementById("personalizeFeedSettings").innerText = "Hide Personalization";
-    document.getElementById("personalizeFeedSettings").onclick = hidePersonalizeFeed;
-
-    /*
-    [
-  {
-    "id": 100,
-    "name": "art",
-    "version": 1.7,
-    "isSubCategory": false,
-    "parentCategoryID": null,
-    "subCategories": [
-      {
-        "id": 101,
-        "name": "painting",
-        "version": 1.7,
-        "isSubCategory": true,
-        "parentCategoryID": 100,
-        "subCategories": []
-      },
-      {
-        "id": 102,
-        "name": "sculpture",
-        "version": 1.7,
-        "isSubCategory": true,
-        "parentCategoryID": 100,
-        "subCategories": []
-      },
-      {
-        "id": 103,
-        "name": "photography",
-        "version": 1.7,
-        "isSubCategory": true,
-        "parentCategoryID": 100,
-        "subCategories": []
-      },
-      {
-        "id": 104,
-        "name": "drawing",*/
 
     var ele = `
-        <div class="menu menu-style" id="feedSettings">
-            <p><b>Personalization Settings</b></p>
-            <p>Choose what categories you want to see in your feed.</p>
-            <hr class="rounded">                    
+        <p><b>Personalization Settings</b></p>
+        <p>Choose what categories you want to see in your feed.</p>
+        <hr class="rounded">                    
     `;
 
     for (const category of foundCategories) {
@@ -1515,7 +1531,7 @@ async function changePersonalizedFeed() {
                     <hr class="rounded">                    
                     ${category.subCategories.map(subCategory => {
                         return `
-                            <p>${subCategory.name}</p>
+                            <span>${subCategory.name}, </span>
                         `;
                     }).join('')}
                 </div>
@@ -1526,12 +1542,8 @@ async function changePersonalizedFeed() {
         `;
     }
 
-    ele+=`
-        </div>
-    `;
 
-    document.getElementById("feedPopup").innerHTML = ele;
-
+    return ele;
 }
 
 function viewSubcategories(id) {
@@ -1580,23 +1592,18 @@ function revealSubcategories(id) {
 
 function devModePage() {
     const ele = `
-        <div class="menu menu-style" id="devModePage">
-            <p><b>Dev Mode</b></p>
-            <p>Dev Mode is ${debug ? "enabled" : "disabled"}</p>
-            <p>Are you sure you want to enter dev mode?</p>
-            <button class="menuButton menuButton-style" onclick="switchDevMode()">Dev Mode</button>
-            <button class="menuButton menuButton-style" onclick="removeDevModeConfirm()">Cancel</button></div>
-        </div>
+        <p>Dev Mode is ${debug ? "enabled" : "disabled"}</p>
+        <button class="menuButton menuButton-style" onclick="switchDevMode()">Dev Mode</button>
+        <button class="menuButton menuButton-style" onclick="removeDevModeConfirm()">Cancel</button></div>
     `;
 
-    document.getElementById("devModeConfirm").innerHTML = ele;
-    return true;
+    return ele;
 }
 
 function switchDevMode() {
     debugModeSwitch()
     devMode();
-    devModePage()
+    updateUIDevMode()
 }
 
 async function userEditPage() {
@@ -2680,11 +2687,6 @@ async function openPrivacyPage(privacyDataFound) {
     if (debug) console.log(privacyData);
 
     var ele = `
-        <div class="menu menu-style">
-            <p><b><br>Privacy Settings</b></p>
-            <p>This feature is unfinished, and will have a later update for better functionality.</p>
-            <p>Currently only privating posts works.</p>
-            <hr class="rounded">
         <form id="userEdit_privacySettings">
     `;
 
@@ -2709,15 +2711,12 @@ async function openPrivacyPage(privacyDataFound) {
     }
 
     ele += `
-            </form>
-            <button class="menuButton menuButton-style" onclick="updatePrivacySettings()">Update Settings</button>
-            <div id="completed_change_pass"></div>
-        </div>
+        </form>
+        <button class="menuButton menuButton-style" onclick="updatePrivacySettings()">Update Settings</button>
+        <div id="completed_change_pass"></div>
     `;
     
-    document.getElementById("privacyPopup").innerHTML = ele;
-    document.getElementById("userEdit_privacySettings").addEventListener("submit", function (e) { e.preventDefault()})
-
+    return ele;
 }
 
 async function updatePrivacySettings() {
@@ -2739,7 +2738,9 @@ async function updatePrivacySettings() {
     });
 
     if (!res || res.error) return null;
-    openPrivacyPage(res)
+    const updatedUI = await openPrivacyPage(res)
+    document.getElementById("privacySettingsUI").innerHTML = updatedUI;
+    document.getElementById("userEdit_privacySettings").addEventListener("submit", function (e) { e.preventDefault()})
 }
 
 async function changePasswordPage() {
@@ -2781,11 +2782,6 @@ async function fetchClientEmailData() {
     return res
 }
 
-function hideChangeFeed() {
-    document.getElementById("feedPopup").innerHTML = "";
-    document.getElementById("changeFeedSettings").innerText = "Change Feed";
-    document.getElementById("changeFeedSettings").onclick = changeFeedSettings;
-}
 
 async function changeFeedSettings() {
     const allowed = await getPossibleFeeds();
@@ -2794,15 +2790,12 @@ async function changeFeedSettings() {
     const currentDefaultOption = allowed.find(allow => allow.name === getPref.preferredFeed);
     const selectedDate = getTimeSince(getPref.timestamp)
 
-    document.getElementById("changeFeedSettings").innerText = "Hide Change Feed";
-    document.getElementById("changeFeedSettings").onclick = hideChangeFeed;
-
     var ele = `
-        <div class="menu menu-style">
-            <p><b>Change your default feed</p></b>
-            <hr class="rounded">
-            <p>Current default feed is:<br><b>${currentDefaultOption.niceName}</b> selected ${selectedDate.sinceOrUntil == "current" ? "just changed" : `${selectedDate.sinceOrUntil == "since" ? selectedDate.value + " ago" : selectedDate.value}`}
+        <p><b>Change your default feed</p></b>
+        <hr class="rounded">
+        <p>Current default feed is:<br><b>${currentDefaultOption.niceName}</b> selected ${selectedDate.sinceOrUntil == "current" ? "just changed" : `${selectedDate.sinceOrUntil == "since" ? selectedDate.value + " ago" : selectedDate.value}`}
     `;
+
     for (const feed of allowed) {
         if (!feed.speical) ele += `
         <div class="menu menu-style">
@@ -2813,13 +2806,14 @@ async function changeFeedSettings() {
     }
 
     ele +="</div>"
-    document.getElementById("feedPopup").innerHTML = ele;
+    return ele;
 }
 
 async function changePref(feedName) {
     const changed = changePrefAPI(feedName);
     if (!changed || changed.error) alert(`An error occurred while changing${changed.error? `: ${changed.msg}`: ""}`);
-    await changeFeedSettings();
+    const changeFeedSettingsUI = await changeFeedSettings();
+    document.getElementById("changeFeedSettingsUI").innerHTML = changeFeedSettingsUI;
 }
 
 async function getPrefAPI() {
@@ -2837,8 +2831,8 @@ async function changePrefAPI(feedName) {
 
 async function changeSearchSettings() {
     const searchExport = await sendRequest('/search/setting', { method: 'GET' });
-    if (!searchExport) return alert("Error getting search settings");
-    else renderSearchSettings(searchExport);
+    if (!searchExport) alert("Error getting search settings");
+    else return renderSearchSettings(searchExport);
 }
 
 function renderSearchSettings(searchExport) {
@@ -2846,7 +2840,6 @@ function renderSearchSettings(searchExport) {
     const selectedDate = getTimeSince(searchExport.currentSearch.timestamp)
     
     var ele = `
-        <div class="menu menu-style">
             <p><b>Change your default search algorithm</p></b>
             <hr class="rounded">
             <p>Current default search is:<br><b>${currentDefaultOption.niceName}</b> selected ${selectedDate.sinceOrUntil == "current" ? "just changed" : `${selectedDate.sinceOrUntil == "since" ? selectedDate.value + " ago" : selectedDate.value}`}
@@ -2860,85 +2853,81 @@ function renderSearchSettings(searchExport) {
         `
     }
 
-    ele +="</div>"
-    document.getElementById("searchSettingPopup").innerHTML = ele;
+    return ele;
 }
 
 async function changeSearchPref(searchVersion) {
     const searchExport = await sendRequest('/search/setting', { method: 'POST', body: { newSearch: searchVersion} });
     if (!searchExport || searchExport.error) alert(`An error occurred while changing${changed.error? `: ${changed.msg}`: ""}`);
 
-    renderSearchSettings(searchExport);
+    const changeSearchSettingsUI = renderSearchSettings(searchExport);
+    document.getElementById("changeSearchSettingsUI").innerHTML = changeSearchSettingsUI;
 }
 
 async function changeEmailPage() {
     const emailData = await fetchClientEmailData();
-
-    const ele = `
-        <div class="menu menu-style">
-            <div> 
-                <p><b>Current Email Settings</b></p>
-                <hr class="rounded">
-                <p>Current Email: ${emailData.email}</p>
-                <p>Email Verified: ${emailData.verified}</p>
-                ${emailData.verified && emailData.timestampVerified ? `
-                    <p>Verified Since: ${checkDate(emailData.timestampVerified)}</p>
-                ` : ``}
-                ${emailData.emailSetting != emailData.email ? `
-                    <p>Attempting Verification for: ${emailData.emailSetting}</p>
-                ` : ``}
-                ${emailData.removeRequest ? `
-                    <p>Attempting Removal for: ${emailData.removeRequest}</p>
-                ` : ``}
-            </div>
-            <div>
-            <hr class="rounded">
-            <p><b>Email Notifications</b></p>
-                ${emailData.verified ? `
-                    <div id="emailSettingOptions"></div>
-                ` : `
-                    <p>Email is not verified, can not change email settings</p>
-                `}
-            </div>
-            <div>
-                <hr class="rounded">
-                <p><b>Change Email</b></p>
-                <hr class="rounded">
-                <form id="userEdit_email" class="contentMessage" onsubmit="editEmailRequest()">
-                    <label for="userEdit_email_text"><p>New Email</p></label>
-                    <input type="email" id="userEdit_email_text" autocomplete="false" autofill="false" class="userEditForm menu-style" placeholder="New Email">
-                </form>
-                <form id="userEdit_password" class="contentMessage" onsubmit="editEmailRequest()">
-                    <label for="userEdit_email_pass"><p>Password</p></label>
-                    <input type="password" id="userEdit_email_pass" class="userEditForm menu-style" placeholder="Password">
-                </form>
-                <button class="menuButton menuButton-style" onclick="editEmailRequest()">Submit Email</button>
-                <p id="resultAddRequest"></p>
-            </div>
-            ${emailData.verified ? `
-            <div>
-                <hr class="rounded">
-                <p><b>Remove Email</b></p>
-                <hr class="rounded">
-                <form id="userEdit_password_remove" class="contentMessage" onsubmit="removeEmailRequest('${emailData.email}')">
-                    <label for="userEdit_email_pass_remove"><p>Password</p></label>
-                    <input type="password" id="userEdit_email_pass_remove" class="userEditForm menu-style" placeholder="Password">
-                </form>
-                <button class="menuButton menuButton-style" onclick="removeEmailRequest('${emailData.email}')">Remove Email</button>
-                <p id="resultRemoveRequest"></p>
-            </div> 
-            ` : ``}
-        </div>
-    `
-
+    var createEditEmailSettingsUI = ""
     if (emailData.verified) {
-        createEditEmailSettingsView(emailData.emailSettings);
+        createEditEmailSettingsUI = await createEditEmailSettingsView(emailData.emailSettings);
     }
 
-    document.getElementById("emailPopup").innerHTML = ele;
-    document.getElementById("userEdit_email").addEventListener("submit", function (e) { e.preventDefault()})
-    document.getElementById("userEdit_password").addEventListener("submit", function (e) { e.preventDefault()})
-    document.getElementById("userEdit_password_remove").addEventListener("submit", function (e) { e.preventDefault()})
+    const ele = `
+        <div> 
+            <p><b>Current Email Settings</b></p>
+            <hr class="rounded">
+            <p>Current Email: ${emailData.email}</p>
+            <p>Email Verified: ${emailData.verified}</p>
+            ${emailData.verified && emailData.timestampVerified ? `
+                <p>Verified Since: ${checkDate(emailData.timestampVerified)}</p>
+            ` : ``}
+            ${emailData.emailSetting != emailData.email ? `
+                <p>Attempting Verification for: ${emailData.emailSetting}</p>
+            ` : ``}
+            ${emailData.removeRequest ? `
+                <p>Attempting Removal for: ${emailData.removeRequest}</p>
+            ` : ``}
+        </div>
+        <div>
+        <hr class="rounded">
+        <p><b>Email Notifications</b></p>
+            ${emailData.verified ? `
+                <div id="emailSettingOptions">${createEditEmailSettingsUI}</div>
+            ` : `
+                <p>Email is not verified, can not change email settings</p>
+            `}
+        </div>
+        <div>
+            <hr class="rounded">
+            <p><b>Change Email</b></p>
+            <hr class="rounded">
+            <form id="userEdit_email" class="contentMessage" onsubmit="editEmailRequest()">
+                <label for="userEdit_email_text"><p>New Email</p></label>
+                <input type="email" id="userEdit_email_text" autocomplete="false" autofill="false" class="userEditForm menu-style" placeholder="New Email">
+            </form>
+            <form id="userEdit_password" class="contentMessage" onsubmit="editEmailRequest()">
+                <label for="userEdit_email_pass"><p>Password</p></label>
+                <input type="password" id="userEdit_email_pass" class="userEditForm menu-style" placeholder="Password">
+            </form>
+            <button class="menuButton menuButton-style" onclick="editEmailRequest()">Submit Email</button>
+            <p id="resultAddRequest"></p>
+        </div>
+        ${emailData.verified ? `
+        <div>
+            <hr class="rounded">
+            <p><b>Remove Email</b></p>
+            <hr class="rounded">
+            <form id="userEdit_password_remove" class="contentMessage" onsubmit="removeEmailRequest('${emailData.email}')">
+                <label for="userEdit_email_pass_remove"><p>Password</p></label>
+                <input type="password" id="userEdit_email_pass_remove" class="userEditForm menu-style" placeholder="Password">
+            </form>
+            <button class="menuButton menuButton-style" onclick="removeEmailRequest('${emailData.email}')">Remove Email</button>
+            <p id="resultRemoveRequest"></p>
+        </div> 
+        ` : ``} 
+    `
+
+    // document.getElementById("emailPopup").innerHTML = ele;
+    return ele;
 }
 
 async function createEditEmailSettingsView(emailSettings) {
@@ -2958,8 +2947,7 @@ async function createEditEmailSettingsView(emailSettings) {
 
     ele+=`</form><button class="menuButton menuButton-style" onclick="editEmailSettings()">Submit Email Settings</button>`;
     
-    document.getElementById("emailSettingOptions").innerHTML = ele;
-    document.getElementById("userEdit_emailSettings").addEventListener("submit", function (e) { e.preventDefault()})
+    return ele;
 }
 
 async function editEmailSettings() {
@@ -2985,7 +2973,6 @@ async function editEmailSettings() {
     for (item of changedItems) {
         newSettings.push({ option: item, value: document.getElementById(`emailSetting_${item}`).checked })
     }
-
     const res = await sendRequest(`/emails/settings`, {
         method: 'PUT',
         body: {
@@ -2994,7 +2981,8 @@ async function editEmailSettings() {
     });
     
     if (!res || res.error) return null;
-    createEditEmailSettingsView(res);
+    const createEditEmailSettingsUI = await createEditEmailSettingsView(res);
+    document.getElementById("emailSettingOptions").innerHTML = createEditEmailSettingsUI;
 }
 
 async function getPossibleEmailSettings() {
@@ -3423,11 +3411,6 @@ async function getUserDataSimple(userID) {
     else return res
 }
 
-async function hideDevOptions() {
-    document.getElementById('showDevDiv').innerHTML=""
-    document.getElementById('showDevOptionsButton').innerHTML="Show Dev Settings"
-}
-
 function revealDevOptions(option, index){
     switch (option) {
         case "devToken":
@@ -3453,14 +3436,10 @@ function revealDevOptions(option, index){
 }
 
 async function showDevOptions() {
-    if (document.getElementById('showDevAreShown')) return hideDevOptions()
-    document.getElementById('showDevOptionsButton').innerHTML="Hide Developer Settings"
-
     const res = await sendRequest(`/get/developer/`, { method: 'GET' });
     if (!res || res.error) return document.getElementById(`showDevDiv`).innerText = "Error while requesting data"
 
     var firstEle = `
-        <hr class="rounded" id="showDevAreShown">
         <p>Account Status</p>
         <div class="menu menu-style">
             ${res.developer ? `<p>You have an Interact Developer Account</p>`:``}
@@ -3548,8 +3527,7 @@ async function showDevOptions() {
     
     var ele = firstEle+devAccEle+appTokensEle+appAccessEle;
     
-    document.getElementById("showDevDiv").innerHTML=ele;
-    return;
+    return ele;
 };
 
 
@@ -3784,7 +3762,7 @@ function listenForLoading() {
         if (angle >= 2 * Math.PI) {
             angle = 0;
         }
-        requestAnimationFrame(drawLoadingCircle);
+        if (!stopLoadingFeed) requestAnimationFrame(drawLoadingCircle);
     }
 
     drawLoadingCircle();
@@ -3814,6 +3792,7 @@ async function changeFeed(feedType) {
 async function getFeed(feedType) {
     const feedToUse = feedType || 'userFeed'
     buildingFeed=true
+    stopLoadingFeed = true;
 
     if (currentFeed && (feedToUse == currentFeedType)) return buildView(currentFeed)
     if (debug) console.log("loading feed")
@@ -3842,6 +3821,7 @@ async function getFeed(feedType) {
     }
 
     if (!data || !data[0]) {
+        stopLoadingFeed = true;
         document.getElementById('mainFeed').innerHTML=`
             <div id="loadingSection" class="loading menu menu-style">
                 <h1 class="h2-style">You've reached the end of the feed! Check out the other feeds or adjust your personalization settings!</h1>

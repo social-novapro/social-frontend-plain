@@ -66,6 +66,21 @@
     padding: 10px;
     text-align: left;
 }
+/* .areaPost h1 {
+    padding: 10px;
+    text-align: left;
+} */
+
+.settingsCategory {
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    cursor: pointer;
+}
+.settingsCategory:hover {
+    background: var(--main-border-color);
+    border : 2px solid var(--hover-border-color);
+}
 
 .publicPost {
     background-color:  var(--main-button-color);
