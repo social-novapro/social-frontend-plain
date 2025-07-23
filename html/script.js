@@ -116,6 +116,7 @@ async function checkURLParams() {
     const ifSettings = params.has("settings");
     const ifNotificationPage = params.has("notifications")
     const ifBookmarksPage = params.has("bookmarks")
+    const ifSearchPage = params.has("searchPage")
 
     if (ifUsername) {
         paramsFound = true
@@ -165,6 +166,11 @@ async function checkURLParams() {
         paramsInfo.paramsFound = true
 
         bookmarksPage();
+    } else if (ifSearchPage) {
+        paramsFound = true
+        paramsInfo.paramsFound = true
+        // const searchSearching = params.get('search')
+        activeSearchBar();
     }
     return paramsInfo
 }
@@ -2801,12 +2807,27 @@ async function changeFeedSettings() {
         <div class="menu menu-style">
             <p>${feed.description}</p>
             <button class="menuButton menuButton-style ${getPref.preferredFeed==feed.name ? 'activeFeed' : ''}" onclick="changePref('${feed.name}')">${feed.niceName}</button>
+            ${feed.name == "personal" ? `
+                <div>
+                    <div class="spacer_5px"></div>
+                    <p>Reset personalized feed indexes and viewed posts</p>
+                    <button class="menuButton menuButton-style" onclick="resetPersonalizedFeed()" id="resetPersonalFeed">Reset Personalized Feed</button>
+                </div>
+            ` : ``}
         </div>
         `
     }
 
     ele +="</div>"
     return ele;
+}
+async function resetPersonalizedFeed() {
+    const reset = await sendRequest(`/feeds/personal/reset`, { method: "GET" });
+    if (!reset || reset.error) return alert(`An error occurred while resetting feed${reset.error? `: ${reset.msg}`: ""}`);
+    const changeFeedSettingsUI = await changeFeedSettings();
+    document.getElementById("changeFeedSettingsUI").innerHTML = changeFeedSettingsUI;
+    document.getElementById("resetPersonalFeed").innerHTML = "Reset Personalized Feed (Completed)";
+    document.getElementById("resetPersonalFeed").disabled = true;
 }
 
 async function changePref(feedName) {
@@ -3624,20 +3645,72 @@ async function requestVerification() {
     })
 }
 
-function activeSearchBar() {
+async function activeSearchBar() {
     if (document.getElementById("searchArea").innerHTML) return;
+
+    changeHeader("?searchPage")
     document.getElementById("searchArea").innerHTML = `
         <div class="searchSelect search menu-style">
             <input id="searchBarArea" class="menu-style" onkeyup="searchSocial()" placeholder="Search for Posts and Users...">
         </div>
     `
-    document.getElementById('navSection5').innerHTML = `
-        <div id="searchBar" class="nav-link" onclick="unactiveSearchBar()">
-            <span class="material-symbols-outlined nav-button";>search</span>
-            <span class="link-text pointerCursor" id="page6">Remove</span>
-        </div>
 
-    `
+    document.getElementById('mainFeed').innerHTML = loadingHTML("Searching...");
+
+    const exploreData = await sendRequest(`/search/v2/explore`, { method: 'GET' });
+    if (!exploreData || exploreData.error) {
+        document.getElementById('mainFeed').innerHTML = `<div class="menu menu-style">
+            <h1>Error while rendering explore page</h1>
+            <p>${exploreData.error ? exploreData.error : "An unknown error occurred"}</p>
+        </div>`;
+        return;
+    }
+
+    console.log(exploreData)
+    const ele = `
+        ${exploreData.hashtagsFound?.length > 0 ? `<div><h1 class="publicPost posts-styles font_h1-style">Newest Hashtags</h1>` : ""}
+        ${exploreData.hashtagsFound?.map(function(hashtagFound) {
+            if (debug) console.log(hashtagFound)
+            return hashtagElementCreate({tag: hashtagFound.tagText})
+        }).join(" ")}
+        ${exploreData.usersFound.length > 0 ? `<div><h1 class="publicPost posts-styles font_h1-style">Newest Users</h1>` : ""}
+        ${exploreData.usersFound.reverse().map(function(user) {
+            var timesince
+            if (user.creationTimestamp) timesince = checkDate(user.creationTimestamp)
+
+            return `
+                <div class="publicPost posts-style">
+                    <p class="${user._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" onclick="userHtml('${user._id}')"> ${user.displayName} @${user.username} | ${user.creationTimestamp ? timesince : '' }</p>
+                    <p>${user.description ? user.description : "no description"}</p>
+                    <p>Following: ${user.followingCount} | Followers: ${user.followerCount}</p>
+                    ${user._id == currentUserLogin.userID ? `` : `
+                        <p id="follow_search_id_${user._id}" onclick=
+                        ${user.followed===true ? 
+                            `"unFollowUser('${user._id}', 'follow_search_id_${user._id}')">Unfollow User` :
+                            `"followUser('${user._id}', 'follow_search_id_${user._id}')">Follow User`
+                        }</p>
+                    `}
+                    <p class="debug" onclick="copyToClipboard('${user._id}')">${user._id}</p>
+                </div>
+            `
+        }).join(" ")}
+        ${exploreData.postsFound.length > 0 ? `<div><h1 class="publicPost posts-styles font_h1-style">Newest Posts</h1>` : ""}
+        ${exploreData.postsFound.reverse().map(function(postArray) {
+            return postElementCreate({
+                post: postArray.postData,
+                user: postArray.userData, 
+                pollData: postArray.type?.poll=="included" ? postArray.pollData : null,
+                voteData: postArray.type?.vote=="included" ? postArray.voteData : null,
+                quoteData: postArray.type?.quote=="included" ? postArray.quoteData : null,
+                coposterData: postArray.type?.copost=="included" ? postArray.coposterData : null,
+                tagData: postArray.type?.tag=="included" ? postArray.tagData : null,
+                extraDta: postArray.type?.extra=="included" ? postArray.extraData : null,
+            })
+        }).join(" ")}
+        ${exploreData.postsFound.length > 0 ? `</div>` : ""}
+    `;
+
+    document.getElementById('mainFeed').innerHTML = ele ;
 }
 
 function unactiveSearchBar() {
@@ -4214,7 +4287,7 @@ async function addWritingToSeachBar(input) {
 
 function hashtagElementCreate(tag) {
     return `
-        <div class="publicPost posts-style">
+        <div class="publicPost posts-style" onclick="searchResult('${tag.tag}')">
             <p>${tag.tag}</p>
         </div>
     `
