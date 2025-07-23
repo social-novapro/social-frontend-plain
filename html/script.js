@@ -1496,7 +1496,7 @@ async function changePersonalizedFeed() {
 
     for (const category of foundCategories) {
         ele+=`
-            <p style="text-align:left; padding-left:11%">${firstLetterUpperCase(category.name)} - <span id="categoryValue_${category.id}">${category.value}</span></p>
+            <p style="text-align:left; padding-left:11%">${firstLetterUpperCase(category.name)} - <span id="categoryValue_${category.id}">Value ${category.value}</span> - <span id="revealButton_${category.id}" onclick="viewSubcategories('${category.id}')">View Subcategories</span></p>
             <div class="slider-labels">
                 <span>0</span>
                 <input
@@ -1511,23 +1511,11 @@ async function changePersonalizedFeed() {
                 <span>10</span>
             </div>
             ${category.subCategories && category.subCategories[0] ? `
-                <div style="display: none;" id="feedSettings_${category.id}_subcategories">
+                <div style="display: none" id="feedSettings_${category.id}_subcategories">
                     <hr class="rounded">                    
                     ${category.subCategories.map(subCategory => {
                         return `
                             <p>${subCategory.name}</p>
-                            <input 
-                                type="range"
-                                id="feedSettings_${subCategory.id}"
-                                class="menu-style sliderInput"
-                                min="0"
-                                max="10"
-                                value="${subCategory.value}
-                            ">
-                            <div class="slider-labels">
-                                <span>0</span>
-                                <span>100</span>
-                            </div>
                         `;
                     }).join('')}
                 </div>
@@ -1544,6 +1532,17 @@ async function changePersonalizedFeed() {
 
     document.getElementById("feedPopup").innerHTML = ele;
 
+}
+
+function viewSubcategories(id) {
+    if (document.getElementById(`feedSettings_${id}_subcategories`).style.display == "block") {
+        document.getElementById(`feedSettings_${id}_subcategories`).style.display = "none";
+        document.getElementById(`revealButton_${id}`).innerText = "Reveal Subcategories";
+        return;
+    }
+
+    document.getElementById(`feedSettings_${id}_subcategories`).style.display = "block";
+    document.getElementById(`revealButton_${id}`).innerText = "Hide Subcategories";
 }
 
 async function updateCategory(id) {
@@ -3826,22 +3825,31 @@ async function getFeed(feedType) {
     listenForLoading();
     buildCopostRequests()
     var url = `/feeds/${feedToUse}`
-    if (feedToUse == "userFeed" || feedToUse=="allPosts") url+="/v2"
-    const data = await sendRequest(`${url}`, { method: 'GET' })
+    if (feedToUse == "userFeed" || feedToUse=="allPosts" || "personal") url+="/v2"
+    const data = await sendRequest(`${url}`, { method: 'GET', ignoreError: true })
+    changeFeedHeader(feedToUse);
+
     if (data.feedVersion == 2){
         currentFeedType = feedToUse;
-        currentFeed = data.posts.reverse()
-        prevIndexID = data.prevIndexID
+        currentFeed = data.posts.reverse();
+        prevIndexID = data.prevIndexID;
     
         if (params.paramsFound == false) {
             buildView(data.posts)
-            await changeFeedHeader(feedToUse);
             return;
         }
         else return
     }
 
-    if (!data || !data[0]) return showModal("<p>There was no data in the feed selected, please load a different feed</p>")
+    if (!data || !data[0]) {
+        document.getElementById('mainFeed').innerHTML=`
+            <div id="loadingSection" class="loading menu menu-style">
+                <h1 class="h2-style">You've reached the end of the feed! Check out the other feeds or adjust your personalization settings!</h1>
+            </div>
+        `
+        return;
+        // return showModal("<p>There was no data in the feed selected, please load a different feed</p>")
+    }
     currentFeedType = feedToUse;
     currentFeed = data.reverse()
 
