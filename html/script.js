@@ -200,10 +200,12 @@ function updateMargin() {
 }
 
 // makes it easy to render postElement without having to do a lot of work
-function postElementCreateFullEasy(postData) {
+function postElementCreateFullEasy(postData, hideParent=false, hideReplies=false) {
     return postElementCreate({
         post: postData.postData,
         user: postData.userData, 
+        hideParent: hideParent,
+        hideReplies: hideReplies,
         pollData: postData.type?.poll=="included" ? postData.pollData : null,
         voteData: postData.type?.vote=="included" ? postData.voteData : null,
         quoteData: postData.type?.quote=="included" ? postData.quoteData : null,
@@ -455,7 +457,7 @@ async function popupActions(elem/*postID, userID, hideParent, hideReplies, owner
     popup.style.border = "2px solid var(--main-border-color)";
     popup.style.padding = "10px";
     popup.style.boxShadow = "0 2px 10px rgba(0,0,0,0.1)";
-    popup.style.borderRadius = "6px";
+    popup.style.borderRadius = "15px";
     popup.style.textAlign = "left";
 
     // Set the inner HTML
@@ -719,7 +721,7 @@ async function viewReplies(postID) {
 
     document.getElementById(`replies_${postID}`).innerText = "Close replies";
 
-    const replyData = await sendRequest(`/posts/replies/${postID}`, { method: 'GET',ignoreError: true });
+    const replyData = await sendRequest(`/posts/replies/full/${postID}`, { method: 'GET',ignoreError: true });
     if (replyData.error) {
         document.getElementById(`postElement_${postID}`).innerHTML+=`
             <div id="repliesOpened_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
@@ -734,8 +736,9 @@ async function viewReplies(postID) {
 
     var ele = ``;
     for (const reply of replyData.replies) {
-        const userData = await sendRequest(`/users/get/basic/${reply.userID}`, { method: 'GET' });
-        ele+=postElementCreate({post: reply, user: userData, hideParent: true });
+        ele+=postElementCreateFullEasy(reply, true);
+        // const userData = await sendRequest(`/users/get/basic/${reply.userID}`, { method: 'GET' });
+        // ele+=postElementCreate({post: reply, user: userData, hideParent: true });
     }
 
     document.getElementById(`postElement_${postID}`).innerHTML+=`
@@ -801,7 +804,7 @@ async function showLikes(postID) {
     
     var ele = ``;
     for (const userInfoLike of likeData.peopleLiked) {
-        ele+=`<p onclick="userHtml('${likeData.userID}')">${userInfoLike.userData?.displayName} @${userInfoLike.username}</p>`;
+        ele+=`<p onclick="userHtml('${userInfoLike.userID}')">${userInfoLike.userData?.displayName} @${userInfoLike.username}</p>`;
     }
 
     document.getElementById(`postElement_${postID}`).innerHTML+=`
@@ -3802,8 +3805,8 @@ async function requestVerification() {
     })
 }
 
-async function activeSearchBar() {
-    if (document.getElementById("searchArea").innerHTML) return;
+async function activeSearchBar(rerender=false) {
+    if (!rerender && document.getElementById("searchArea").innerHTML) return;
 
     changeHeader("?searchPage")
     document.getElementById("searchArea").innerHTML = `
@@ -3823,7 +3826,7 @@ async function activeSearchBar() {
         return;
     }
 
-    console.log(exploreData)
+    if (debug) console.log(exploreData)
     const ele = `
         ${exploreData.hashtagsFound?.length > 0 ? `<div><h1 class="publicPost posts-styles font_h1-style">Newest Hashtags</h1>` : ""}
         ${exploreData.hashtagsFound?.map(function(hashtagFound) {
@@ -4453,9 +4456,9 @@ function hashtagElementCreate(tag) {
 async function searchResult(input) {
     if (!input) {
         if (debug) console.log("returning to feed")
-        changeHeader('')
+        changeHeader('?searchPage')
         addWritingToSeachBar('')
-        return getFeed()
+        return activeSearchBar(true)
     }
     if (currentSearch == input){
         if (debug) console.log("same search")
