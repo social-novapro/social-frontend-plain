@@ -679,6 +679,7 @@ async function viewQuotes(postID) {
         document.getElementById(`quotes_${postID}`).innerText = "Check Quotes";
         return document.getElementById(`quotesOpened_${postID}`).remove();
     }
+    document.getElementById(`quotes_${postID}`).innerText = "Close Quotes";
 
     const quoteData = await sendRequest(`/posts/quotes/${postID}`, { method: 'GET', ignoreError: true });
     if (quoteData.error) {
@@ -706,8 +707,6 @@ async function viewQuotes(postID) {
             ${ele}
         </div>
     `;
-
-    document.getElementById(`quotes_${postID}`).innerText = "Close Quotes";
 }
 
 // async function 
@@ -717,6 +716,8 @@ async function viewReplies(postID) {
 
         return document.getElementById(`repliesOpened_${postID}`).remove();
     }
+
+    document.getElementById(`replies_${postID}`).innerText = "Close replies";
 
     const replyData = await sendRequest(`/posts/replies/${postID}`, { method: 'GET',ignoreError: true });
     if (replyData.error) {
@@ -745,7 +746,6 @@ async function viewReplies(postID) {
         </div>
     `;
 
-    document.getElementById(`replies_${postID}`).innerText = "Close replies";
     // get message
     // postElementCreate
 }
@@ -784,6 +784,7 @@ async function showLikes(postID) {
         document.getElementById(`likedBy_${postID}`).innerText = "View Likes";
         return document.getElementById(`likesOpened_${postID}`).remove();
     }
+    document.getElementById(`likedBy_${postID}`).innerText = "Close Likes";
 
     const likeData = await sendRequest(`/posts/likes/${postID}`, { method: 'GET', ignoreError: true });
     if (likeData.error) {
@@ -810,9 +811,6 @@ async function showLikes(postID) {
             ${ele}
         </div>
     `;
-
-    document.getElementById(`likedBy_${postID}`).innerText = "Close Likes";
-    document.getEle
 }
 
 async function showEditHistory(postID) {
@@ -820,6 +818,7 @@ async function showEditHistory(postID) {
         document.getElementById(`editHistory_${postID}`).innerText = "View Edit History";
         return document.getElementById(`editHistoryOpened_${postID}`).remove();
     }
+    document.getElementById(`editHistory_${postID}`).innerText = "Close Edit History";
     
     const editData = await sendRequest(`/posts/edits/${postID}`, { method: 'GET', ignoreError: true });
     if (editData.error) {
@@ -846,8 +845,6 @@ async function showEditHistory(postID) {
             ${ele}
         </div>
     `;
-
-    document.getElementById(`editHistory_${postID}`).innerText = "Close Edit History";
 };
 
 function getTime() {
