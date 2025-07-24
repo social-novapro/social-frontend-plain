@@ -66,6 +66,42 @@
     padding: 10px;
     text-align: left;
 }
+/* .areaPost h1 {
+    padding: 10px;
+    text-align: left;
+} */
+
+.settingsCategory {
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    cursor: pointer;
+}
+.settingsCategory:hover {
+    background: var(--main-border-color);
+    border : 2px solid var(--hover-border-color);
+}
+.popup-context-menu p {
+    margin: 6px 0;
+    cursor: pointer;
+    /* position: absolute;
+    z-index: 9999;
+    background: var(--main-nav-color);
+    color: var(--main-a-color);
+    padding: 10px;
+    border: 2px solid var(--main-border-color);
+    box-shadow: var(--main-shadow-color);
+    border-radius: 10px;
+    text-align: left; */
+}
+
+.popup-context-menu p:hover {
+    background: var(--main-border-color);
+    border-radius: 6px;
+    padding-left: 6px;
+    padding-right: 6px;
+    /* border: 2px solid var(--hover-border-color); */
+}
 
 .publicPost {
     background-color:  var(--main-button-color);
