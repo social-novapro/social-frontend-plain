@@ -339,7 +339,7 @@ function postElementCreate({
                             </p>
                         ` : ''}
                     ` : ''}
-                    <p id="popupactions_${post._id}" class="posts_action-style" onclick="popupActions('${post._id}', '${post.userID}', '${options.hideParent}', '${options.hideReplies}', ${owner}, ${extraData.pinned}, ${extraData.saved}, ${extraData.followed})">${styleActionButton()}</p>
+                    <p id="popupactions_${post._id}" class="posts_action-style" data-postid="${post._id}" data-userid="${post.userID}" data-hideparent="${options.hideParent}" data-hidereplies="${options.hideReplies}" data-owner="${owner}" data-pinned="${extraData.pinned}" data-saved="${extraData.saved}" data-followed="${extraData.followed}" onclick="popupActions(this)">${styleActionButton()}</p>
                 </div>
             </div>
         </div>
@@ -412,42 +412,134 @@ function removeColorOption(pollID, optionID) {
     document.getElementById(elementID).classList.remove("voted");
 }
 
-async function popupActions(postID, userID, hideParent, hideReplies, owner, pinned=false, saved=false, followed=false) {
-    var elementPopup = document.getElementById(`popupOpen_${postID}`);
-    if (elementPopup) {
-        document.getElementById(`popupactions_${postID}`).innerHTML = styleActionButton(false)
-        return elementPopup.remove();
+async function popupActions(elem/*postID, userID, hideParent, hideReplies, owner, pinned=false, saved=false, followed=false */) {
+    const postID = elem.dataset.postid;
+    const userID = elem.dataset.userid;
+    const hideParent = elem.dataset.hideparent === ("true" || true) ? true : false //? elem.dataset.hideparent : false;
+    const hideReplies = elem.dataset.hidereplies === ("true" || true) ? true : false //? elem.dataset.hideparent : false;;
+    const owner = elem.dataset.owner === ("true" || true) ? true : false //? elem.dataset.owner : false;
+    const pinned = elem.dataset.pinned === ("true" || true) ? true : false //? elem.dataset.pinned : false;
+    const saved = elem.dataset.saved === ("true" || true) ? true : false //? elem.dataset.saved : false;
+    const followed = elem.dataset.followed === ("true" || true) ? true : false //? elem.dataset.followed : false;
+
+    if (debug) console.log({ postID, userID, hideParent, hideReplies, owner, pinned, saved, followed });
+
+    const existingPopup = document.getElementById(`popupOpen_${postID}`);
+    const triggerButton = document.getElementById(`popupactions_${postID}`);
+
+    const openedEditHistory = document.getElementById(`editHistoryOpened_${postID}`);
+    const openedLikes = document.getElementById(`likesOpened_${postID}`);
+    const openedReplies = document.getElementById(`repliesOpened_${postID}`);
+    const openedQuotes = document.getElementById(`quotesOpened_${postID}`);
+
+    // If already open, close it
+    if (existingPopup) {
+        triggerButton.innerHTML = styleActionButton(false);
+        return existingPopup.remove();
     } else {
-        document.getElementById(`popupactions_${postID}`).innerHTML = styleActionButton(true)
+        triggerButton.innerHTML = styleActionButton(true);
     }
 
-    document.getElementById(`postElement_${postID}`).innerHTML+=`
-        <div id="popupOpen_${postID}" class="publicPost posts-style no-select" style="position: element(#popupactions_${postID});">
-            ${owner && mobileClient? `
-                <p>Owner Actions</p>
-                <p>---</p>
-                <p onclick="deletePost('${postID}')">delete post</p>
-                <p id='editButton_${postID}'>
-                    <p onclick="editPost('${postID}')">edit post</p>
-                </p>
-            ` : ``}
-            <p>Menu Actions</p>
-            <p>---</p>
-            <p class="pointerCursor" onclick="${pinned===true ? `unpinPost('${postID}')` : `pinPost('${postID}')` }" id="pin_post_${postID}">${pinned===true ? `Unpin from Profile` : `Pin to Profile` }</p>
-            <p class="pointerCursor" onclick="${saved===true ? `unsaveBookmark('${postID}')` : `saveBookmark('${postID}')`}" id="saveBookmark_${postID}">${saved===true ? `Remove from Bookmarks`:`Save to Bookmarks`}</p>
-            <p class="pointerCursor" id="followUser_${postID}" onclick=
-            ${owner ? `` : `${followed===true ? 
-                `"unFollowUser('${userID}', 'followUser_${postID}')">Unfollow User` :
-                `"followUser('${userID}', 'followUser_${postID}')">Follow User`
-            }</p>`}
-            <p class="pointerCursor" onclick="copyPostLink('${postID}')" id="post_copy_${postID}">Copy Post Link</p>
-            <p class="pointerCursor" onclick="showEditHistory('${postID}')" id="editHistory_${postID}">Check Edit History</p>
-            <p class="pointerCursor" onclick="showLikes('${postID}')" id="likedBy_${postID}">Check Who Liked</p>
-            ${hideReplies != true ? `<p class="pointerCursor" onclick="viewReplies('${postID}')" id="replies_${postID}">Check Replies</p>` : ``}
-            ${hideReplies != true ? `<p class="pointerCursor" onclick="viewQuotes('${postID}')" id="quotes_${postID}">Check Quotes</p>` : ``}
-        </div>
+    // Get the position of the button that triggered the popup
+    const rect = triggerButton.getBoundingClientRect();
+
+    // Create the popup
+    const popup = document.createElement("div");
+    popup.id = `popupOpen_${postID}`;
+    popup.className = "popup-context-menu";
+    popup.style.position = "absolute";
+    popup.style.top = `${rect.bottom + window.scrollY}px`;
+    popup.style.left = `${rect.left + window.scrollX}px`;
+    popup.style.zIndex = 9999;
+    popup.style.background = "var(--main-nav-color)";
+    popup.style.border = "2px solid var(--main-border-color)";
+    popup.style.padding = "10px";
+    popup.style.boxShadow = "0 2px 10px rgba(0,0,0,0.1)";
+    popup.style.borderRadius = "6px";
+    popup.style.textAlign = "left";
+
+    // Set the inner HTML
+    popup.innerHTML = `
+        ${owner && mobileClient ? `
+            <p><strong>Owner Actions</strong></p>
+            <hr>
+            <p onclick="deletePost('${postID}')">
+                <span class="material-symbols-outlined">delete</span>
+                <span>Delete Post</span>
+            </p>
+            <p onclick="editPost('${postID}')">
+                <span class="material-symbols-outlined">edit</span>
+                <span>Edit Post</span>
+            </p>
+        ` : ``}
+        <p><strong>Menu Actions</strong></p>
+        <hr>
+        <p class="pointerCursor" onclick="${pinned ? `unpinPost('${postID}')` : `pinPost('${postID}')`}">
+            ${pinned ? `
+                <span class="material-symbols-outlined">keep_off</span>
+                <span id="pin_post_${postID}">Unpin from Profile</span>    
+            ` : `
+                <span class="material-symbols-outlined">keep</span>
+                <span id="pin_post_${postID}">Pin to Profile</span>
+            `}
+        </p>
+        <p class="pointerCursor" onclick="${saved ? `unsaveBookmark('${postID}')` : `saveBookmark('${postID}')`}">
+            ${saved ? `
+                <span class="material-symbols-outlined">bookmark_remove</span>
+                <span id="saveBookmark_${postID}">Unsave from Bookmarks</span>
+            ` : `
+                <span class="material-symbols-outlined">bookmark_add</span>
+                <span id="saveBookmark_${postID}">Save to Bookmarks</span>
+            `}
+        </p>
+        ${!owner ? `
+            <p class="pointerCursor" onclick="${followed ? `unFollowUser('${userID}', 'followUserPostMenu_${postID}')` : `followUser('${userID}', 'followUserPostMenu_${postID}')`}">
+                ${followed ? `
+                    <span class="material-symbols-outlined">person_remove</span>
+                    <span id="followUserPostMenu_${postID}">Unfollow User</span>
+                ` : `
+                    <span class="material-symbols-outlined">person_add</span>
+                    <span id="followUserPostMenu_${postID}">Follow User</span>
+                `}
+            </p>
+        ` : ``}
+        <p class="pointerCursor" onclick="copyPostLink('${postID}')">
+            <span class="material-symbols-outlined">add_link</span>
+            <span id="post_copy_${postID}">Copy Post Link</span>
+        </p>
+        <p class="pointerCursor" onclick="showEditHistory('${postID}')">
+            <span class="material-symbols-outlined">history</span>
+            <span id="editHistory_${postID}">${!openedEditHistory ? "View Edit History" : "Close Edit History"}</span>
+        </p>
+        <p class="pointerCursor" onclick="showLikes('${postID}')">
+            <span class="material-symbols-outlined">recent_actors</span>
+            <span id="likedBy_${postID}">${!openedLikes ? "View Likes" : "Close Likes"}</span>
+        </p>
+        ${hideReplies !== true ? `
+            <p class="pointerCursor" onclick="viewReplies('${postID}')">
+                <span class="material-symbols-outlined">reply_all</span>
+                <span id="replies_${postID}">${!openedReplies ? "Check Replies" : "Close Replies"}</span>
+            </p>
+            <p class="pointerCursor" onclick="viewQuotes('${postID}')">
+                <span class="material-symbols-outlined">record_voice_over</span>
+                <span id="quotes_${postID}">${!openedQuotes ? "Check Quotes" : "Close Quotes"}</span>
+            </p>
+        ` : ``}
     `;
-};
+
+    // Close popup when clicking outside
+    const clickAway = (e) => {
+        if (!popup.contains(e.target) && e.target !== triggerButton) {
+            popup.remove();
+            triggerButton.innerHTML = styleActionButton(false);
+            document.removeEventListener("click", clickAway);
+        }
+    };
+    setTimeout(() => document.addEventListener("click", clickAway), 0); // delay to avoid immediate close
+
+    document.body.appendChild(popup);
+}
+
 
 async function aiSummaryAction(postID, userID) {
     var elementPopup = document.getElementById(`aisummaryOpen_${postID}`);
@@ -487,17 +579,18 @@ function copyPostLink(postID) {
 
 async function pinPost(postID) {
     const req = await sendRequest(`/users/edit/pins/${postID}`, { method: 'POST' });
-    if (req.error) return
-
-    showModal(`<p>Success!</p>`)
-    
+    if (req.error) return document.getElementById(`pin_post_${postID}`).innerText = "Error while pinning post, please try again later.";
+    document.getElementById(`pin_post_${postID}`).innerText = "Pinned";
+    document.getElementById(`pin_post_${postID}`).parentElement.onclick = () => unpinPost(postID);
+    document.getElementById(`popupactions_${postID}`).dataset.pinned = true;
 }
 
 async function unpinPost(postID) {
     const req = await sendRequest(`/users/edit/pins/${postID}`, { method: 'DELETE' });
-    if (req.error) return
-
-    showModal(`<p>Success!</p>`)
+    if (req.error) return document.getElementById(`pin_post_${postID}`).innerText = "Error while unpinning post, please try again later.";
+    document.getElementById(`pin_post_${postID}`).innerText = "Unpinned"
+    document.getElementById(`pin_post_${postID}`).parentElement.onclick = () => pinPost(postID);
+    document.getElementById(`popupactions_${postID}`).dataset.pinned = false;
 }
 
 async function unpinAllPosts() {
@@ -520,7 +613,13 @@ async function followUser(userID, eleIdChange) {
 
     if (eleIdChange) {
         document.getElementById(eleIdChange).innerText="Unfollow User";
-        document.getElementById(eleIdChange).onclick = () => unFollowUser(userID, eleIdChange);
+
+        if (eleIdChange.startsWith("followUserPostMenu_")) {
+            document.getElementById(eleIdChange).parentElement.onclick = () => unFollowUser(userID, eleIdChange);
+            const postID = eleIdChange.split("_")[1];
+            document.getElementById(`popupactions_${postID}`).dataset.followed = true;
+        }
+        else document.getElementById(eleIdChange).onclick = () => unFollowUser(userID, eleIdChange);
     } else {
         showModal(`<p>Unfollowed User!</p>`);
     }
@@ -532,7 +631,13 @@ async function unFollowUser(userID, eleIdChange) {
 
     if (eleIdChange) {
         document.getElementById(eleIdChange).innerText="Follow User";
-        document.getElementById(eleIdChange).onclick = () => followUser(userID, eleIdChange);
+        if (eleIdChange.startsWith("followUserPostMenu_")) {
+            document.getElementById(eleIdChange).parentElement.onclick = () => followUser(userID, eleIdChange);
+            const postID = eleIdChange.split("_")[1];
+            document.getElementById(`popupactions_${postID}`).dataset.followed = false;
+        }
+        else document.getElementById(eleIdChange).onclick = () => followUser(userID, eleIdChange);
+
     } else {
         showModal(`<p>Unfollowed User!</p>`);
     }
@@ -651,8 +756,13 @@ async function saveBookmark(postID, list) {
         listname: list ? list : "main"
     }
     const res = await sendRequest(`/posts/save/`, { method: 'POST', body });
-    if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.error}`;
-    document.getElementById(`saveBookmark_${postID}`).innerText="Saved"
+    if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.msg}`;
+    document.getElementById(`saveBookmark_${postID}`).innerText="Saved";
+    // parent must be updated to do new function
+
+    document.getElementById(`saveBookmark_${postID}`).parentElement.onclick = () => unsaveBookmark(postID);
+    document.getElementById(`saveBookmark_${postID}`).parentElement.childNodes[0].innerText = "bookmark_remove"
+    document.getElementById(`popupactions_${postID}`).dataset.saved = true;
 }
 
 async function unsaveBookmark(postID, list, where) {
@@ -661,33 +771,83 @@ async function unsaveBookmark(postID, list, where) {
         listname: list ? list : "main"
     }
     const res = await sendRequest(`/posts/unsave/`, { method: 'DELETE', body });
-    if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.error}`;
+    if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.msg}`;
     if (!where) document.getElementById(`saveBookmark_${postID}`).innerText="Unsaved"
     if (where == "bookmarks") document.getElementById(`bookmarkView_${postID}`).remove()
+    document.getElementById(`saveBookmark_${postID}`).parentElement.onclick = () => saveBookmark(postID);
+
+    document.getElementById(`popupactions_${postID}`).dataset.saved = false;
 }
 
 async function showLikes(postID) {
-    const likedBy = await sendRequest(`/posts/likes/${postID}`, { method: 'GET' });
-    if (!likedBy || !likedBy.peopleLiked) return document.getElementById(`likedBy_${postID}`).innerHTML = `Could not find any people who liked the post.`;
+    if (document.getElementById(`likesOpened_${postID}`)) {
+        document.getElementById(`likedBy_${postID}`).innerText = "View Likes";
+        return document.getElementById(`likesOpened_${postID}`).remove();
+    }
 
-    var newElement = `<p>Liked By:</p>`;
-    for (const people of likedBy.peopleLiked) {
-        newElement+=`<p onclick="userHtml('${people.userID}')">${people.username}</p>`
-    };
+    const likeData = await sendRequest(`/posts/likes/${postID}`, { method: 'GET' });
+    if (likeData.error) {
+        document.getElementById(`postElement_${postID}`).innerHTML+=`
+            <div id="likesOpened_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
+                <p>Likes</p>
+                <p>---</p>
+                There are no likes yet on this post.
+            </div>
+        `;
+        if (debug) console.log("no likes")
+        return ;
+    }
+    
+    var ele = ``;
+    for (const userInfoLike of likeData.peopleLiked) {
+        ele+=`<p onclick="userHtml('${likeData.userID}')">${userInfoLike.userData?.displayName} @${userInfoLike.username}</p>`;
+    }
 
-    document.getElementById(`likedBy_${postID}`).innerHTML=newElement;
+    document.getElementById(`postElement_${postID}`).innerHTML+=`
+        <div id="likesOpened_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
+            <p>Likes</p>
+            <p>---</p>
+            ${ele}
+        </div>
+    `;
+
+    document.getElementById(`likedBy_${postID}`).innerText = "Close Likes";
+    document.getEle
 }
 
 async function showEditHistory(postID) {
+    if (document.getElementById(`editHistoryOpened_${postID}`)) {
+        document.getElementById(`editHistory_${postID}`).innerText = "View Edit History";
+        return document.getElementById(`editHistoryOpened_${postID}`).remove();
+    }
+    
     const editData = await sendRequest(`/posts/edits/${postID}`, { method: 'GET' });
-    if (!editData || !editData.edits) return document.getElementById(`editHistory_${postID}`).innerHTML = `Could not find any edits.`;
+    if (editData.error) {
+        document.getElementById(`postElement_${postID}`).innerHTML+=`
+            <div id="editHistoryOpened_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
+                <p>Edit History</p
+                <p>---</p>
+                There is no edit history for this post.
+            </div>
+        `;
+        if (debug) console.log("no edit history")
+        return ;
+    }
 
-    var newElement = `<p>Edit History:</p>`;
+    var ele =``;
     for (const edit of editData.edits.reverse()) {
-        newElement+=`<p>${edit.content}</p>`
+        ele+=`<p>${edit.content}</p>`
     };
 
-    document.getElementById(`editHistory_${postID}`).innerHTML=newElement;
+    document.getElementById(`postElement_${postID}`).innerHTML+=`
+        <div id="editHistoryOpened_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
+            <p>Edit History</p>
+            <p>---</p>
+            ${ele}
+        </div>
+    `;
+
+    document.getElementById(`editHistory_${postID}`).innerText = "Close Edit History";
 };
 
 function getTime() {
@@ -3865,7 +4025,7 @@ async function changeFeed(feedType) {
 async function getFeed(feedType) {
     const feedToUse = feedType || 'userFeed'
     buildingFeed=true
-    stopLoadingFeed = true;
+    stopLoadingFeed = false;
 
     if (currentFeed && (feedToUse == currentFeedType)) return buildView(currentFeed)
     if (debug) console.log("loading feed")
