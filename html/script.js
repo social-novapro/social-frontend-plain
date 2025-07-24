@@ -680,7 +680,7 @@ async function viewQuotes(postID) {
         return document.getElementById(`quotesOpened_${postID}`).remove();
     }
 
-    const quoteData = await sendRequest(`/posts/quotes/${postID}`, { method: 'GET', });
+    const quoteData = await sendRequest(`/posts/quotes/${postID}`, { method: 'GET', ignoreError: true });
     if (quoteData.error) {
         document.getElementById(`postElement_${postID}`).innerHTML+=`
             <div id="quotesOpened_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
@@ -718,7 +718,7 @@ async function viewReplies(postID) {
         return document.getElementById(`repliesOpened_${postID}`).remove();
     }
 
-    const replyData = await sendRequest(`/posts/replies/${postID}`, { method: 'GET', });
+    const replyData = await sendRequest(`/posts/replies/${postID}`, { method: 'GET',ignoreError: true });
     if (replyData.error) {
         document.getElementById(`postElement_${postID}`).innerHTML+=`
             <div id="repliesOpened_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
@@ -785,7 +785,7 @@ async function showLikes(postID) {
         return document.getElementById(`likesOpened_${postID}`).remove();
     }
 
-    const likeData = await sendRequest(`/posts/likes/${postID}`, { method: 'GET' });
+    const likeData = await sendRequest(`/posts/likes/${postID}`, { method: 'GET', ignoreError: true });
     if (likeData.error) {
         document.getElementById(`postElement_${postID}`).innerHTML+=`
             <div id="likesOpened_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
@@ -821,7 +821,7 @@ async function showEditHistory(postID) {
         return document.getElementById(`editHistoryOpened_${postID}`).remove();
     }
     
-    const editData = await sendRequest(`/posts/edits/${postID}`, { method: 'GET' });
+    const editData = await sendRequest(`/posts/edits/${postID}`, { method: 'GET', ignoreError: true });
     if (editData.error) {
         document.getElementById(`postElement_${postID}`).innerHTML+=`
             <div id="editHistoryOpened_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
