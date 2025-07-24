@@ -47,7 +47,7 @@ var userData = {
     userProfile: null,
     userUpdates: null,
 }
-
+var stopLoadingFeed = false; // this is used for drawing the circle, could use buildingFeed, but that includes other stuff
 var userProfieIndexData = {
     indexID: null,
     prevIndexID: null,
@@ -114,12 +114,9 @@ async function checkURLParams() {
     const ifPostPage = params.has("posting");
     const ifUserEdit = params.has("userEdit");
     const ifSettings = params.has("settings");
-    const ifEmailSettings = params.has("emailSettings");
-    const ifThemeSettings = params.has("themeEditor");
-    const ifThemeDiscovery = params.has("themeDiscovery")
     const ifNotificationPage = params.has("notifications")
     const ifBookmarksPage = params.has("bookmarks")
-    const ifPersonalizedSetting = params.has("personalizedSettings")
+    const ifSearchPage = params.has("searchPage")
 
     if (ifUsername) {
         paramsFound = true
@@ -159,27 +156,6 @@ async function checkURLParams() {
         paramsInfo.paramsFound = true
 
         settingsPage()
-    } else if (ifEmailSettings) {
-        paramsFound = true
-        paramsInfo.paramsFound = true
-
-        settingsPage(false);
-        changeEmailPage();
-        document.getElementById("emailSettings").scrollIntoView();
-    } else if (ifThemeSettings) {
-        paramsFound = true
-        paramsInfo.paramsFound = true
-
-        settingsPage(false);
-        editThemePanel(headers.userid);
-        document.getElementById("themeEditor").scrollIntoView();
-    } else if (ifThemeDiscovery) {
-        paramsFound = true
-        paramsInfo.paramsFound = true
-
-        settingsPage();
-        await viewThemesDiscovery()
-        document.getElementById("themeDiscovery").scrollIntoView();
     } else if (ifNotificationPage) {
         paramsFound = true
         paramsInfo.paramsFound = true
@@ -190,14 +166,11 @@ async function checkURLParams() {
         paramsInfo.paramsFound = true
 
         bookmarksPage();
-    } else if (ifPersonalizedSetting) {
+    } else if (ifSearchPage) {
         paramsFound = true
         paramsInfo.paramsFound = true
-
-        settingsPage(false);
-        changePersonalizedFeed();
-
-        document.getElementById("feedSettings").scrollIntoView();
+        // const searchSearching = params.get('search')
+        activeSearchBar();
     }
     return paramsInfo
 }
@@ -227,10 +200,12 @@ function updateMargin() {
 }
 
 // makes it easy to render postElement without having to do a lot of work
-function postElementCreateFullEasy(postData) {
+function postElementCreateFullEasy(postData, hideParent=false, hideReplies=false) {
     return postElementCreate({
         post: postData.postData,
         user: postData.userData, 
+        hideParent: hideParent,
+        hideReplies: hideReplies,
         pollData: postData.type?.poll=="included" ? postData.pollData : null,
         voteData: postData.type?.vote=="included" ? postData.voteData : null,
         quoteData: postData.type?.quote=="included" ? postData.quoteData : null,
@@ -366,7 +341,7 @@ function postElementCreate({
                             </p>
                         ` : ''}
                     ` : ''}
-                    <p id="popupactions_${post._id}" class="posts_action-style" onclick="popupActions('${post._id}', '${post.userID}', '${options.hideParent}', '${options.hideReplies}', ${owner}, ${extraData.pinned}, ${extraData.saved}, ${extraData.followed})">${styleActionButton()}</p>
+                    <p id="popupactions_${post._id}" class="posts_action-style" data-postid="${post._id}" data-userid="${post.userID}" data-hideparent="${options.hideParent}" data-hidereplies="${options.hideReplies}" data-owner="${owner}" data-pinned="${extraData.pinned}" data-saved="${extraData.saved}" data-followed="${extraData.followed}" onclick="popupActions(this)">${styleActionButton()}</p>
                 </div>
             </div>
         </div>
@@ -439,42 +414,134 @@ function removeColorOption(pollID, optionID) {
     document.getElementById(elementID).classList.remove("voted");
 }
 
-async function popupActions(postID, userID, hideParent, hideReplies, owner, pinned=false, saved=false, followed=false) {
-    var elementPopup = document.getElementById(`popupOpen_${postID}`);
-    if (elementPopup) {
-        document.getElementById(`popupactions_${postID}`).innerHTML = styleActionButton(false)
-        return elementPopup.remove();
+async function popupActions(elem/*postID, userID, hideParent, hideReplies, owner, pinned=false, saved=false, followed=false */) {
+    const postID = elem.dataset.postid;
+    const userID = elem.dataset.userid;
+    const hideParent = elem.dataset.hideparent === ("true" || true) ? true : false //? elem.dataset.hideparent : false;
+    const hideReplies = elem.dataset.hidereplies === ("true" || true) ? true : false //? elem.dataset.hideparent : false;;
+    const owner = elem.dataset.owner === ("true" || true) ? true : false //? elem.dataset.owner : false;
+    const pinned = elem.dataset.pinned === ("true" || true) ? true : false //? elem.dataset.pinned : false;
+    const saved = elem.dataset.saved === ("true" || true) ? true : false //? elem.dataset.saved : false;
+    const followed = elem.dataset.followed === ("true" || true) ? true : false //? elem.dataset.followed : false;
+
+    if (debug) console.log({ postID, userID, hideParent, hideReplies, owner, pinned, saved, followed });
+
+    const existingPopup = document.getElementById(`popupOpen_${postID}`);
+    const triggerButton = document.getElementById(`popupactions_${postID}`);
+
+    const openedEditHistory = document.getElementById(`editHistoryOpened_${postID}`);
+    const openedLikes = document.getElementById(`likesOpened_${postID}`);
+    const openedReplies = document.getElementById(`repliesOpened_${postID}`);
+    const openedQuotes = document.getElementById(`quotesOpened_${postID}`);
+
+    // If already open, close it
+    if (existingPopup) {
+        triggerButton.innerHTML = styleActionButton(false);
+        return existingPopup.remove();
     } else {
-        document.getElementById(`popupactions_${postID}`).innerHTML = styleActionButton(true)
+        triggerButton.innerHTML = styleActionButton(true);
     }
 
-    document.getElementById(`postElement_${postID}`).innerHTML+=`
-        <div id="popupOpen_${postID}" class="publicPost posts-style no-select" style="position: element(#popupactions_${postID});">
-            ${owner && mobileClient? `
-                <p>Owner Actions</p>
-                <p>---</p>
-                <p onclick="deletePost('${postID}')">delete post</p>
-                <p id='editButton_${postID}'>
-                    <p onclick="editPost('${postID}')">edit post</p>
-                </p>
-            ` : ``}
-            <p>Menu Actions</p>
-            <p>---</p>
-            <p class="pointerCursor" onclick="${pinned===true ? `unpinPost('${postID}')` : `pinPost('${postID}')` }" id="pin_post_${postID}">${pinned===true ? `Unpin from Profile` : `Pin to Profile` }</p>
-            <p class="pointerCursor" onclick="${saved===true ? `unsaveBookmark('${postID}')` : `saveBookmark('${postID}')`}" id="saveBookmark_${postID}">${saved===true ? `Remove from Bookmarks`:`Save to Bookmarks`}</p>
-            <p class="pointerCursor" id="followUser_${postID}" onclick=
-            ${owner ? `` : `${followed===true ? 
-                `"unFollowUser('${userID}', 'followUser_${postID}')">Unfollow User` :
-                `"followUser('${userID}', 'followUser_${postID}')">Follow User`
-            }</p>`}
-            <p class="pointerCursor" onclick="copyPostLink('${postID}')" id="post_copy_${postID}">Copy Post Link</p>
-            <p class="pointerCursor" onclick="showEditHistory('${postID}')" id="editHistory_${postID}">Check Edit History</p>
-            <p class="pointerCursor" onclick="showLikes('${postID}')" id="likedBy_${postID}">Check Who Liked</p>
-            ${hideReplies != true ? `<p class="pointerCursor" onclick="viewReplies('${postID}')" id="replies_${postID}">Check Replies</p>` : ``}
-            ${hideReplies != true ? `<p class="pointerCursor" onclick="viewQuotes('${postID}')" id="quotes_${postID}">Check Quotes</p>` : ``}
-        </div>
+    // Get the position of the button that triggered the popup
+    const rect = triggerButton.getBoundingClientRect();
+
+    // Create the popup
+    const popup = document.createElement("div");
+    popup.id = `popupOpen_${postID}`;
+    popup.className = "popup-context-menu";
+    popup.style.position = "absolute";
+    popup.style.top = `${rect.bottom + window.scrollY}px`;
+    popup.style.left = `${rect.left + window.scrollX}px`;
+    popup.style.zIndex = 9999;
+    popup.style.background = "var(--main-nav-color)";
+    popup.style.border = "2px solid var(--main-border-color)";
+    popup.style.padding = "10px";
+    popup.style.boxShadow = "0 2px 10px rgba(0,0,0,0.1)";
+    popup.style.borderRadius = "15px";
+    popup.style.textAlign = "left";
+
+    // Set the inner HTML
+    popup.innerHTML = `
+        ${owner && mobileClient ? `
+            <p><strong>Owner Actions</strong></p>
+            <hr>
+            <p onclick="deletePost('${postID}')">
+                <span class="material-symbols-outlined">delete</span>
+                <span>Delete Post</span>
+            </p>
+            <p onclick="editPost('${postID}')">
+                <span class="material-symbols-outlined">edit</span>
+                <span>Edit Post</span>
+            </p>
+        ` : ``}
+        <p><strong>Menu Actions</strong></p>
+        <hr>
+        <p class="pointerCursor" onclick="${pinned ? `unpinPost('${postID}')` : `pinPost('${postID}')`}">
+            ${pinned ? `
+                <span class="material-symbols-outlined">keep_off</span>
+                <span id="pin_post_${postID}">Unpin from Profile</span>    
+            ` : `
+                <span class="material-symbols-outlined">keep</span>
+                <span id="pin_post_${postID}">Pin to Profile</span>
+            `}
+        </p>
+        <p class="pointerCursor" onclick="${saved ? `unsaveBookmark('${postID}')` : `saveBookmark('${postID}')`}">
+            ${saved ? `
+                <span class="material-symbols-outlined">bookmark_remove</span>
+                <span id="saveBookmark_${postID}">Unsave from Bookmarks</span>
+            ` : `
+                <span class="material-symbols-outlined">bookmark_add</span>
+                <span id="saveBookmark_${postID}">Save to Bookmarks</span>
+            `}
+        </p>
+        ${!owner ? `
+            <p class="pointerCursor" onclick="${followed ? `unFollowUser('${userID}', 'followUserPostMenu_${postID}')` : `followUser('${userID}', 'followUserPostMenu_${postID}')`}">
+                ${followed ? `
+                    <span class="material-symbols-outlined">person_remove</span>
+                    <span id="followUserPostMenu_${postID}">Unfollow User</span>
+                ` : `
+                    <span class="material-symbols-outlined">person_add</span>
+                    <span id="followUserPostMenu_${postID}">Follow User</span>
+                `}
+            </p>
+        ` : ``}
+        <p class="pointerCursor" onclick="copyPostLink('${postID}')">
+            <span class="material-symbols-outlined">add_link</span>
+            <span id="post_copy_${postID}">Copy Post Link</span>
+        </p>
+        <p class="pointerCursor" onclick="showEditHistory('${postID}')">
+            <span class="material-symbols-outlined">history</span>
+            <span id="editHistory_${postID}">${!openedEditHistory ? "View Edit History" : "Close Edit History"}</span>
+        </p>
+        <p class="pointerCursor" onclick="showLikes('${postID}')">
+            <span class="material-symbols-outlined">recent_actors</span>
+            <span id="likedBy_${postID}">${!openedLikes ? "View Likes" : "Close Likes"}</span>
+        </p>
+        ${hideReplies !== true ? `
+            <p class="pointerCursor" onclick="viewReplies('${postID}')">
+                <span class="material-symbols-outlined">reply_all</span>
+                <span id="replies_${postID}">${!openedReplies ? "Check Replies" : "Close Replies"}</span>
+            </p>
+            <p class="pointerCursor" onclick="viewQuotes('${postID}')">
+                <span class="material-symbols-outlined">record_voice_over</span>
+                <span id="quotes_${postID}">${!openedQuotes ? "Check Quotes" : "Close Quotes"}</span>
+            </p>
+        ` : ``}
     `;
-};
+
+    // Close popup when clicking outside
+    const clickAway = (e) => {
+        if (!popup.contains(e.target) && e.target !== triggerButton) {
+            popup.remove();
+            triggerButton.innerHTML = styleActionButton(false);
+            document.removeEventListener("click", clickAway);
+        }
+    };
+    setTimeout(() => document.addEventListener("click", clickAway), 0); // delay to avoid immediate close
+
+    document.body.appendChild(popup);
+}
+
 
 async function aiSummaryAction(postID, userID) {
     var elementPopup = document.getElementById(`aisummaryOpen_${postID}`);
@@ -514,17 +581,18 @@ function copyPostLink(postID) {
 
 async function pinPost(postID) {
     const req = await sendRequest(`/users/edit/pins/${postID}`, { method: 'POST' });
-    if (req.error) return
-
-    showModal(`<p>Success!</p>`)
-    
+    if (req.error) return document.getElementById(`pin_post_${postID}`).innerText = "Error while pinning post, please try again later.";
+    document.getElementById(`pin_post_${postID}`).innerText = "Pinned";
+    document.getElementById(`pin_post_${postID}`).parentElement.onclick = () => unpinPost(postID);
+    document.getElementById(`popupactions_${postID}`).dataset.pinned = true;
 }
 
 async function unpinPost(postID) {
     const req = await sendRequest(`/users/edit/pins/${postID}`, { method: 'DELETE' });
-    if (req.error) return
-
-    showModal(`<p>Success!</p>`)
+    if (req.error) return document.getElementById(`pin_post_${postID}`).innerText = "Error while unpinning post, please try again later.";
+    document.getElementById(`pin_post_${postID}`).innerText = "Unpinned"
+    document.getElementById(`pin_post_${postID}`).parentElement.onclick = () => pinPost(postID);
+    document.getElementById(`popupactions_${postID}`).dataset.pinned = false;
 }
 
 async function unpinAllPosts() {
@@ -547,7 +615,13 @@ async function followUser(userID, eleIdChange) {
 
     if (eleIdChange) {
         document.getElementById(eleIdChange).innerText="Unfollow User";
-        document.getElementById(eleIdChange).onclick = () => unFollowUser(userID, eleIdChange);
+
+        if (eleIdChange.startsWith("followUserPostMenu_")) {
+            document.getElementById(eleIdChange).parentElement.onclick = () => unFollowUser(userID, eleIdChange);
+            const postID = eleIdChange.split("_")[1];
+            document.getElementById(`popupactions_${postID}`).dataset.followed = true;
+        }
+        else document.getElementById(eleIdChange).onclick = () => unFollowUser(userID, eleIdChange);
     } else {
         showModal(`<p>Unfollowed User!</p>`);
     }
@@ -559,7 +633,13 @@ async function unFollowUser(userID, eleIdChange) {
 
     if (eleIdChange) {
         document.getElementById(eleIdChange).innerText="Follow User";
-        document.getElementById(eleIdChange).onclick = () => followUser(userID, eleIdChange);
+        if (eleIdChange.startsWith("followUserPostMenu_")) {
+            document.getElementById(eleIdChange).parentElement.onclick = () => followUser(userID, eleIdChange);
+            const postID = eleIdChange.split("_")[1];
+            document.getElementById(`popupactions_${postID}`).dataset.followed = false;
+        }
+        else document.getElementById(eleIdChange).onclick = () => followUser(userID, eleIdChange);
+
     } else {
         showModal(`<p>Unfollowed User!</p>`);
     }
@@ -601,8 +681,9 @@ async function viewQuotes(postID) {
         document.getElementById(`quotes_${postID}`).innerText = "Check Quotes";
         return document.getElementById(`quotesOpened_${postID}`).remove();
     }
+    document.getElementById(`quotes_${postID}`).innerText = "Close Quotes";
 
-    const quoteData = await sendRequest(`/posts/quotes/${postID}`, { method: 'GET', });
+    const quoteData = await sendRequest(`/posts/quotes/${postID}`, { method: 'GET', ignoreError: true });
     if (quoteData.error) {
         document.getElementById(`postElement_${postID}`).innerHTML+=`
             <div id="quotesOpened_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
@@ -628,8 +709,6 @@ async function viewQuotes(postID) {
             ${ele}
         </div>
     `;
-
-    document.getElementById(`quotes_${postID}`).innerText = "Close Quotes";
 }
 
 // async function 
@@ -640,7 +719,9 @@ async function viewReplies(postID) {
         return document.getElementById(`repliesOpened_${postID}`).remove();
     }
 
-    const replyData = await sendRequest(`/posts/replies/${postID}`, { method: 'GET', });
+    document.getElementById(`replies_${postID}`).innerText = "Close replies";
+
+    const replyData = await sendRequest(`/posts/replies/full/${postID}`, { method: 'GET',ignoreError: true });
     if (replyData.error) {
         document.getElementById(`postElement_${postID}`).innerHTML+=`
             <div id="repliesOpened_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
@@ -655,8 +736,9 @@ async function viewReplies(postID) {
 
     var ele = ``;
     for (const reply of replyData.replies) {
-        const userData = await sendRequest(`/users/get/basic/${reply.userID}`, { method: 'GET' });
-        ele+=postElementCreate({post: reply, user: userData, hideParent: true });
+        ele+=postElementCreateFullEasy(reply, true);
+        // const userData = await sendRequest(`/users/get/basic/${reply.userID}`, { method: 'GET' });
+        // ele+=postElementCreate({post: reply, user: userData, hideParent: true });
     }
 
     document.getElementById(`postElement_${postID}`).innerHTML+=`
@@ -667,7 +749,6 @@ async function viewReplies(postID) {
         </div>
     `;
 
-    document.getElementById(`replies_${postID}`).innerText = "Close replies";
     // get message
     // postElementCreate
 }
@@ -678,8 +759,13 @@ async function saveBookmark(postID, list) {
         listname: list ? list : "main"
     }
     const res = await sendRequest(`/posts/save/`, { method: 'POST', body });
-    if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.error}`;
-    document.getElementById(`saveBookmark_${postID}`).innerText="Saved"
+    if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.msg}`;
+    document.getElementById(`saveBookmark_${postID}`).innerText="Saved";
+    // parent must be updated to do new function
+
+    document.getElementById(`saveBookmark_${postID}`).parentElement.onclick = () => unsaveBookmark(postID);
+    document.getElementById(`saveBookmark_${postID}`).parentElement.childNodes[0].innerText = "bookmark_remove"
+    document.getElementById(`popupactions_${postID}`).dataset.saved = true;
 }
 
 async function unsaveBookmark(postID, list, where) {
@@ -688,33 +774,80 @@ async function unsaveBookmark(postID, list, where) {
         listname: list ? list : "main"
     }
     const res = await sendRequest(`/posts/unsave/`, { method: 'DELETE', body });
-    if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.error}`;
+    if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.msg}`;
     if (!where) document.getElementById(`saveBookmark_${postID}`).innerText="Unsaved"
     if (where == "bookmarks") document.getElementById(`bookmarkView_${postID}`).remove()
+    document.getElementById(`saveBookmark_${postID}`).parentElement.onclick = () => saveBookmark(postID);
+
+    document.getElementById(`popupactions_${postID}`).dataset.saved = false;
 }
 
 async function showLikes(postID) {
-    const likedBy = await sendRequest(`/posts/likes/${postID}`, { method: 'GET' });
-    if (!likedBy || !likedBy.peopleLiked) return document.getElementById(`likedBy_${postID}`).innerHTML = `Could not find any people who liked the post.`;
+    if (document.getElementById(`likesOpened_${postID}`)) {
+        document.getElementById(`likedBy_${postID}`).innerText = "View Likes";
+        return document.getElementById(`likesOpened_${postID}`).remove();
+    }
+    document.getElementById(`likedBy_${postID}`).innerText = "Close Likes";
 
-    var newElement = `<p>Liked By:</p>`;
-    for (const people of likedBy.peopleLiked) {
-        newElement+=`<p onclick="userHtml('${people.userID}')">${people.username}</p>`
-    };
+    const likeData = await sendRequest(`/posts/likes/${postID}`, { method: 'GET', ignoreError: true });
+    if (likeData.error) {
+        document.getElementById(`postElement_${postID}`).innerHTML+=`
+            <div id="likesOpened_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
+                <p>Likes</p>
+                <p>---</p>
+                There are no likes yet on this post.
+            </div>
+        `;
+        if (debug) console.log("no likes")
+        return ;
+    }
+    
+    var ele = ``;
+    for (const userInfoLike of likeData.peopleLiked) {
+        ele+=`<p onclick="userHtml('${userInfoLike.userID}')">${userInfoLike.userData?.displayName} @${userInfoLike.username}</p>`;
+    }
 
-    document.getElementById(`likedBy_${postID}`).innerHTML=newElement;
+    document.getElementById(`postElement_${postID}`).innerHTML+=`
+        <div id="likesOpened_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
+            <p>Likes</p>
+            <p>---</p>
+            ${ele}
+        </div>
+    `;
 }
 
 async function showEditHistory(postID) {
-    const editData = await sendRequest(`/posts/edits/${postID}`, { method: 'GET' });
-    if (!editData || !editData.edits) return document.getElementById(`editHistory_${postID}`).innerHTML = `Could not find any edits.`;
+    if (document.getElementById(`editHistoryOpened_${postID}`)) {
+        document.getElementById(`editHistory_${postID}`).innerText = "View Edit History";
+        return document.getElementById(`editHistoryOpened_${postID}`).remove();
+    }
+    document.getElementById(`editHistory_${postID}`).innerText = "Close Edit History";
+    
+    const editData = await sendRequest(`/posts/edits/${postID}`, { method: 'GET', ignoreError: true });
+    if (editData.error) {
+        document.getElementById(`postElement_${postID}`).innerHTML+=`
+            <div id="editHistoryOpened_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
+                <p>Edit History</p
+                <p>---</p>
+                There is no edit history for this post.
+            </div>
+        `;
+        if (debug) console.log("no edit history")
+        return ;
+    }
 
-    var newElement = `<p>Edit History:</p>`;
+    var ele =``;
     for (const edit of editData.edits.reverse()) {
-        newElement+=`<p>${edit.content}</p>`
+        ele+=`<p>${edit.content}</p>`
     };
 
-    document.getElementById(`editHistory_${postID}`).innerHTML=newElement;
+    document.getElementById(`postElement_${postID}`).innerHTML+=`
+        <div id="editHistoryOpened_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
+            <p>Edit History</p>
+            <p>---</p>
+            ${ele}
+        </div>
+    `;
 };
 
 function getTime() {
@@ -1166,122 +1299,219 @@ async function getFullUserData(userSearch) {
     return profileData;
 }
 
-function settingsPage(toChangeHeader=true) {
-    if (toChangeHeader) changeHeader("?settings")
+function settingsPage(toChangeHeader=true, toReset=false, subCategory) {
+    const hash = window.location.search.split("=")[1];
+  
+    if ((toChangeHeader && !hash) || (toChangeHeader && toReset)) changeHeader("?settings");
+
+        console.log("settingsPage", hash, toChangeHeader, toReset)
 
     const ele = `
         <div id="settingsPage">
-            <div class="" id="settingsPageContent">
-                <div class="menu menu-style">
-                    <h1 class="font_h1-style">Settings</h1>
-                </div>
-                <div class="inline">
-                    <div class="menu menu-style">
-                        <p>View your profile. As shown to other users.</p>
-                        <button class="menuButton menuButton-style" onclick="profile()">View Profile</button>
-                        <hr class="rounded">
-                        <p>Edit your public profile.</p>
-                        <button class="menuButton menuButton-style" onclick="userEditPage()">Edit Profile</button>
-                    </div>
-                    <div class="menu menu-style">
-                        <p><b>Notifications</b></p>
-                        <div>
-                            <button class="menuButton menuButton-style" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
-                            <button class="menuButton menuButton-style" id="showSubscriptionsButton" onclick="showSubscriptions()">Show Subscriptions</button>
-                            <!--<button class="menuButton menuButton-style" id="notificationSettingsPage" onclick="notificationSettingsPage()">Show Settings</button>-->
-                        </div>
-                        <div>
-                            <div id="notificationsDiv"></div>
-                        </div>
-                    </div>
-                    <div class="menu menu-style">
-                        <p><b>Bookmarks</b></p>
-                        <button class="menuButton menuButton-style" id="showBookmarksButton" onclick="showBookmarks()">Show Bookmarks</button>
-                        <div id="bookmarksdiv"></div>
-                    </div>
-                    <div id="feedSettings" class="menu menu-style">
-                        <p><b>Feed</b></p>
-                        <button class="menuButton menuButton-style" onclick="changeFeedSettings()" id="changeFeedSettings">Feed Settings</p>
-                        ${true ? `<button class="menuButton menuButton-style" onclick="changePersonalizedFeed()" id="personalizeFeedSettings">Personalized Feed</p>` : ``}
-                    </div>
-                    <div id="feedPopup"></div>
-                    <div id="searchSetting" class="menu menu-style">
-                        <p><b>Search</b></p>
-                        <button class="menuButton menuButton-style" onclick="changeSearchSettings()">Search Settings</p>
-                    </div>
-                    <div id="searchSettingPopup"></div>
-                    <div id="themeEditor" class="menu menu-style"><p><b>Client Theme</b></p>
-                        <button class="menuButton menuButton-style" onclick='editThemePanel("${headers.userid}")'>Open Editor</button>
-                        <button class="menuButton menuButton-style" onclick='createTheme()'>Create Theme</button>
-                        <button class="menuButton menuButton-style" onclick='viewThemes("${headers.userid}")'>Existing Themes</button>
-                        <button class="menuButton menuButton-style" onclick='unsetThemeFrontend()'>Unset Theme</button>
-                        <button class="menuButton menuButton-style" onclick='viewThemesDiscovery()'>Discover Themes</button>
-                    </div> 
-                    <div id="userThemeEditor"></div>
-                    <div class="menu menu-style">
-                        <p><b>Privacy</b></p>
-                        <button class="menuButton menuButton-style" onclick="openPrivacyPage()">Open Privacy Page</p>
-                    </div>
-                    <div id="privacyPopup"></div>
-                    <div id="emailSettings" class="menu menu-style">
-                        <p><b>Email</b></p>
-                        <button class="menuButton menuButton-style" onclick="changeEmailPage()">Email Settings</p>
-                    </div>
-                    <div id="emailPopup"></div>
-                    <div class="menu menu-style">
-                        <p><b>Password</b></p>
-                        <button class="menuButton menuButton-style"  onclick="changePasswordPage()">Change Password</p>
-                    </div>
-                    <div id="passwordPopup"></div>
-                    <div class="menu menu-style">
-                        <p><b>User Login</b></p>
-                        <p>Sign into another account.</p>
-                        <button class="menuButton menuButton-style" onclick="redirectBegin()">Login</button>
-                        <hr class="rounded">
-                        <p><b>Switch Login</b></p>
-                        <p>Switch to another account.</p>
-                        <button class="menuButton menuButton-style" onclick="switchAccountPage()">View Accounts</button>
-                        <hr class="rounded">
-                        <p><b>Sign Out</b></p>
-                        <p>Open your sign out options.</p>
-                        <button class="menuButton menuButton-style" onclick="signOutPage()">Sign Out</button>
-                        <div id="signOutConfirm"></div>
-                    </div>
-                    <div class="menu menu-style">
-                        <p>Delete your account.</p>
-                        <button class="menuButton menuButton-style" onclick="deleteAccPage()">Delete Account</button>
-                        <div id="deleteAccConfirm"></div>
-                    </div>
-                    <div class="menu menu-style">
-                        <p><b>Other Pages</b></p>
-                        <p>These are other pages that are related to interact.</p>
-                        <button class="menuButton menuButton-style" onclick="generateRelatedPages()">Show Pages</button>
-                        <div id="generateRelatedPages"></div>
-                    </div>
-                    <div class="menu menu-style">
-                        <p><b>DevMode</b></p>
-                        <p>Enable / Disable dev mode. This will allow you to see more information about the different elements of Interact.<br><br>
-                        To view change live, open inspect element, and run <b>switchNav(3)</b><br><br>
-                        You can quickly copy values by pressing the IDs. This will copy the ID to your clipboard.</p>
-                        <button class="menuButton menuButton-style" onclick="devModePage()">Dev Mode Settings</button>
-                        <div id="devModeConfirm"></div>
-                    </div>
-                    <div class="menu menu-style">
-                        <p><b>Developer</b></p>
-                        <p>Access your developer account, and any apps that has access to your account</p>
-                        <button class="menuButton menuButton-style" id="showDevOptionsButton" onclick="showDevOptions()">Show Dev Settings</button>
-                        <div id="showDevDiv"></div>
-                    </div>
-                </div>
+            <div id="settingsHeader">
+                <div class="menu menu-style areaPost"><h1 class="font_h1-style">Settings</h1></div>
             </div>
-            <div id="settingsContent"></div>
+            <div id="settingsContent">
+                <div class="menu menu-style areaPost settingsCategory" onclick="openSettingsCategoryPage('accounts')"><p>👤 Accounts - Manage Accounts on Interact Website</p></div>
+                <div class="menu menu-style areaPost settingsCategory" onclick="openSettingsCategoryPage('feed')"><p>📰 Feed - Adjust Your Feed and Search to Your Liking</p></div>
+                <div class="menu menu-style areaPost settingsCategory" onclick="openSettingsCategoryPage('theme')"><p>🎨 Theme - Adjust Your Default Client</p></div>
+                <div class="menu menu-style areaPost settingsCategory" onclick="openSettingsCategoryPage('privacy')"><p>🔐 Privacy - Adjust Your Privacy Settings</p></div>
+                <div class="menu menu-style areaPost settingsCategory" onclick="openSettingsCategoryPage('developer')"><p>👨‍💻 Developer - Learn and Create using Interact API</p></div>
+                <div class="menu menu-style areaPost settingsCategory" onclick="openSettingsCategoryPage('email')"><p>📧 Email - Adjust Your Email Settings</p></div>
+                <div class="menu menu-style areaPost settingsCategory" onclick="openSettingsCategoryPage('other')"><p>📄 Other Pages - View Other Pages Related to Interact</p></div>
+            </div>
         </div>
     `;
 
     document.getElementById("mainFeed").innerHTML = ele;
     devMode();
+    if ((hash && !toReset) || subCategory) return openSettingsCategoryPage(hash ? hash : subCategory);
 
     return true;
+}
+
+async function openSettingsCategoryPage(category) {
+    const backBtn = `<div class="menu menu-style settingsCategory" onclick="settingsPage(true, true)"><p>Back to Settings Page</p></div>`
+    const headerTitle = `<div class="menu menu-style areaPost"><h1 class="font_h1-style">${firstLetterUpperCase(category)} ${category != "other" ? "Settings" : "Pages" }</h1></div>`
+    let header = `${headerTitle}${backBtn}`;
+    document.getElementById("settingsHeader").innerHTML = header;
+    document.getElementById("settingsContent").innerHTML = `<div class="menu menu-style areaPost"><p>Loading ${firstLetterUpperCase(category)} Settings...</p></div>`;
+    changeHeader(`?settings=${category}`)
+
+    let content = "";
+    switch (category) {
+        case "accounts":
+            content += profileSettingsCategoryPage();
+            break;
+        case "feed":
+            content += await feedSettingsCategoryPage();
+            break;
+        case "theme":
+            content += themeSettingsCategoryPage();
+            break;
+        case "privacy":
+            content += await privacySettingsCategoryPage();
+            break;
+        case "email":
+            content += await emailSettingsCategoryPage();
+            break;
+        case "developer":
+            content += await developerSettingsCategoryPage();
+            break;
+        case "other":
+            content += otherSettingsCategoryPage();
+            break;
+        default:
+            content += `<div class="menu menu-style"><p>Unknown category: '${category}'. Please report this to the developers, or check spelling.</p></div>`;
+            break;
+    }
+
+    document.getElementById("settingsContent").innerHTML = content;
+
+    if (category == "privacy") {
+        document.getElementById("userEdit_privacySettings").addEventListener("submit", function (e) { e.preventDefault()})
+    } else if (category == "email") {
+        if (document.getElementById("userEdit_emailSettings")) document.getElementById("userEdit_emailSettings").addEventListener("submit", function (e) { e.preventDefault()})
+        document.getElementById("userEdit_email").addEventListener("submit", function (e) { e.preventDefault()})
+        document.getElementById("userEdit_password").addEventListener("submit", function (e) { e.preventDefault()})
+        document.getElementById("userEdit_password_remove").addEventListener("submit", function (e) { e.preventDefault()})
+    }
+
+    devMode();
+}
+
+function profileSettingsCategoryPage() {
+    const ele = `
+        <div class="menu menu-style">
+            <p>View your profile. As shown to other users.</p>
+            <button class="menuButton menuButton-style" onclick="profile()">View Profile</button>
+            <hr class="rounded">
+            <p>Edit your public profile.</p>
+            <button class="menuButton menuButton-style" onclick="userEditPage()">Edit Profile</button>
+        </div>
+        <div class="menu menu-style">
+            <p><b>Interact Accounts</b></p>
+            <p>Sign into another account.</p>
+            <button class="menuButton menuButton-style" onclick="redirectBegin()">Login</button>
+            <hr class="rounded">
+
+            <p><b>Switch Login</b></p>
+            <p>Switch to another account.</p>
+            <button class="menuButton menuButton-style" onclick="switchAccountPage()">View Accounts</button>
+            <hr class="rounded">
+
+            <p><b>Sign Out</b></p>
+            <p>Open your sign out options.</p>
+            <button class="menuButton menuButton-style" onclick="signOutPage()">Sign Out</button>
+        </div>
+        <div id="signOutConfirm"></div>
+        <div class="menu menu-style">
+            <p><b>Delete Your Account</b></p>
+            <button class="menuButton menuButton-style" onclick="deleteAccPage()">Delete Account</button>
+        </div>
+        <div id="deleteAccConfirm"></div>
+        <div class="menu menu-style">
+            <p><b>Change Your Password</b></p>
+            <button class="menuButton menuButton-style" onclick="changePasswordPage()">Change Password</p>
+        </div>
+        <div id="passwordPopup"></div>
+    `
+    return ele;
+}
+
+async function feedSettingsCategoryPage() {
+    const changeFeedSettingsUI = await changeFeedSettings();
+    const changePersonalizedFeedUI = await changePersonalizedFeed();
+    const changeSearchSettingsUI = await changeSearchSettings();
+    const ele = `
+        <div class="menu menu-style" id="changeFeedSettingsUI">
+            ${changeFeedSettingsUI}
+        </div>
+        <div class="menu menu-style">
+            ${changePersonalizedFeedUI}
+        </div>
+        <div class="menu menu-style" id="changeSearchSettingsUI">
+            ${changeSearchSettingsUI}
+        </div>
+    `;
+    return ele;
+}
+
+function themeSettingsCategoryPage() {
+    const ele = `
+        <div id="themeEditor" class="menu menu-style"><p><b>Client Theme</b></p>
+            <button class="menuButton menuButton-style" onclick='editThemePanel("${headers.userid}")'>Open Editor</button>
+            <button class="menuButton menuButton-style" onclick='createTheme()'>Create Theme</button>
+            <button class="menuButton menuButton-style" onclick='viewThemes("${headers.userid}")'>Existing Themes</button>
+            <button class="menuButton menuButton-style" onclick='unsetThemeFrontend()'>Unset Theme</button>
+            <button class="menuButton menuButton-style" onclick='viewThemesDiscovery()'>Discover Themes</button>
+        </div> 
+        <div id="userThemeEditor"></div>
+    `;
+    return ele;
+}
+
+async function privacySettingsCategoryPage() {
+    const openPrivacyPageUI = await openPrivacyPage();
+    const ele = `
+        <div class="menu menu-style">
+            <p>Note: This feature is unfinished, and will have a later updates for better functionality.</p>
+        </div>
+        <div class="menu menu-style" id="privacySettingsUI">
+            ${openPrivacyPageUI}
+        </div>
+    `;
+    return ele;
+}
+
+function updateUIDevMode() {
+    const devModePageUI = devModePage();
+    document.getElementById("devModeStatus").innerHTML = devModePageUI;
+}
+
+async function developerSettingsCategoryPage() {
+    const devModePageUI = devModePage();
+    const showDevOptionsUI = await showDevOptions();
+    const ele = `
+        <div class="menu menu-style">
+            <p><b>DevMode</b></p>
+            <p>Enable / Disable dev mode. This will allow you to see more information about the different elements of Interact.<br><br>
+            To view change live, open inspect element, and run <b>switchNav(3)</b><br><br>
+            You can quickly copy values by pressing the IDs. This will copy the ID to your clipboard.</p>
+        </div>
+        <div id="devModeStatus" class="menu menu-style">
+            <div>${devModePageUI}</div>
+        </div>
+        <div class="menu menu-style">
+            <p><b>Developer</b></p>
+            <p>Access your developer account, and any apps that has access to your account</p>
+        </div>
+        <div class="menu menu-style">
+            <div id="showDevDiv">${showDevOptionsUI}</div>
+        </div>
+    `;
+    return ele;
+}
+
+async function emailSettingsCategoryPage() {
+    const changeEmailPageUI = await changeEmailPage();
+
+    const ele = `
+        <div class="menu menu-style">
+            ${changeEmailPageUI}
+        </div>
+    `;
+    return ele;
+}
+
+function otherSettingsCategoryPage() {
+    const generatedReleatedUI = generateRelatedPages();
+    const ele = `
+        <div class="menu menu-style areaPost settingsCategory" onclick="switchNav(6)"><p>Notifications - Check out your notifications and subscriptions</p></div>
+        <div class="menu menu-style areaPost settingsCategory" onclick="switchNav(9)"><p>Bookmarks - Check out your bookmarks</p></div>
+        ${generatedReleatedUI}
+    `
+    return ele;
 }
 
 function bookmarksPage() {
@@ -1304,24 +1534,24 @@ function bookmarksPage() {
 
 function generateRelatedPages() {
     const related = [
-        { name: "Analytics", url: "https://interact-analytics.novapro.net" },
-        { name: "Interact Info", url: "https://novapro.net/interact/" },
-        { name: "Admin Page", url: "/admin/" },
-        { name: "Interact Staff", url: "/staff/" },
-        { name: "GitHub", url: "https://github.com/social-novapro/" },
-        { name: "Nova Productions", url: "https://novapro.net/" },
-        { name: "dkravec site", url: "https://dkravec.net/" },
+        { name: "Analytics", url: "https://interact-analytics.novapro.net", description: "Check out Analytics about Interact" },
+        { name: "Interact Info", url: "https://novapro.net/interact/", description: "Check out the product page on novapro.net" },
+        { name: "Admin Page", url: "/admin/", description: "Check out the admin page, where you can see some runtime info" },
+        { name: "Interact Staff", url: "/staff/", description: "Check out the Interact staff page" },
+        { name: "GitHub", url: "https://github.com/social-novapro/", description: "Check out the social-novapro github page, where you can find many open source repos" },
+        { name: "Nova Productions", url: "https://novapro.net/", description: "Learn about the company that created Interact." },
+        { name: "dkravec site", url: "https://dkravec.net/", description: "Learn about me - Daniel Kravec, the creator of Interact." },
     ];
 
     var ele = '';
 
     for (const rel of related) {
         ele+=`
-            <button class="userInfo buttonStyled" onclick="relatedPagesSwitch('${rel.url}')">${rel.name}</button>
+            <div class="menu menu-style areaPost settingsCategory" onclick=relatedPagesSwitch('${rel.url}')"><p>${rel.name} - ${rel.description}</p></div>
         `
     }
 
-    document.getElementById("generateRelatedPages").innerHTML=ele;
+   return ele;
 }
 
 function relatedPagesSwitch(page) {
@@ -1345,7 +1575,7 @@ function removeDeleteAccConfirm() {
 
 function signOutPage() {
     const ele = `
-        <div class="menu menu-stye" id="signOutPage">
+        <div class="menu menu-style">
             <p><b>Sign Out</b></p>
             <p>Are you sure you want to sign out?</p>
             <button class="menuButton menuButton-style"onclick="signOut()">Sign Out</p>
@@ -1355,8 +1585,8 @@ function signOutPage() {
     `;
 
     document.getElementById("signOutConfirm").innerHTML = ele;
-    document.getElementById("signOutPage").classList.add("menu");
-    document.getElementById("signOutPage").classList.add("menu-style");
+    // document.getElementById("signOutPage").classList.add("menu");
+    // document.getElementById("signOutPage").classList.add("menu-style");
     return true;
 }
 
@@ -1368,7 +1598,7 @@ async function switchAccountPage() {
     if (!loginsParsed[0]) return showModal("<p>No other accounts found</p>")
 
     var ele = `
-        <div class="menu menu-style" id="switchAccountPage">
+        <div class="menu menu-style">
             <p><b>Switch Account</b></p>
             <p>Choose an account to switch to</p>
             <div class="inline">
@@ -1380,11 +1610,9 @@ async function switchAccountPage() {
             <button class="menuButton menuButton-style" onclick="switchAccount('${login.userID}')">${preview}</button>
         `;
     }
-    ele += `</div>`;
+    ele += `<button class="menuButton menuButton-style" onclick="removeSignOutConfirm()">Cancel</button></div></div>`;
 
     document.getElementById("signOutConfirm").innerHTML = ele;
-    document.getElementById("signOutPage").classList.add("menu");
-    document.getElementById("signOutPage").classList.add("menu-style");
 }
 
 async function miniPreviewUser(userID) {
@@ -1396,9 +1624,10 @@ async function miniPreviewUser(userID) {
 
 async function deleteAccPage() {
     const ele = `
-        <div class="" id="deleteAccPage">
+        <div class="menu menu-style">
             <p><b>Delete Account</b></p>
             <p>Are you sure you want to delete your account?<br>This will send an email and you will need to confirm.</p>
+            <hr class="rounded">
             <div class="signInDiv">
                 <form id="userEdit_password_delete" class="contentMessage">
                     <label for="userEdit_email_pass_delete"><p>Password</p></label>
@@ -1412,8 +1641,6 @@ async function deleteAccPage() {
     `;
     
     document.getElementById("deleteAccConfirm").innerHTML = ele;
-    document.getElementById("deleteAccConfirm").classList.add("menu");
-    document.getElementById("deleteAccConfirm").classList.add("menu-style");
     document.getElementById("userEdit_password_delete").addEventListener("submit", function (e) { e.preventDefault()})
 }
 
@@ -1435,11 +1662,6 @@ async function requestDeleteAcc() {
     return res;
 }
 
-function hidePersonalizeFeed() {
-    document.getElementById("feedPopup").innerHTML = "";
-    document.getElementById("personalizeFeedSettings").innerText = "Personalized Feed";
-    document.getElementById("personalizeFeedSettings").onclick = changePersonalizedFeed;
-}
 function firstLetterUpperCase(string) {
     return string.charAt(0).toUpperCase() + string.slice(1);
 }
@@ -1447,56 +1669,16 @@ async function changePersonalizedFeed() {
     // get all categories
     /*if (!foundCategories || !foundCategories[0]) */foundCategories = await sendRequest(`/users/personalize`, { method: 'GET' });
     if (!foundCategories || foundCategories.error) return console.log("error with categories");
-    document.getElementById("personalizeFeedSettings").innerText = "Hide Personalization";
-    document.getElementById("personalizeFeedSettings").onclick = hidePersonalizeFeed;
-
-    /*
-    [
-  {
-    "id": 100,
-    "name": "art",
-    "version": 1.7,
-    "isSubCategory": false,
-    "parentCategoryID": null,
-    "subCategories": [
-      {
-        "id": 101,
-        "name": "painting",
-        "version": 1.7,
-        "isSubCategory": true,
-        "parentCategoryID": 100,
-        "subCategories": []
-      },
-      {
-        "id": 102,
-        "name": "sculpture",
-        "version": 1.7,
-        "isSubCategory": true,
-        "parentCategoryID": 100,
-        "subCategories": []
-      },
-      {
-        "id": 103,
-        "name": "photography",
-        "version": 1.7,
-        "isSubCategory": true,
-        "parentCategoryID": 100,
-        "subCategories": []
-      },
-      {
-        "id": 104,
-        "name": "drawing",*/
 
     var ele = `
-        <div class="menu menu-style" id="feedSettings">
-            <p><b>Personalization Settings</b></p>
-            <p>Choose what categories you want to see in your feed.</p>
-            <hr class="rounded">                    
+        <p><b>Personalization Settings</b></p>
+        <p>Choose what categories you want to see in your feed.</p>
+        <hr class="rounded">                    
     `;
 
     for (const category of foundCategories) {
         ele+=`
-            <p style="text-align:left; padding-left:11%">${firstLetterUpperCase(category.name)} - <span id="categoryValue_${category.id}">${category.value}</span></p>
+            <p style="text-align:left; padding-left:11%">${firstLetterUpperCase(category.name)} - <span id="categoryValue_${category.id}">Value ${category.value}</span> - <span id="revealButton_${category.id}" onclick="viewSubcategories('${category.id}')">View Subcategories</span></p>
             <div class="slider-labels">
                 <span>0</span>
                 <input
@@ -1511,23 +1693,11 @@ async function changePersonalizedFeed() {
                 <span>10</span>
             </div>
             ${category.subCategories && category.subCategories[0] ? `
-                <div style="display: none;" id="feedSettings_${category.id}_subcategories">
+                <div style="display: none" id="feedSettings_${category.id}_subcategories">
                     <hr class="rounded">                    
                     ${category.subCategories.map(subCategory => {
                         return `
-                            <p>${subCategory.name}</p>
-                            <input 
-                                type="range"
-                                id="feedSettings_${subCategory.id}"
-                                class="menu-style sliderInput"
-                                min="0"
-                                max="10"
-                                value="${subCategory.value}
-                            ">
-                            <div class="slider-labels">
-                                <span>0</span>
-                                <span>100</span>
-                            </div>
+                            <span>${subCategory.name}, </span>
                         `;
                     }).join('')}
                 </div>
@@ -1538,12 +1708,19 @@ async function changePersonalizedFeed() {
         `;
     }
 
-    ele+=`
-        </div>
-    `;
 
-    document.getElementById("feedPopup").innerHTML = ele;
+    return ele;
+}
 
+function viewSubcategories(id) {
+    if (document.getElementById(`feedSettings_${id}_subcategories`).style.display == "block") {
+        document.getElementById(`feedSettings_${id}_subcategories`).style.display = "none";
+        document.getElementById(`revealButton_${id}`).innerText = "Reveal Subcategories";
+        return;
+    }
+
+    document.getElementById(`feedSettings_${id}_subcategories`).style.display = "block";
+    document.getElementById(`revealButton_${id}`).innerText = "Hide Subcategories";
 }
 
 async function updateCategory(id) {
@@ -1581,23 +1758,18 @@ function revealSubcategories(id) {
 
 function devModePage() {
     const ele = `
-        <div class="menu menu-style" id="devModePage">
-            <p><b>Dev Mode</b></p>
-            <p>Dev Mode is ${debug ? "enabled" : "disabled"}</p>
-            <p>Are you sure you want to enter dev mode?</p>
-            <button class="menuButton menuButton-style" onclick="switchDevMode()">Dev Mode</button>
-            <button class="menuButton menuButton-style" onclick="removeDevModeConfirm()">Cancel</button></div>
-        </div>
+        <p>Dev Mode is ${debug ? "enabled" : "disabled"}</p>
+        <button class="menuButton menuButton-style" onclick="switchDevMode()">Dev Mode</button>
+        <button class="menuButton menuButton-style" onclick="removeDevModeConfirm()">Cancel</button></div>
     `;
 
-    document.getElementById("devModeConfirm").innerHTML = ele;
-    return true;
+    return ele;
 }
 
 function switchDevMode() {
     debugModeSwitch()
     devMode();
-    devModePage()
+    updateUIDevMode()
 }
 
 async function userEditPage() {
@@ -2681,11 +2853,6 @@ async function openPrivacyPage(privacyDataFound) {
     if (debug) console.log(privacyData);
 
     var ele = `
-        <div class="menu menu-style">
-            <p><b><br>Privacy Settings</b></p>
-            <p>This feature is unfinished, and will have a later update for better functionality.</p>
-            <p>Currently only privating posts works.</p>
-            <hr class="rounded">
         <form id="userEdit_privacySettings">
     `;
 
@@ -2710,15 +2877,12 @@ async function openPrivacyPage(privacyDataFound) {
     }
 
     ele += `
-            </form>
-            <button class="menuButton menuButton-style" onclick="updatePrivacySettings()">Update Settings</button>
-            <div id="completed_change_pass"></div>
-        </div>
+        </form>
+        <button class="menuButton menuButton-style" onclick="updatePrivacySettings()">Update Settings</button>
+        <div id="completed_change_pass"></div>
     `;
     
-    document.getElementById("privacyPopup").innerHTML = ele;
-    document.getElementById("userEdit_privacySettings").addEventListener("submit", function (e) { e.preventDefault()})
-
+    return ele;
 }
 
 async function updatePrivacySettings() {
@@ -2740,7 +2904,9 @@ async function updatePrivacySettings() {
     });
 
     if (!res || res.error) return null;
-    openPrivacyPage(res)
+    const updatedUI = await openPrivacyPage(res)
+    document.getElementById("privacySettingsUI").innerHTML = updatedUI;
+    document.getElementById("userEdit_privacySettings").addEventListener("submit", function (e) { e.preventDefault()})
 }
 
 async function changePasswordPage() {
@@ -2782,11 +2948,6 @@ async function fetchClientEmailData() {
     return res
 }
 
-function hideChangeFeed() {
-    document.getElementById("feedPopup").innerHTML = "";
-    document.getElementById("changeFeedSettings").innerText = "Change Feed";
-    document.getElementById("changeFeedSettings").onclick = changeFeedSettings;
-}
 
 async function changeFeedSettings() {
     const allowed = await getPossibleFeeds();
@@ -2795,32 +2956,45 @@ async function changeFeedSettings() {
     const currentDefaultOption = allowed.find(allow => allow.name === getPref.preferredFeed);
     const selectedDate = getTimeSince(getPref.timestamp)
 
-    document.getElementById("changeFeedSettings").innerText = "Hide Change Feed";
-    document.getElementById("changeFeedSettings").onclick = hideChangeFeed;
-
     var ele = `
-        <div class="menu menu-style">
-            <p><b>Change your default feed</p></b>
-            <hr class="rounded">
-            <p>Current default feed is:<br><b>${currentDefaultOption.niceName}</b> selected ${selectedDate.sinceOrUntil == "current" ? "just changed" : `${selectedDate.sinceOrUntil == "since" ? selectedDate.value + " ago" : selectedDate.value}`}
+        <p><b>Change your default feed</p></b>
+        <hr class="rounded">
+        <p>Current default feed is:<br><b>${currentDefaultOption.niceName}</b> selected ${selectedDate.sinceOrUntil == "current" ? "just changed" : `${selectedDate.sinceOrUntil == "since" ? selectedDate.value + " ago" : selectedDate.value}`}
     `;
+
     for (const feed of allowed) {
         if (!feed.speical) ele += `
         <div class="menu menu-style">
             <p>${feed.description}</p>
             <button class="menuButton menuButton-style ${getPref.preferredFeed==feed.name ? 'activeFeed' : ''}" onclick="changePref('${feed.name}')">${feed.niceName}</button>
+            ${feed.name == "personal" ? `
+                <div>
+                    <div class="spacer_5px"></div>
+                    <p>Reset personalized feed indexes and viewed posts</p>
+                    <button class="menuButton menuButton-style" onclick="resetPersonalizedFeed()" id="resetPersonalFeed">Reset Personalized Feed</button>
+                </div>
+            ` : ``}
         </div>
         `
     }
 
     ele +="</div>"
-    document.getElementById("feedPopup").innerHTML = ele;
+    return ele;
+}
+async function resetPersonalizedFeed() {
+    const reset = await sendRequest(`/feeds/personal/reset`, { method: "GET" });
+    if (!reset || reset.error) return alert(`An error occurred while resetting feed${reset.error? `: ${reset.msg}`: ""}`);
+    const changeFeedSettingsUI = await changeFeedSettings();
+    document.getElementById("changeFeedSettingsUI").innerHTML = changeFeedSettingsUI;
+    document.getElementById("resetPersonalFeed").innerHTML = "Reset Personalized Feed (Completed)";
+    document.getElementById("resetPersonalFeed").disabled = true;
 }
 
 async function changePref(feedName) {
     const changed = changePrefAPI(feedName);
     if (!changed || changed.error) alert(`An error occurred while changing${changed.error? `: ${changed.msg}`: ""}`);
-    await changeFeedSettings();
+    const changeFeedSettingsUI = await changeFeedSettings();
+    document.getElementById("changeFeedSettingsUI").innerHTML = changeFeedSettingsUI;
 }
 
 async function getPrefAPI() {
@@ -2838,8 +3012,8 @@ async function changePrefAPI(feedName) {
 
 async function changeSearchSettings() {
     const searchExport = await sendRequest('/search/setting', { method: 'GET' });
-    if (!searchExport) return alert("Error getting search settings");
-    else renderSearchSettings(searchExport);
+    if (!searchExport) alert("Error getting search settings");
+    else return renderSearchSettings(searchExport);
 }
 
 function renderSearchSettings(searchExport) {
@@ -2847,7 +3021,6 @@ function renderSearchSettings(searchExport) {
     const selectedDate = getTimeSince(searchExport.currentSearch.timestamp)
     
     var ele = `
-        <div class="menu menu-style">
             <p><b>Change your default search algorithm</p></b>
             <hr class="rounded">
             <p>Current default search is:<br><b>${currentDefaultOption.niceName}</b> selected ${selectedDate.sinceOrUntil == "current" ? "just changed" : `${selectedDate.sinceOrUntil == "since" ? selectedDate.value + " ago" : selectedDate.value}`}
@@ -2861,85 +3034,81 @@ function renderSearchSettings(searchExport) {
         `
     }
 
-    ele +="</div>"
-    document.getElementById("searchSettingPopup").innerHTML = ele;
+    return ele;
 }
 
 async function changeSearchPref(searchVersion) {
     const searchExport = await sendRequest('/search/setting', { method: 'POST', body: { newSearch: searchVersion} });
     if (!searchExport || searchExport.error) alert(`An error occurred while changing${changed.error? `: ${changed.msg}`: ""}`);
 
-    renderSearchSettings(searchExport);
+    const changeSearchSettingsUI = renderSearchSettings(searchExport);
+    document.getElementById("changeSearchSettingsUI").innerHTML = changeSearchSettingsUI;
 }
 
 async function changeEmailPage() {
     const emailData = await fetchClientEmailData();
-
-    const ele = `
-        <div class="menu menu-style">
-            <div> 
-                <p><b>Current Email Settings</b></p>
-                <hr class="rounded">
-                <p>Current Email: ${emailData.email}</p>
-                <p>Email Verified: ${emailData.verified}</p>
-                ${emailData.verified && emailData.timestampVerified ? `
-                    <p>Verified Since: ${checkDate(emailData.timestampVerified)}</p>
-                ` : ``}
-                ${emailData.emailSetting != emailData.email ? `
-                    <p>Attempting Verification for: ${emailData.emailSetting}</p>
-                ` : ``}
-                ${emailData.removeRequest ? `
-                    <p>Attempting Removal for: ${emailData.removeRequest}</p>
-                ` : ``}
-            </div>
-            <div>
-            <hr class="rounded">
-            <p><b>Email Notifications</b></p>
-                ${emailData.verified ? `
-                    <div id="emailSettingOptions"></div>
-                ` : `
-                    <p>Email is not verified, can not change email settings</p>
-                `}
-            </div>
-            <div>
-                <hr class="rounded">
-                <p><b>Change Email</b></p>
-                <hr class="rounded">
-                <form id="userEdit_email" class="contentMessage" onsubmit="editEmailRequest()">
-                    <label for="userEdit_email_text"><p>New Email</p></label>
-                    <input type="email" id="userEdit_email_text" autocomplete="false" autofill="false" class="userEditForm menu-style" placeholder="New Email">
-                </form>
-                <form id="userEdit_password" class="contentMessage" onsubmit="editEmailRequest()">
-                    <label for="userEdit_email_pass"><p>Password</p></label>
-                    <input type="password" id="userEdit_email_pass" class="userEditForm menu-style" placeholder="Password">
-                </form>
-                <button class="menuButton menuButton-style" onclick="editEmailRequest()">Submit Email</button>
-                <p id="resultAddRequest"></p>
-            </div>
-            ${emailData.verified ? `
-            <div>
-                <hr class="rounded">
-                <p><b>Remove Email</b></p>
-                <hr class="rounded">
-                <form id="userEdit_password_remove" class="contentMessage" onsubmit="removeEmailRequest('${emailData.email}')">
-                    <label for="userEdit_email_pass_remove"><p>Password</p></label>
-                    <input type="password" id="userEdit_email_pass_remove" class="userEditForm menu-style" placeholder="Password">
-                </form>
-                <button class="menuButton menuButton-style" onclick="removeEmailRequest('${emailData.email}')">Remove Email</button>
-                <p id="resultRemoveRequest"></p>
-            </div> 
-            ` : ``}
-        </div>
-    `
-
+    var createEditEmailSettingsUI = ""
     if (emailData.verified) {
-        createEditEmailSettingsView(emailData.emailSettings);
+        createEditEmailSettingsUI = await createEditEmailSettingsView(emailData.emailSettings);
     }
 
-    document.getElementById("emailPopup").innerHTML = ele;
-    document.getElementById("userEdit_email").addEventListener("submit", function (e) { e.preventDefault()})
-    document.getElementById("userEdit_password").addEventListener("submit", function (e) { e.preventDefault()})
-    document.getElementById("userEdit_password_remove").addEventListener("submit", function (e) { e.preventDefault()})
+    const ele = `
+        <div> 
+            <p><b>Current Email Settings</b></p>
+            <hr class="rounded">
+            <p>Current Email: ${emailData.email}</p>
+            <p>Email Verified: ${emailData.verified}</p>
+            ${emailData.verified && emailData.timestampVerified ? `
+                <p>Verified Since: ${checkDate(emailData.timestampVerified)}</p>
+            ` : ``}
+            ${emailData.emailSetting != emailData.email ? `
+                <p>Attempting Verification for: ${emailData.emailSetting}</p>
+            ` : ``}
+            ${emailData.removeRequest ? `
+                <p>Attempting Removal for: ${emailData.removeRequest}</p>
+            ` : ``}
+        </div>
+        <div>
+        <hr class="rounded">
+        <p><b>Email Notifications</b></p>
+            ${emailData.verified ? `
+                <div id="emailSettingOptions">${createEditEmailSettingsUI}</div>
+            ` : `
+                <p>Email is not verified, can not change email settings</p>
+            `}
+        </div>
+        <div>
+            <hr class="rounded">
+            <p><b>Change Email</b></p>
+            <hr class="rounded">
+            <form id="userEdit_email" class="contentMessage" onsubmit="editEmailRequest()">
+                <label for="userEdit_email_text"><p>New Email</p></label>
+                <input type="email" id="userEdit_email_text" autocomplete="false" autofill="false" class="userEditForm menu-style" placeholder="New Email">
+            </form>
+            <form id="userEdit_password" class="contentMessage" onsubmit="editEmailRequest()">
+                <label for="userEdit_email_pass"><p>Password</p></label>
+                <input type="password" id="userEdit_email_pass" class="userEditForm menu-style" placeholder="Password">
+            </form>
+            <button class="menuButton menuButton-style" onclick="editEmailRequest()">Submit Email</button>
+            <p id="resultAddRequest"></p>
+        </div>
+        ${emailData.verified ? `
+        <div>
+            <hr class="rounded">
+            <p><b>Remove Email</b></p>
+            <hr class="rounded">
+            <form id="userEdit_password_remove" class="contentMessage" onsubmit="removeEmailRequest('${emailData.email}')">
+                <label for="userEdit_email_pass_remove"><p>Password</p></label>
+                <input type="password" id="userEdit_email_pass_remove" class="userEditForm menu-style" placeholder="Password">
+            </form>
+            <button class="menuButton menuButton-style" onclick="removeEmailRequest('${emailData.email}')">Remove Email</button>
+            <p id="resultRemoveRequest"></p>
+        </div> 
+        ` : ``} 
+    `
+
+    // document.getElementById("emailPopup").innerHTML = ele;
+    return ele;
 }
 
 async function createEditEmailSettingsView(emailSettings) {
@@ -2959,8 +3128,7 @@ async function createEditEmailSettingsView(emailSettings) {
 
     ele+=`</form><button class="menuButton menuButton-style" onclick="editEmailSettings()">Submit Email Settings</button>`;
     
-    document.getElementById("emailSettingOptions").innerHTML = ele;
-    document.getElementById("userEdit_emailSettings").addEventListener("submit", function (e) { e.preventDefault()})
+    return ele;
 }
 
 async function editEmailSettings() {
@@ -2986,7 +3154,6 @@ async function editEmailSettings() {
     for (item of changedItems) {
         newSettings.push({ option: item, value: document.getElementById(`emailSetting_${item}`).checked })
     }
-
     const res = await sendRequest(`/emails/settings`, {
         method: 'PUT',
         body: {
@@ -2995,7 +3162,8 @@ async function editEmailSettings() {
     });
     
     if (!res || res.error) return null;
-    createEditEmailSettingsView(res);
+    const createEditEmailSettingsUI = await createEditEmailSettingsView(res);
+    document.getElementById("emailSettingOptions").innerHTML = createEditEmailSettingsUI;
 }
 
 async function getPossibleEmailSettings() {
@@ -3424,11 +3592,6 @@ async function getUserDataSimple(userID) {
     else return res
 }
 
-async function hideDevOptions() {
-    document.getElementById('showDevDiv').innerHTML=""
-    document.getElementById('showDevOptionsButton').innerHTML="Show Dev Settings"
-}
-
 function revealDevOptions(option, index){
     switch (option) {
         case "devToken":
@@ -3454,14 +3617,10 @@ function revealDevOptions(option, index){
 }
 
 async function showDevOptions() {
-    if (document.getElementById('showDevAreShown')) return hideDevOptions()
-    document.getElementById('showDevOptionsButton').innerHTML="Hide Developer Settings"
-
     const res = await sendRequest(`/get/developer/`, { method: 'GET' });
     if (!res || res.error) return document.getElementById(`showDevDiv`).innerText = "Error while requesting data"
 
     var firstEle = `
-        <hr class="rounded" id="showDevAreShown">
         <p>Account Status</p>
         <div class="menu menu-style">
             ${res.developer ? `<p>You have an Interact Developer Account</p>`:``}
@@ -3549,8 +3708,7 @@ async function showDevOptions() {
     
     var ele = firstEle+devAccEle+appTokensEle+appAccessEle;
     
-    document.getElementById("showDevDiv").innerHTML=ele;
-    return;
+    return ele;
 };
 
 
@@ -3647,20 +3805,72 @@ async function requestVerification() {
     })
 }
 
-function activeSearchBar() {
-    if (document.getElementById("searchArea").innerHTML) return;
+async function activeSearchBar(rerender=false) {
+    if (!rerender && document.getElementById("searchArea").innerHTML) return;
+
+    changeHeader("?searchPage")
     document.getElementById("searchArea").innerHTML = `
         <div class="searchSelect search menu-style">
             <input id="searchBarArea" class="menu-style" onkeyup="searchSocial()" placeholder="Search for Posts and Users...">
         </div>
     `
-    document.getElementById('navSection5').innerHTML = `
-        <div id="searchBar" class="nav-link" onclick="unactiveSearchBar()">
-            <span class="material-symbols-outlined nav-button";>search</span>
-            <span class="link-text pointerCursor" id="page6">Remove</span>
-        </div>
 
-    `
+    document.getElementById('mainFeed').innerHTML = loadingHTML("Searching...");
+
+    const exploreData = await sendRequest(`/search/v2/explore`, { method: 'GET' });
+    if (!exploreData || exploreData.error) {
+        document.getElementById('mainFeed').innerHTML = `<div class="menu menu-style">
+            <h1>Error while rendering explore page</h1>
+            <p>${exploreData.error ? exploreData.error : "An unknown error occurred"}</p>
+        </div>`;
+        return;
+    }
+
+    if (debug) console.log(exploreData)
+    const ele = `
+        ${exploreData.hashtagsFound?.length > 0 ? `<div><h1 class="publicPost posts-styles font_h1-style">Newest Hashtags</h1>` : ""}
+        ${exploreData.hashtagsFound?.map(function(hashtagFound) {
+            if (debug) console.log(hashtagFound)
+            return hashtagElementCreate({tag: hashtagFound.tagText})
+        }).join(" ")}
+        ${exploreData.usersFound.length > 0 ? `<div><h1 class="publicPost posts-styles font_h1-style">Newest Users</h1>` : ""}
+        ${exploreData.usersFound.reverse().map(function(user) {
+            var timesince
+            if (user.creationTimestamp) timesince = checkDate(user.creationTimestamp)
+
+            return `
+                <div class="publicPost posts-style">
+                    <p class="${user._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" onclick="userHtml('${user._id}')"> ${user.displayName} @${user.username} | ${user.creationTimestamp ? timesince : '' }</p>
+                    <p>${user.description ? user.description : "no description"}</p>
+                    <p>Following: ${user.followingCount} | Followers: ${user.followerCount}</p>
+                    ${user._id == currentUserLogin.userID ? `` : `
+                        <p id="follow_search_id_${user._id}" onclick=
+                        ${user.followed===true ? 
+                            `"unFollowUser('${user._id}', 'follow_search_id_${user._id}')">Unfollow User` :
+                            `"followUser('${user._id}', 'follow_search_id_${user._id}')">Follow User`
+                        }</p>
+                    `}
+                    <p class="debug" onclick="copyToClipboard('${user._id}')">${user._id}</p>
+                </div>
+            `
+        }).join(" ")}
+        ${exploreData.postsFound.length > 0 ? `<div><h1 class="publicPost posts-styles font_h1-style">Newest Posts</h1>` : ""}
+        ${exploreData.postsFound.reverse().map(function(postArray) {
+            return postElementCreate({
+                post: postArray.postData,
+                user: postArray.userData, 
+                pollData: postArray.type?.poll=="included" ? postArray.pollData : null,
+                voteData: postArray.type?.vote=="included" ? postArray.voteData : null,
+                quoteData: postArray.type?.quote=="included" ? postArray.quoteData : null,
+                coposterData: postArray.type?.copost=="included" ? postArray.coposterData : null,
+                tagData: postArray.type?.tag=="included" ? postArray.tagData : null,
+                extraDta: postArray.type?.extra=="included" ? postArray.extraData : null,
+            })
+        }).join(" ")}
+        ${exploreData.postsFound.length > 0 ? `</div>` : ""}
+    `;
+
+    document.getElementById('mainFeed').innerHTML = ele ;
 }
 
 function unactiveSearchBar() {
@@ -3785,7 +3995,7 @@ function listenForLoading() {
         if (angle >= 2 * Math.PI) {
             angle = 0;
         }
-        requestAnimationFrame(drawLoadingCircle);
+        if (!stopLoadingFeed) requestAnimationFrame(drawLoadingCircle);
     }
 
     drawLoadingCircle();
@@ -3815,6 +4025,7 @@ async function changeFeed(feedType) {
 async function getFeed(feedType) {
     const feedToUse = feedType || 'userFeed'
     buildingFeed=true
+    stopLoadingFeed = false;
 
     if (currentFeed && (feedToUse == currentFeedType)) return buildView(currentFeed)
     if (debug) console.log("loading feed")
@@ -3826,22 +4037,32 @@ async function getFeed(feedType) {
     listenForLoading();
     buildCopostRequests()
     var url = `/feeds/${feedToUse}`
-    if (feedToUse == "userFeed" || feedToUse=="allPosts") url+="/v2"
-    const data = await sendRequest(`${url}`, { method: 'GET' })
+    if (feedToUse == "userFeed" || feedToUse=="allPosts" || "personal") url+="/v2"
+    const data = await sendRequest(`${url}`, { method: 'GET', ignoreError: true })
+    changeFeedHeader(feedToUse);
+
     if (data.feedVersion == 2){
         currentFeedType = feedToUse;
-        currentFeed = data.posts.reverse()
-        prevIndexID = data.prevIndexID
+        currentFeed = data.posts.reverse();
+        prevIndexID = data.prevIndexID;
     
         if (params.paramsFound == false) {
             buildView(data.posts)
-            await changeFeedHeader(feedToUse);
             return;
         }
         else return
     }
 
-    if (!data || !data[0]) return showModal("<p>There was no data in the feed selected, please load a different feed</p>")
+    if (!data || !data[0]) {
+        stopLoadingFeed = true;
+        document.getElementById('mainFeed').innerHTML=`
+            <div id="loadingSection" class="loading menu menu-style">
+                <h1 class="h2-style">You've reached the end of the feed! Check out the other feeds or adjust your personalization settings!</h1>
+            </div>
+        `
+        return;
+        // return showModal("<p>There was no data in the feed selected, please load a different feed</p>")
+    }
     currentFeedType = feedToUse;
     currentFeed = data.reverse()
 
@@ -4226,7 +4447,7 @@ async function addWritingToSeachBar(input) {
 
 function hashtagElementCreate(tag) {
     return `
-        <div class="publicPost posts-style">
+        <div class="publicPost posts-style" onclick="searchResult('${tag.tag}')">
             <p>${tag.tag}</p>
         </div>
     `
@@ -4235,9 +4456,9 @@ function hashtagElementCreate(tag) {
 async function searchResult(input) {
     if (!input) {
         if (debug) console.log("returning to feed")
-        changeHeader('')
+        changeHeader('?searchPage')
         addWritingToSeachBar('')
-        return getFeed()
+        return activeSearchBar(true)
     }
     if (currentSearch == input){
         if (debug) console.log("same search")
