@@ -4,14 +4,14 @@ var LOCAL_STORAGE_LOGINS='social.loginAccounts'
 var params = new URLSearchParams(window.location.search);
 var foundparams = false;
 
-var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
+// var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
 var redirectURL = `/`;
 
-var headers = {
-    'Content-Type': 'application/json',
-    "devtoken" : "6292d8ae-8c33-4d46-a617-4ac048bd6f11",
-    "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421"
-}
+// var headers = {
+//     'Content-Type': 'application/json',
+//     "devtoken" : "6292d8ae-8c33-4d46-a617-4ac048bd6f11",
+//     "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421"
+// }
 
 /* loginACcounts info
     will be an array, with the usertoken, and userID, and access token, nothing else
