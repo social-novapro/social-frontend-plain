@@ -16,9 +16,7 @@
 var getUrl = window.location;
 var baseUrl = getUrl .protocol + "//" + getUrl.host + "/" + getUrl.pathname.split('/')[1];
 var pathArray = window.location.pathname.split( '/' );
-// var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
-// var hostedUrl = `${config ? `${config.current == "prod" ? config.prod.hosted_url : config.dev.hosted_url}` : 'https://interact.novapro.net/' }`
-// var params = new URLSearchParams(window.location.search)
+
 var prevIndexID = 0;
 var followingFollowerData = {
     userID: null,
@@ -27,13 +25,6 @@ var followingFollowerData = {
     currentlyBuilding: false,
     type: 0
 }
-
-// API HEADERS
-// var headers = {
-//     'Content-Type': 'application/json',
-//     "devtoken" : "6292d8ae-8c33-4d46-a617-4ac048bd6f11",
-//     "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421"
-// }
 
 // VARIBLES
 var currentUserLogin = { }
