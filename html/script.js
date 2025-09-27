@@ -746,10 +746,13 @@ async function viewReplies(postID) {
 
 async function saveBookmark(postID, list) {
     const body = {
-        postID,
+        UUID: postID,
         listname: list ? list : "main"
     }
-    const res = await sendRequest(`/posts/save/`, { method: 'POST', body });
+
+    const res = await sendRequest(`/bookmarks/save/`, { method: 'POST', body });
+
+    // const res = await sendRequest(`/posts/save/`, { method: 'POST', body });
     if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.msg}`;
     document.getElementById(`saveBookmark_${postID}`).innerText="Saved";
     // parent must be updated to do new function
@@ -761,10 +764,10 @@ async function saveBookmark(postID, list) {
 
 async function unsaveBookmark(postID, list, where) {
     const body = {
-        postID,
+        UUID: postID,
         listname: list ? list : "main"
     }
-    const res = await sendRequest(`/posts/unsave/`, { method: 'DELETE', body });
+    const res = await sendRequest(`/bookmarks/unsave/`, { method: 'DELETE', body });
     if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.msg}`;
     if (!where) document.getElementById(`saveBookmark_${postID}`).innerText="Unsaved"
     if (where == "bookmarks") document.getElementById(`bookmarkView_${postID}`).remove()
