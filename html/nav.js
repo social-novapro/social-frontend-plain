@@ -17,6 +17,8 @@ var debug = false;
 var sideBarOpenClosed = document.getElementById("expandingNavBar")
 var mainContentSideBarOpenClosed = document.getElementById("expandingMainContent")
 
+var popupHasInteraction = false;
+
 if (location.protocol !== 'https:' && !((/localhost|(127|192\.168|10)\.(\d{1,3}\.?){2,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.(\d{1,3}\.?){2}/).test(location.hostname))) {
     location.replace(`https:${location.href.substring(location.protocol.length)}`);
 }
@@ -477,6 +479,57 @@ async function switchNav(pageVal) {
         default:
             break;
     }
+}
+
+function showPopup(message, htmlArea=null, timeout=3000) {
+    const popup = document.getElementById("popup");
+    // popup.textContent = message;
+    popup.classList.add("show");
+    popup.classList.remove("hidden");
+    var ele = `<div>`;
+
+    if (message) {
+        ele+=`<span><p>${message}</p></span>`;
+    }
+
+    if (htmlArea) {
+        ele+=`<span>${htmlArea}</span>`;
+    }
+
+    // popup.innerHTML ÷
+    if (timeout==-1) {
+        popup.innerHTML+=`
+            <span><p><button class="menuButton menuButton-style" onclick="closePopup()">Close</button></p></span>
+        `;
+    }
+
+    ele+=`</div>`;
+    
+    popup.innerHTML = ele;
+
+    popup.addEventListener('mouseenter', () => {
+        popupHasInteraction = true;
+    });
+
+    popup.addEventListener('mouseleave', () => {
+        popupHasInteraction = false;
+    });
+    
+    if(timeout!=-1) timeoutPopup(timeout);
+}
+function timeoutPopup(timeout) {
+    setTimeout(() => {
+        if (popupHasInteraction) return timeoutPopup(timeout);
+        closePopup()
+        // popup.classList.remove("show");
+        // setTimeout(() => popup.classList.add("hidden"), timeout);
+    }, timeout);
+}
+
+function closePopup() {
+    const popup = document.getElementById("popup");
+    popup.classList.remove("show");
+    setTimeout(() => popup.classList.add("hidden"), 20);
 }
 
 function showModal(html, showClose) {

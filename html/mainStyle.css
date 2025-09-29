@@ -526,3 +526,22 @@ hr.rounded_full {
     text-align: right;
     align-items: right;
 }
+.popup {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--hover-border-color);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    opacity: 0;
+    transition: opacity 0.3s ease, bottom 0.3s ease;
+    z-index: 9999;
+}
+
+.popup.show {
+    opacity: 1;
+    bottom: 40px;
+}

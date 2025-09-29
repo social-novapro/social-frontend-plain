@@ -751,10 +751,12 @@ async function saveBookmark(postID, list) {
     }
 
     const res = await sendRequest(`/bookmarks/save/`, { method: 'POST', body });
-
-    // const res = await sendRequest(`/posts/save/`, { method: 'POST', body });
     if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.msg}`;
-    document.getElementById(`saveBookmark_${postID}`).innerText="Saved";
+
+    const moveBookmarkHTML = `<p onclick="moveBookmarkPopup('${res.bookmark._id}', '${res.list.listname}')" class="pointerCursor">Move to another list</p>`;
+
+    showPopup(`Saved to list: ${res.list.listname}`, moveBookmarkHTML, 2000);
+    document.getElementById(`saveBookmark_${postID}`).innerText="Saved to list: " + res.list.listname;
     // parent must be updated to do new function
 
     document.getElementById(`saveBookmark_${postID}`).parentElement.onclick = () => unsaveBookmark(postID);
@@ -763,17 +765,86 @@ async function saveBookmark(postID, list) {
 }
 
 async function unsaveBookmark(postID, list, where) {
+    // cant assume list is 'main' anymore
     const body = {
         UUID: postID,
-        listname: list ? list : "main"
+        listname: list ? list : null
     }
+
     const res = await sendRequest(`/bookmarks/unsave/`, { method: 'DELETE', body });
     if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.msg}`;
     if (!where) document.getElementById(`saveBookmark_${postID}`).innerText="Unsaved"
     if (where == "bookmarks") document.getElementById(`bookmarkView_${postID}`).remove()
-    document.getElementById(`saveBookmark_${postID}`).parentElement.onclick = () => saveBookmark(postID);
 
+    showPopup(`Unsaved bookmark`, null);
+    document.getElementById(`saveBookmark_${postID}`).parentElement.onclick = () => saveBookmark(postID);
     document.getElementById(`popupactions_${postID}`).dataset.saved = false;
+}
+
+async function moveBookmarkPopup(bookmarkID, currentList) {
+    const lists = await sendRequest(`/bookmarks/lists/`, { method: 'GET' });
+    console.log(lists)
+    if (lists.error) return document.getElementById(`saveBookmark_${bookmarkID}`).innerText = `Error: ${lists.msg}`;
+
+    var ele = `
+        <div id="moveBookmarkListPopup_${bookmarkID}" class="popup-move-bookmark">
+        <p><strong>Move Bookmark</strong></p>
+        <hr class="rounded">
+        <p>Current list: <strong>${currentList}</strong></p>
+
+        <label for="moveBookmarkSelect_${bookmarkID}">Select list:</label>
+        <select id="moveBookmarkSelect_${bookmarkID}" style="display:block;">
+            ${lists.map(list =>
+                `<option value="${list.listname}" ${list.listname === currentList ? "selected" : ""}>
+                    ${list.listname}
+                </option>`
+            ).join("")}
+        </select>
+
+        <button type="button" class="toggle-new-list" id="switchModeBookmark_${bookmarkID}" onclick="swapBookmarkMoveMode('${bookmarkID}', 'newList')">+ New List</button>
+        <input type="text" id="moveBookmarkNewList_${bookmarkID}" placeholder="Enter new list name" style="display:none;">
+
+        <button onclick="moveBookmarkList('${bookmarkID}')">Move</button>
+    `;
+
+    showPopup(null,ele);
+
+    popupHasInteraction = true;
+}
+
+function swapBookmarkMoveMode(bookmarkID, switchTo='lists') {
+    const mainButton = document.getElementById(`switchModeBookmark_${bookmarkID}`);
+    if (switchTo == 'lists') {
+        mainButton.innerText = "+ New List";
+        mainButton.onclick = () => swapBookmarkMoveMode(bookmarkID, 'newList');
+        document.getElementById(`moveBookmarkSelect_${bookmarkID}`).style.display = 'block';
+        document.getElementById(`moveBookmarkNewList_${bookmarkID}`).style.display = 'none';
+        document.getElementById(`moveBookmarkSelect_${bookmarkID}`).focus();
+    }
+    else if (switchTo == 'newList') {
+        mainButton.innerText = "Select Existing List";
+        mainButton.onclick = () => swapBookmarkMoveMode(bookmarkID, 'lists');
+        document.getElementById(`moveBookmarkSelect_${bookmarkID}`).style.display = 'none';
+        document.getElementById(`moveBookmarkNewList_${bookmarkID}`).style.display = 'block';
+        document.getElementById(`moveBookmarkNewList_${bookmarkID}`).focus();
+    }
+}
+
+async function moveBookmarkList(bookmarkID) {
+    const currentMode = document.getElementById(`moveBookmarkSelect_${bookmarkID}`).style.display === 'block' ? 'lists' : 'newList';
+    const newListname = currentMode === 'lists' ? document.getElementById(`moveBookmarkSelect_${bookmarkID}`)?.value : document.getElementById(`moveBookmarkNewList_${bookmarkID}`)?.value;
+
+    popupHasInteraction = false;
+    const body = {
+        bookmarkID: bookmarkID,
+        listname: newListname
+    }
+
+    const res = await sendRequest(`/bookmarks/move/`, { method: 'PUT', body });
+    if (res.error) return document.getElementById(`moveBookmark_${bookmarkID}`).innerText = `Error: ${res.msg}`;
+
+    showPopup(`Moved to list: ${res.list.listname}`, null);
+    document.getElementById(`moveBookmark_${bookmarkID}`).innerText="Moved to list: " + res.list.listname;
 }
 
 async function showLikes(postID) {
