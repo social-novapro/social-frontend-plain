@@ -764,11 +764,12 @@ async function saveBookmark(postID, list) {
     document.getElementById(`popupactions_${postID}`).dataset.saved = true;
 }
 
-async function unsaveBookmark(postID, list, where) {
+async function unsaveBookmark(postID, list, where, nameOrID) {
     // cant assume list is 'main' anymore
     const body = {
         UUID: postID,
-        listname: list ? list : null
+        listname: list&&(nameOrID == 'name') ? list : null,
+        listID: list&&(nameOrID == 'id') ? list : null
     }
 
     const res = await sendRequest(`/bookmarks/unsave/`, { method: 'DELETE', body });
@@ -1586,10 +1587,8 @@ function bookmarksPage() {
             <div class="menu menu-style">
                 <h1>Bookmarks</h1>
             </div>
-            <div class="menu menu-style">
-                <button class="menuButton menuButton-style" id="showBookmarksButton" onclick="showBookmarks()">Show Bookmarks</button>
-                <div id="bookmarksdiv"></div>
-            </div>
+
+            <div id="bookmarksdiv"></div>
         </div>
     `;
 
@@ -3311,56 +3310,57 @@ async function unsubAll() {
     else return document.getElementById(`notificationsDiv`).innerHTML=`Unsubscribed from all users.`
 }
 
-function hideBookmarks() {
-    document.getElementById('bookmarksdiv').innerHTML=""
-    document.getElementById('showBookmarksButton').innerHTML="Show Bookmarks"
-}
-
 async function showBookmarks() {
-    if (document.getElementById('bookmarksAreShown')) return hideBookmarks()
-    document.getElementById('showBookmarksButton').innerHTML="Hide Bookmarks"
+    // if (document.getElementById('bookmarksAreShown')) return hideBookmarks()
+    // document.getElementById('showBookmarksButton').innerHTML="Hide Bookmarks"
 
-    const res = await sendRequest(`/posts/bookmarks/`, { method: 'GET', ignoreError: true });
+    const res = await sendRequest(`/bookmarks/`, { method: 'GET', ignoreError: true });
     if (!res || res.error) return document.getElementById("bookmarksdiv").innerHTML=`<div><hr class="rounded">No Bookmarks found.</div>`
 
-    var obj = {} // { list: name, saves: [] }
+    // show possible lists
+    var ele = `
+        <div>
+         <div class="menu menu-style"><p>Found ${res.lists.length} Bookmark Lists</p><hr class="rounded" id="bookmarksAreShown">
+
+    `
     for (const list of res.lists) {
-        obj[list.name] = []
-    }
-
-    for (const save of res.saves.reverse()) {
-        obj[save.bookmarkList].push(save._id)
-    }
-
-    var ele = `<hr class="rounded" id="bookmarksAreShown">`
-
-    for (const listname in obj) {
-        var list = obj[listname]
         ele+=`
             <div>
-                <p>${listname}</p>
-        `
-        for (const save of list) {``
-            if (debug) console.log(save)
-            const newData = await getPostAndProfileData(save)
-            ele+= `
-                <hr class="rounded">
-
-                <div class="" id="bookmarkView_${save}">
-                    ${newData.error ? `
-                        <p>Deleted Post or Otherwise</p>
-                    ` : `
-                        ${postElementCreate(newData)}
-                    `}
-                    <button class="menuButton menuButton-style" onclick="unsaveBookmark('${save}', null, 'bookmarks')">Remove ${newData.error ? `Broken` : ''} Bookmark</button>
+                <p>${list.listname} - ${list.description ? list.description : "No Description"}</p>
+                <div class="menuButtonsFlex">
+                    <button class="menuButton menuButton-style" onclick="openBookmarkList('${list.name}')">Open List</button>
+                    <button class="menuButton menuButton-style" onclick="deleteBookmarkList('${list.name}')">Delete List</button>
                 </div>
-            `;
+            </div>
+            <hr class="rounded">
+        `
+    }
+    ele+=`</div>`
+
+    // show bookmarks in currently opened list
+    // using bookmarksData from res
+    for (let i=0; i<res.bookmarksData.length; i++) {
+        const saveData = res.bookmarks[i];
+        const bookmarkData = res.bookmarksData[i];
+
+        if (saveData.contentType == 0) {
+            console.log(bookmarkData, saveData)
+            ele+= `
+                <div id="bookmarkView_${saveData.contentUUID}">
+                    ${postElementCreateFullEasy(bookmarkData)}
+                    <div class="menu menu-style">
+                    <div class="menuButtonsFlex">
+                        <button class="menuButton menuButton-style" onclick="openMoveBookmarkMenu('${saveData._id}', '${saveData.listname}')">Move to other list</button>
+                        <button class="menuButton menuButton-style" onclick="unsaveBookmark('${saveData.contentUUID}', '${saveData.listID}', 'bookmarks', 'id')">Remove ${bookmarkData.error ? `Broken` : ''} Bookmark</button>
+                    </div>
+                    </div>
+                    <hr class="rounded">
+                </div>
+            `
         }
-        ele+=`</div>`
     }
 
     document.getElementById("bookmarksdiv").innerHTML=ele
-    if (debug) console.log(obj)
 }
 
 function hideSubscriptions() {
