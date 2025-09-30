@@ -3311,7 +3311,8 @@ async function unsubAll() {
 }
 
 async function populateBookmarkList(listID, refetch, listData, editingResults=null) {
-    if (!listID) return false;
+    if (!listID && listData) return false;
+
     if (!listData || refetch) {
         listData = await sendRequest(`/bookmarks/list/`+listID, { method: 'GET', ignoreError: true });
         if (!listData || listData.error) return document.getElementById("list_"+listID).innerHTML=`<div><hr class="rounded">No Bookmark Lists found.</div>`
@@ -3357,6 +3358,7 @@ async function showBookmarks() {
     }
 
     ele+=`
+        <div id="bookmarkCreationEditingDiv"></div>
         <div>
             <button class="menuButton menuButton-style" onclick="openCreateBookmarkListMenu()">Create New List</button>
         </div>
@@ -3374,10 +3376,10 @@ async function showBookmarks() {
                 <div id="bookmarkView_${saveData.contentUUID}">
                     ${postElementCreateFullEasy(bookmarkData)}
                     <div class="menu menu-style">
-                    <div class="menuButtonsFlex">
-                        <button class="menuButton menuButton-style" onclick="openMoveBookmarkMenu('${saveData._id}', '${saveData.listname}')">Move to other list</button>
-                        <button class="menuButton menuButton-style" onclick="unsaveBookmark('${saveData.contentUUID}', '${saveData.listID}', 'bookmarks', 'id')">Remove ${bookmarkData.error ? `Broken` : ''} Bookmark</button>
-                    </div>
+                        <div class="menuButtonsFlex">
+                            <button class="menuButton menuButton-style" onclick="openMoveBookmarkMenu('${saveData._id}', '${saveData.listname}')">Move to other list</button>
+                            <button class="menuButton menuButton-style" onclick="unsaveBookmark('${saveData.contentUUID}', '${saveData.listID}', 'bookmarks', 'id')">Remove ${bookmarkData.error ? `Broken` : ''} Bookmark</button>
+                        </div>
                     </div>
                     <hr class="rounded">
                 </div>
@@ -3392,27 +3394,71 @@ async function openCreateBookmarkListMenu() {
     const possibleChanges = await sendRequest(`/bookmarks/list/changes`, { method: 'GET', ignoreError: true });
     if (!possibleChanges || possibleChanges.error) return document.getElementById("bookmarksdiv").innerHTML=`<div><hr class="rounded">No Bookmarks found.</div>`
 
+    var ele = `
+        <div class="menu menu-style">
+        <p><b>Creating New List</b></p>
+        <hr class="rounded">
+    `
+
+    const editForm = await generateHtmlEditCreateBookmarkList("new")
+    ele+=editForm;
+    
+    ele+=`
+        <hr class="rounded">
+        <button class="menuButton menuButton-style" onclick="showBookmarks()">Cancel</button>
+        <button class="menuButton menuButton-style" onclick="createBookmarkList()">Create List</button>
+        </div>
+    `
+    document.getElementById("bookmarkCreationEditingDiv").innerHTML=ele
+}
+
+async function createBookmarkList() {
+    const formData = getBookmarkFormDataBody("new")
+
+    const res = await sendRequest(`/bookmarks/list/create`, {
+        method: 'POST',
+        body: formData
+    });
+    
+    showBookmarks();
+    if (!res || res.error) return showPopup("Failed to Create Bookmark List");
+    showPopup("Created New Bookmark List")
+
+    populateBookmarkList(`${res.list._id}`, false, res.list, "Created New Bookmark List")
 }
 
 async function editBookmarkList(listID) {
     const listData = await sendRequest(`/bookmarks/list/${listID}`, { method: 'GET', ignoreError: true });
-
-    const possibleChanges = await sendRequest(`/bookmarks/list/changes`, { method: 'GET', ignoreError: true });
-    if (!possibleChanges || possibleChanges.error) return document.getElementById("bookmarksdiv").innerHTML=`<div><hr class="rounded">No Bookmarks found.</div>`
-    console.log(possibleChanges)
 
     var ele = `
         <div class="menu menu-style">
         <p><b>Editing List: ${listData.listname}</b></p>
         <hr class="rounded">
     `
+    const editForm = await generateHtmlEditCreateBookmarkList(listID, listData)
+    ele+=editForm;
+    
+    ele+=`
+        <hr class="rounded">
+        <button class="menuButton menuButton-style" onclick="populateBookmarkList('${listID}', true, null)">Cancel Changes</button>
+        <button class="menuButton menuButton-style" onclick="saveBookmarkListChanges('${listID}')">Save Changes</button>
+        <div id="saveListChangesResult_${listID}"></div>
+        </div>
+    `
 
+    document.getElementById("list_"+listID).innerHTML=ele
+}
+async function generateHtmlEditCreateBookmarkList(listID, listData={}) {
+    const possibleChanges = await sendRequest(`/bookmarks/list/changes`, { method: 'GET', ignoreError: true });
+    if (!possibleChanges || possibleChanges.error) return document.getElementById("bookmarksdiv").innerHTML=`<div><hr class="rounded">No Bookmarks found.</div>`
+
+    var ele = "<div>";
     for (const change of possibleChanges.simple) {
         if (change == "listname") {
             ele += `
                 <div>
                     <label for="editList_listname_${listID}">List Name:</label>
-                    <input type="text" id="editList_listname_${listID}" name="editList_listname_${listID}" value="${listData.listname}" minlength="${possibleChanges.detailed.listname.min}" maxlength="${possibleChanges.detailed.listname.max}" class="userEditForm menu-style" placeholder="List Name">
+                    <input type="text" id="editList_listname_${listID}" name="editList_listname_${listID}" value="${listData.listname ? listData.listname : ""}" minlength="${possibleChanges.detailed.listname.min}" maxlength="${possibleChanges.detailed.listname.max}" class="userEditForm menu-style" placeholder="List Name">
                 </div>
             `;
         } else if (change == "default") {
@@ -3434,8 +3480,8 @@ async function editBookmarkList(listID) {
                 <label for="editList_privacy_${listID}">Select an option:</label>
                 <select id="editList_privacy_${listID}">
             `;
+
             const currentSetting = listData.privacy ?? possibleChanges.detailed.privacy.details.defaultValue
-            console.log(possibleChanges.detailed.privacy.details.default)
             for (const option of possibleChanges.detailed.privacy.details.options) {
                 console.log(currentSetting, option, listData)
                 ele+=`
@@ -3446,45 +3492,37 @@ async function editBookmarkList(listID) {
         }
     }
 
-    ele+=`
-        <hr class="rounded">
-        <button class="menuButton menuButton-style" onclick="populateBookmarkList('${listID}', true, null)">Cancel Changes</button>
-        <button class="menuButton menuButton-style" onclick="saveBookmarkListChanges('${listID}')">Save Changes</button>
-        <div id="saveListChangesResult_${listID}"></div>
-        </div>
-    `
-
-    document.getElementById("list_"+listID).innerHTML=ele
-}
-async function generateHtmlEditCreateBookmarkList() {
-    var ele = "";
-
+    ele+="</div>";
     return ele;
 }
 
-async function saveBookmarkListChanges(listID) {
+function getBookmarkFormDataBody(listID) {
     const listname = document.getElementById(`editList_listname_${listID}`)?.value
     const description = document.getElementById(`editList_description_${listID}`)?.value
     const privacy = document.getElementById(`editList_privacy_${listID}`)?.value
     const def = document.getElementById(`editList_default_${listID}`)?.checked
 
-    // if (!listname || !privacy) return 
-
     const body = { };
-
     if (listname) body["listname"] = listname;
     if (description) body["description"] = description;
     if (privacy) body["privacy"] = Number(privacy);
     if (def!=null || def!=undefined) body["default"] = def;
+    return body;
+}
 
+async function saveBookmarkListChanges(listID) {
     const res = await sendRequest(`/bookmarks/list/${listID}`, {
         method: 'PUT',
-        body
+        body: getBookmarkFormDataBody(listID)
     });
     
-    if (!res || res.error) return populateBookmarkList(listID, true, null, "Changes Failed to Save");
+    if (!res || res.error) {
+        popup("Changes Failed to Save")
+        return populateBookmarkList(listID, true, null, "Changes Failed to Save");
+    }
     document.getElementById(`saveListChangesResult_${listID}`).innerHTML=`<p>Saved Changes</p>`
     populateBookmarkList(listID, false, res, "Saved Changes")
+    showPopup(`Saved Changes to ${res.listname}`)
 }
 
 function hideSubscriptions() {
