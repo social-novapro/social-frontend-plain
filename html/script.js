@@ -747,7 +747,7 @@ async function viewReplies(postID) {
 async function saveBookmark(postID, list) {
     const body = {
         UUID: postID,
-        listname: list ? list : "main"
+        listname: list ? list : null
     }
 
     const res = await sendRequest(`/bookmarks/save/`, { method: 'POST', body });
@@ -3310,6 +3310,32 @@ async function unsubAll() {
     else return document.getElementById(`notificationsDiv`).innerHTML=`Unsubscribed from all users.`
 }
 
+async function populateBookmarkList(listID, refetch, listData, editingResults=null) {
+    if (!listID) return false;
+    if (!listData || refetch) {
+        listData = await sendRequest(`/bookmarks/list/`+listID, { method: 'GET', ignoreError: true });
+        if (!listData || listData.error) return document.getElementById("list_"+listID).innerHTML=`<div><hr class="rounded">No Bookmark Lists found.</div>`
+    }
+
+    document.getElementById("list_"+listID).innerHTML=generateListDataHTML(listData)
+    document.getElementById("editing_results_"+listID).innerHTML=editingResults? editingResults : ""
+}
+
+function generateListDataHTML(list) {
+    return `
+        <div id="list_${list._id}">
+            <p>${list.listname} - ${list.description ? list.description : "No Description"}</p>
+            <p>${list.default ? "Default List" : "non default list"}</p>
+            <div class="menuButtonsFlex">
+                <button class="menuButton menuButton-style" onclick="openBookmarkList('${list.listname}')">Open List</button>
+                <button class="menuButton menuButton-style" onclick="editBookmarkList('${list._id}','${list.listname}')">Edit List</button>
+                <button class="menuButton menuButton-style" onclick="deleteBookmarkList('${list.listname}')">Delete List</button>
+            </div>
+            <div id="editing_results_${list._id}"></div>
+        </div>
+    `;
+}
+
 async function showBookmarks() {
     // if (document.getElementById('bookmarksAreShown')) return hideBookmarks()
     // document.getElementById('showBookmarksButton').innerHTML="Hide Bookmarks"
@@ -3325,17 +3351,16 @@ async function showBookmarks() {
     `
     for (const list of res.lists) {
         ele+=`
-            <div>
-                <p>${list.listname} - ${list.description ? list.description : "No Description"}</p>
-                <div class="menuButtonsFlex">
-                    <button class="menuButton menuButton-style" onclick="openBookmarkList('${list.name}')">Open List</button>
-                    <button class="menuButton menuButton-style" onclick="deleteBookmarkList('${list.name}')">Delete List</button>
-                </div>
-            </div>
+            ${generateListDataHTML(list)}
             <hr class="rounded">
         `
     }
-    ele+=`</div>`
+
+    ele+=`
+        <div>
+            <button class="menuButton menuButton-style" onclick="openCreateBookmarkListMenu()">Create New List</button>
+        </div>
+    `
 
     // show bookmarks in currently opened list
     // using bookmarksData from res
@@ -3361,6 +3386,105 @@ async function showBookmarks() {
     }
 
     document.getElementById("bookmarksdiv").innerHTML=ele
+}
+
+async function openCreateBookmarkListMenu() {
+    const possibleChanges = await sendRequest(`/bookmarks/list/changes`, { method: 'GET', ignoreError: true });
+    if (!possibleChanges || possibleChanges.error) return document.getElementById("bookmarksdiv").innerHTML=`<div><hr class="rounded">No Bookmarks found.</div>`
+
+}
+
+async function editBookmarkList(listID) {
+    const listData = await sendRequest(`/bookmarks/list/${listID}`, { method: 'GET', ignoreError: true });
+
+    const possibleChanges = await sendRequest(`/bookmarks/list/changes`, { method: 'GET', ignoreError: true });
+    if (!possibleChanges || possibleChanges.error) return document.getElementById("bookmarksdiv").innerHTML=`<div><hr class="rounded">No Bookmarks found.</div>`
+    console.log(possibleChanges)
+
+    var ele = `
+        <div class="menu menu-style">
+        <p><b>Editing List: ${listData.listname}</b></p>
+        <hr class="rounded">
+    `
+
+    for (const change of possibleChanges.simple) {
+        if (change == "listname") {
+            ele += `
+                <div>
+                    <label for="editList_listname_${listID}">List Name:</label>
+                    <input type="text" id="editList_listname_${listID}" name="editList_listname_${listID}" value="${listData.listname}" minlength="${possibleChanges.detailed.listname.min}" maxlength="${possibleChanges.detailed.listname.max}" class="userEditForm menu-style" placeholder="List Name">
+                </div>
+            `;
+        } else if (change == "default") {
+            ele += `
+                <div>
+                    <label for="editList_default_${listID}">Default List:</label>
+                    <input type="checkbox" id="editList_default_${listID}" name="editList_default_${listID}" ${listData.default ? ` checked ` : ""} class="menu-style"/>
+                </div>
+            `;
+        } else if (change == "description") {
+            ele += `
+            <div>
+                <label for="editList_description_${listID}">Description:</label>
+                <input type="text" id="editList_description_${listID}" name="editList_description_${listID}" value="${listData.description ? listData.description : ""}" maxlength="${possibleChanges.detailed.description.max}" class="userEditForm menu-style" placeholder="Description">
+            </div>`;
+        } else if (change == "privacy") {
+            ele += `
+                <p>${possibleChanges.detailed.privacy.details.description}</p>
+                <label for="editList_privacy_${listID}">Select an option:</label>
+                <select id="editList_privacy_${listID}">
+            `;
+            const currentSetting = listData.privacy ?? possibleChanges.detailed.privacy.details.defaultValue
+            console.log(possibleChanges.detailed.privacy.details.default)
+            for (const option of possibleChanges.detailed.privacy.details.options) {
+                console.log(currentSetting, option, listData)
+                ele+=`
+                    <option value="${option.value}"${currentSetting==option.value ? ` selected ` : ""}>${option.title} - ${option.description}</option>
+                `
+            }
+            ele+=`</select>`;
+        }
+    }
+
+    ele+=`
+        <hr class="rounded">
+        <button class="menuButton menuButton-style" onclick="populateBookmarkList('${listID}', true, null)">Cancel Changes</button>
+        <button class="menuButton menuButton-style" onclick="saveBookmarkListChanges('${listID}')">Save Changes</button>
+        <div id="saveListChangesResult_${listID}"></div>
+        </div>
+    `
+
+    document.getElementById("list_"+listID).innerHTML=ele
+}
+async function generateHtmlEditCreateBookmarkList() {
+    var ele = "";
+
+    return ele;
+}
+
+async function saveBookmarkListChanges(listID) {
+    const listname = document.getElementById(`editList_listname_${listID}`)?.value
+    const description = document.getElementById(`editList_description_${listID}`)?.value
+    const privacy = document.getElementById(`editList_privacy_${listID}`)?.value
+    const def = document.getElementById(`editList_default_${listID}`)?.checked
+
+    // if (!listname || !privacy) return 
+
+    const body = { };
+
+    if (listname) body["listname"] = listname;
+    if (description) body["description"] = description;
+    if (privacy) body["privacy"] = Number(privacy);
+    if (def!=null || def!=undefined) body["default"] = def;
+
+    const res = await sendRequest(`/bookmarks/list/${listID}`, {
+        method: 'PUT',
+        body
+    });
+    
+    if (!res || res.error) return populateBookmarkList(listID, true, null, "Changes Failed to Save");
+    document.getElementById(`saveListChangesResult_${listID}`).innerHTML=`<p>Saved Changes</p>`
+    populateBookmarkList(listID, false, res, "Saved Changes")
 }
 
 function hideSubscriptions() {
