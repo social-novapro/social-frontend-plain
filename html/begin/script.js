@@ -4,14 +4,14 @@ var LOCAL_STORAGE_LOGINS='social.loginAccounts'
 var params = new URLSearchParams(window.location.search);
 var foundparams = false;
 
-var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
+// var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
 var redirectURL = `/`;
 
-var headers = {
-    'Content-Type': 'application/json',
-    "devtoken" : "6292d8ae-8c33-4d46-a617-4ac048bd6f11",
-    "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421"
-}
+// var headers = {
+//     'Content-Type': 'application/json',
+//     "devtoken" : "6292d8ae-8c33-4d46-a617-4ac048bd6f11",
+//     "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421"
+// }
 
 /* loginACcounts info
     will be an array, with the usertoken, and userID, and access token, nothing else
@@ -225,15 +225,15 @@ function createUserPage() {
                     <input type="text" class="contentMessage userEditForm menu-style" id="emailCreate" placeholder="Email" type="text" name="email">
                 </div>
                 <div class="menu menu-style">
-                    <p>Enter Your New Username:</p>
+                    <p>Enter Your New Username: (required)</p>
                     <input type="text" class="contentMessage userEditForm menu-style" id="usernameCreate" placeholder="Username" type="text" name="username">
                 </div>
                 <div class="menu menu-style">
-                    <p>Enter Your New Displayname:</p>
+                    <p>Enter Your New Displayname: (required)</p>
                     <input type="text" class="contentMessage userEditForm menu-style" id="displaynameCreate" placeholder="Displayname">
                 </div>
                 <div class="menu menu-style">
-                    <p>Enter Your New Password:</p>
+                    <p>Enter Your New Password: (required)</p>
                     <input type="password" class="contentMessage userEditForm menu-style" id="passwordCreate" placeholder="Password" name="password">
                 </div>
                 <div class="menu menu-style">
@@ -245,6 +245,10 @@ function createUserPage() {
                     <input type="text" class="contentMessage userEditForm menu-style" id="pronounsCreate" placeholder="Pronouns">
                 </div>
                 <div class="menu menu-style">
+                    <p>Enter Your Birthdate: (required)</p>
+                    <input type="date" class="contentMessage userEditForm menu-style" id="birthDateCreate" placeholder="01/01/04">
+                </div>
+                <div class="menu menu-style">
                     <button class="buttonStyled" type="submit">Create Account</div>
                 </div>
             </form>
@@ -252,7 +256,12 @@ function createUserPage() {
     `
     document.getElementById("createUserForm").addEventListener("submit", function (e) { e.preventDefault()})
 }
-
+function convertDateToEpoch(date) {
+    const newDate = new Date(date);
+    const timezoneOffset = newDate.getTimezoneOffset() * 60000;
+    const adjustedDate = newDate.getTime() + timezoneOffset;
+    return adjustedDate;
+}
 async function createNewUserRequest() {
     var emailCreate = document.getElementById('emailCreate').value;
     var usernameCreate = document.getElementById('usernameCreate').value;
@@ -260,6 +269,7 @@ async function createNewUserRequest() {
     var passwordCreate = document.getElementById('passwordCreate').value;
     var descriptionCreate = document.getElementById('descriptionCreate').value;
     var pronounsCreate = document.getElementById('pronounsCreate').value;
+    var birthDateCreate = document.getElementById('birthDateCreate').value;
 
     var data = {}
     if (emailCreate) data.email = emailCreate;
@@ -268,6 +278,7 @@ async function createNewUserRequest() {
     if (passwordCreate) data.password = passwordCreate
     if (descriptionCreate) data.description = descriptionCreate
     if (pronounsCreate) data.pronouns = pronounsCreate
+    if (birthDateCreate) data.userAge = convertDateToEpoch(birthDateCreate)
 
     const response = await fetch(`${apiURL}Priv/post/newUser`, {
         method: 'POST',
