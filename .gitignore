@@ -1,2 +1,6 @@
 .DS_Store
 config.js
+
+/.svelte-kit
+/node_modules
+.env
