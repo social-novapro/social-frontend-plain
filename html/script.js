@@ -178,7 +178,7 @@ function postElementCreate({
     if (!extraData) extraData = { }
     var timesince
     if (post.timePosted) timesince = checkDate(post.timePosted)
-    const imageContent = checkForImage(post.content, tagData)
+    const imageContent = checkForImage(escapeHtml(post.content), tagData)
     const owner = post.userID == currentUserLogin.userID ? true : false;
 
     const options = {
@@ -1297,10 +1297,6 @@ async function userEditHtml(userID) {
         document.getElementById("userEdit_profileImage").addEventListener("submit", function (e) { e.preventDefault()})
     }
     return true; 
-}
-
-function escapeHtml(text) {
-    return text.replace(/"/g, '&quot;');
 }
 
 function unescapeHtml(text) {
@@ -2734,7 +2730,7 @@ async function getPostAndProfileData(postID) {
 }
 
 async function requestVerification() {
-    var input = document.getElementById('content_request_verification').value
+    var input = escapeHtml(document.getElementById('content_request_verification').value)
     if (debug) console.log(input)
 
     const data = { 
@@ -3161,7 +3157,7 @@ function editPost(postID, edited) {
     if (debug) console.log(oldMessage)
     document.getElementById(`postContentArea_${postID}`).innerHTML = `
         <form id="editPostForm" class="contentMessage"onsubmit="submitEdit('${postID}')">
-            <input type="text" id="editPostInput" class="contentMessage contentMessageFormEdit menu-style" value="${oldMessage}">
+            <input type="text" id="editPostInput" class="contentMessage contentMessageFormEdit menu-style" value="${escapeHtml(oldMessage)}">
         </form>
     `
     document.getElementById(`editButton_${postID}`).innerHTML=`<span onclick='cancelEdit("${postID}", "${oldMessage}", "${edited}")'>${styleEditButton(true)}</span>`
@@ -3177,7 +3173,7 @@ async function cancelEdit(postID, content, edited) {
 
     document.getElementById(`postContentArea_${postID}`).innerHTML = `
         <div class="textAreaPost posts_content-style">
-            <p id="postContent_${post._id}">${post.content}</p>
+            <p id="postContent_${post._id}">${escapeHtml(post.content)}</p>
             ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
         </div>
     `
@@ -3198,7 +3194,7 @@ async function submitEdit(postID) {
     
     if (!editData || editData.error) return false;
 
-    const imageContent = checkForImage(editData.new.content)
+    const imageContent = checkForImage(escapeHtml(editData.new.content))
 
     document.getElementById(`editButton_${postID}`).innerHTML=`<span onclick='editPost("${postID}")' class="posts_action-style">${styleEditButton()}</span>`
 
@@ -3229,7 +3225,7 @@ async function quotePost(postID) {
             <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'}</p>
             <div class="postContent" id="postContentArea_${post._id}">
                 <div class="textAreaPost">
-                    <p id="postContent_${post._id}">${post.content}</p>
+                    <p id="postContent_${post._id}">${escapeHtml(post.content)}</p>
                     ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
                 </div>
             </div>
@@ -3257,7 +3253,7 @@ async function replyPost(postID) {
             <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'}</p>
             <div class="postContent" id="postContentArea_${post._id}">
                 <div class="textAreaPost">
-                    <p id="postContent_${post._id}">${post.content}</p>
+                    <p id="postContent_${post._id}">${escapeHtml(post.content)}</p>
                     ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
                 </div>
             </div>
