@@ -238,7 +238,7 @@ function postElementCreate({
     if (!extraData) extraData = { }
     var timesince
     if (post.timePosted) timesince = checkDate(post.timePosted)
-    const imageContent = checkForImage(post.content, tagData)
+    const imageContent = checkForImage(escapeHtml(post.content), tagData)
     const owner = post.userID == currentUserLogin.userID ? true : false;
 
     const options = {
@@ -1961,10 +1961,6 @@ async function userEditHtml(userID) {
     return true; 
 }
 
-function escapeHtml(text) {
-    return text.replace(/"/g, '&quot;');
-}
-
 function unescapeHtml(text) {
     return text.replace(/&quot;/g, '"');
 }
@@ -3657,13 +3653,23 @@ async function showDevOptions() {
         for (const appToken of res.AppTokens.reverse()) {
             amount++;
             appTokensEle+=`
-                <div class="menu menu-style">
+                <div class="menu menu-style" id="appTokenCard_${appToken._id}">
                     <p>appToken #${amount} of ${res.AppTokens.length}</p>
-                    <p>app name: ${appToken.appName ? appToken.appName : `Unknown`}
+                    <p id="appNameLabel_${appToken._id}">app name: ${appToken.appName ? appToken.appName : `Unknown`}
                     ${appToken._id ? `<p>appToken: <p onclick="revealDevOptions('appTokens', ${amount})" id="appToken_${amount}" class="blur">${appToken._id}</p>`:``}
                     ${appToken._id ? `<p onclick="copyToClipboard('${appToken._id}')">Copy Token</p>` : ""}
                     <p>API Uses: ${appToken.APIUses? appToken.APIUses : `0`}
                     ${appToken.creationTimestamp ? `<p>Application created: ${checkDate(appToken.creationTimestamp)}</p>`:`<p>Unknown creation date</p>`}
+                    <hr class="rounded">
+                    <p><b>Edit App</b></p>
+                    <div class="searchSelect search menu-style">
+                        <input class="menu-style" id="editAppName_${appToken._id}" placeholder="New App Name" value="${appToken.appName ? appToken.appName.replace(/\"/g, '&quot;') : ``}">
+                    </div>
+                    <div class="searchSelect search menu-style">
+                        <input class="menu-style" id="editAppOrigin_${appToken._id}" placeholder="Allowed Origin (https://example.com)" value="${appToken.origin ? appToken.origin.replace(/\"/g, '&quot;') : ``}">
+                    </div>
+                    <button class="menuButton menuButton-style" onclick="editAppToken('${appToken._id}')">Save Changes</button>
+                    <p id="editAppTokenStatus_${appToken._id}"></p>
                 </div>
             `;
         };
@@ -3677,6 +3683,9 @@ async function showDevOptions() {
                 <p>Please input an application name</p>
                 <div class="searchSelect search menu-style">
                     <input class="menu-style" id="appName_AppTokenRequest" placeholder="Application Name:">
+                </div>
+                <div class="searchSelect search menu-style">
+                    <input class="menu-style" id="appOrigin_AppTokenRequest" placeholder="Allowed Origin (optional, https://example.com)">
                 </div>
                 <button class="menuButton menuButton-style" onclick="requestAppToken(${amount})">Generate Token</button>
             </div>
@@ -3706,6 +3715,7 @@ async function showDevOptions() {
 async function requestAppToken(amount) {
     const newAmount = amount+1;
     const appName = document.getElementById('appName_AppTokenRequest').value;
+    const appOrigin = document.getElementById('appOrigin_AppTokenRequest')?.value;
     if (debug) console.log(appName);
     const userDevToken = document.getElementById('devToken').innerText;
     if (debug) console.log(userDevToken);
@@ -3720,7 +3730,8 @@ async function requestAppToken(amount) {
     };
     const data = {
         appname: appName,
-        userdevtoken: userDevToken
+        userdevtoken: userDevToken,
+        apporigin: appOrigin ? appOrigin.trim() : undefined
     }
     const appTokenData = await sendRequest(`Priv/post/newAppToken`, {
         method: 'POST',
@@ -3746,6 +3757,9 @@ async function requestAppToken(amount) {
         <div class="searchSelect search menu-style">
             <input id="appName_AppTokenRequest" class="menu-style" placeholder="Application Name:">
         </div>
+        <div class="searchSelect search menu-style">
+            <input id="appOrigin_AppTokenRequest" class="menu-style" placeholder="Allowed Origin (optional, https://example.com)">
+        </div>
         <button class="menuButton menuButton-style" onclick="requestAppToken(${newAmount})">Generate Token</button>
     `
     document.getElementById('newAppToken').innerHTML=newRequestEle
@@ -3767,6 +3781,48 @@ async function requestDevToken() {
     document.getElementById('devAcc').innerHTML=newEle;
 };
 
+async function editAppToken(appToken) {
+    const appNameEle = document.getElementById(`editAppName_${appToken}`);
+    const appOriginEle = document.getElementById(`editAppOrigin_${appToken}`);
+    const statusEle = document.getElementById(`editAppTokenStatus_${appToken}`);
+
+    if (!appNameEle || !appOriginEle || !statusEle) return;
+
+    const newAppName = appNameEle.value ? appNameEle.value.trim() : "";
+    const newAppOrigin = appOriginEle.value ? appOriginEle.value.trim() : "";
+
+    if (!newAppName && !newAppOrigin) {
+        statusEle.innerText = "Please provide a new name or origin.";
+        return;
+    }
+
+    statusEle.innerText = "Saving...";
+
+    const res = await sendRequest(`/Priv/post/newAppToken`, {
+        method: 'PUT',
+        body: {
+            appToken,
+            newAppName: newAppName || undefined,
+            newAppOrigin: newAppOrigin || undefined,
+        }
+    });
+
+    if (!res || res.error) {
+        statusEle.innerText = `Failed${res && res.msg ? `: ${res.msg}` : ""}`;
+        return;
+    }
+
+    statusEle.innerText = "Saved";
+
+    const card = document.getElementById(`appTokenCard_${appToken}`);
+    if (card) {
+        const appNameLabel = document.getElementById(`appNameLabel_${appToken}`);
+        if (appNameLabel) appNameLabel.innerText = `app name: ${res.appName ? res.appName : 'Unknown'}`;
+        appNameEle.value = res.appName || "";
+        appOriginEle.value = res.origin || "";
+    }
+}
+
 async function getPostAndProfileData(postID) {
     const postData = await sendRequest(`/posts/get/full/${postID}`, { method: 'GET', ignoreError: true});
 
@@ -3777,7 +3833,7 @@ async function getPostAndProfileData(postID) {
 }
 
 async function requestVerification() {
-    var input = document.getElementById('content_request_verification').value
+    var input = escapeHtml(document.getElementById('content_request_verification').value)
     if (debug) console.log(input)
 
     const data = { 
@@ -4269,7 +4325,7 @@ function editPost(postID, edited) {
     if (debug) console.log(oldMessage)
     document.getElementById(`postContentArea_${postID}`).innerHTML = `
         <form id="editPostForm" class="contentMessage"onsubmit="submitEdit('${postID}')">
-            <input type="text" id="editPostInput" class="contentMessage contentMessageFormEdit menu-style" value="${oldMessage}">
+            <input type="text" id="editPostInput" class="contentMessage contentMessageFormEdit menu-style" value="${escapeHtml(oldMessage)}">
         </form>
     `
     document.getElementById(`editButton_${postID}`).innerHTML=`<span onclick='cancelEdit("${postID}", "${oldMessage}", "${edited}")'>${styleEditButton(true)}</span>`
@@ -4285,7 +4341,7 @@ async function cancelEdit(postID, content, edited) {
 
     document.getElementById(`postContentArea_${postID}`).innerHTML = `
         <div class="textAreaPost posts_content-style">
-            <p id="postContent_${post._id}">${post.content}</p>
+            <p id="postContent_${post._id}">${escapeHtml(post.content)}</p>
             ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
         </div>
     `
@@ -4306,7 +4362,7 @@ async function submitEdit(postID) {
     
     if (!editData || editData.error) return false;
 
-    const imageContent = checkForImage(editData.new.content)
+    const imageContent = checkForImage(escapeHtml(editData.new.content))
 
     document.getElementById(`editButton_${postID}`).innerHTML=`<span onclick='editPost("${postID}")' class="posts_action-style">${styleEditButton()}</span>`
 

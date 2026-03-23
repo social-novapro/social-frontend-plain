@@ -10,6 +10,12 @@ node_modules
 
 # OS
 .DS_Store
+<<<<<<< HEAD
+config.js
+
+/.svelte-kit
+/node_modules
+.env
 Thumbs.db
 
 # Env
@@ -21,3 +27,8 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+>>>>>>> 45274f8e2b9272beb334717a98a83cca879d473d
+
+/.svelte-kit
+/node_modules
+.env

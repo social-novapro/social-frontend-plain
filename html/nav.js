@@ -24,6 +24,17 @@ else {
    startup()
 }
 
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#x27;'
+    };
+    return text.replace(/[&<>"']/g, char => map[char]);
+}
+
 async function startup(){
     devMode();
     addNavigation()

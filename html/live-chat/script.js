@@ -222,7 +222,7 @@ function userTyping(data) {
 function addToList(data, content, user, timeStamp, message) {
     var timesince
     if (timeStamp) timesince = checkDate(timeStamp)
-    const imageContent = checkForImage(content)
+    const imageContent = checkForImage(escapeHtml(post.content), tagData)
 
     document.getElementById("messages").innerHTML+=`
         <div class="message posts-style" id="${data._id}">
