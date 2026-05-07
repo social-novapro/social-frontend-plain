@@ -12,15 +12,6 @@ var baseURL
 var verifiedConnection = false
 var loadingMessages = [];
 
-// HEADERS
-var headers = {
-    "devtoken" : "6292d8ae-8c33-4d46-a617-4ac048bd6f11",
-    "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421"
-}
-
-// API URLS
-var wsURL = `${config ? `${config.current == "prod" ? config.prod.websocket_url : config.dev.websocket_url}` : 'https://interact-api.novapro.net/v1' }`
-
 if (location.protocol !== 'https:' && !((/localhost|(127|192\.168|10)\.(\d{1,3}\.?){2,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.(\d{1,3}\.?){2}/).test(location.hostname))) {
     location.replace(`https:${location.href.substring(location.protocol.length)}`);
 }
@@ -231,7 +222,7 @@ function userTyping(data) {
 function addToList(data, content, user, timeStamp, message) {
     var timesince
     if (timeStamp) timesince = checkDate(timeStamp)
-    const imageContent = checkForImage(content)
+    const imageContent = checkForImage(escapeHtml(post.content), tagData)
 
     document.getElementById("messages").innerHTML+=`
         <div class="message posts-style" id="${data._id}">

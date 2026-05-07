@@ -10,15 +10,6 @@ var LOCAL_STORAGE_LOGINS='social.loginAccounts'
 var LOCAL_STORAGE_THEME_SETTINGS = 'social.themeSettings'
 var LOCAL_STORAGE_THEME_POSSIBLE = 'social.themePossible'
 
-// console.log(config)
-var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
-var hostedURL = `${config ? `${config.current == "prod" ? config.prod.hosted_url : config.dev.hosted_url}` : 'https://interact-api.novapro.net/v1' }`
-var wsURL = `${config ? `${config.current == "prod" ? config.prod.websocket_url : config.dev.websocket_url}` : 'wss://interact-api.novapro.net/' }`
-
-var headers = {
-    "devtoken" : "6292d8ae-8c33-4d46-a617-4ac048bd6f11",
-    "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421"
-}
 var openedSidebar = false
 var mainContentSideBarOpenClosed = false
 var debug = false;
@@ -31,6 +22,17 @@ if (location.protocol !== 'https:' && !((/localhost|(127|192\.168|10)\.(\d{1,3}\
 }
 else {
    startup()
+}
+
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#x27;'
+    };
+    return text.replace(/[&<>"']/g, char => map[char]);
 }
 
 async function startup(){
@@ -261,22 +263,31 @@ function newNavigation() {
                     <span class="link-text pointerCursor" id="page4">Create Post</span>
                 </div>
             </li> 
-            <li class="nav-item pointerCursor" id="navSection3">
-                <div id="page3Nav" class="nav-link" onclick="switchNav(7)">
-                    <span class="material-symbols-outlined nav-button";>Settings</span>
-                    <span class="link-text pointerCursor" id="page7">Settings</span>
+            <li class="nav-item pointerCursor" id="navSection6">
+                <div id="page6Nav" class="nav-link" onclick="switchNav(6)">
+                    <span class="material-symbols-outlined nav-button";>notifications</span>
+                    <span class="link-text pointerCursor" id="page6">Notifications</span>
                 </div>
-            </li>`}
+            </li>
+           `}
             ${pathArray[1] != "" ? `` : `
             <li class="nav-item pointerCursor" id="navSection5">
                 <div id="searchBar" class="nav-link" onclick="activeSearchBar()">
                     <span class="material-symbols-outlined nav-button";>search</span>
                     <span class="link-text pointerCursor" id="page6">Search</span>
                 </div>
-            </li>`}
+            </li> 
+            <li class="nav-item pointerCursor" id="navSection8">
+                <div id="page6Nav" class="nav-link" onclick="switchNav(8)">
+                    <span class="material-symbols-outlined nav-button" id="arrow_updown_sub_nav";>arrow_drop_down</span>
+                    <span class="link-text pointerCursor" id="page8">More</span>
+                </div>
+            </li>
+            <section id="subnavarea"></section>
+        `}
             <li class="nav-item pointerCursor expanding-button">
                 <div id="expand" class="nav-link" onclick="sidebarOpen()">
-                    <span class="material-symbols-outlined nav-button";>arrow_forward_ios</span>
+                    <span class="material-symbols-outlined nav-button nav-button-final";>arrow_forward_ios</span>
                     <span class="link-text pointerCursor" id="page1">Expand</span>
                 </div>
             </li>
@@ -287,6 +298,56 @@ function newNavigation() {
 
 function addTitle() {
     document.title = 'Interact'
+}
+
+function subnavBarAction() {
+    const subNavImage = document.getElementById('arrow_updown_sub_nav')
+    const subNavText = document.getElementById('page8')
+    if (subNavImage.innerHTML == "arrow_drop_up") {
+        subNavImage.innerHTML = "arrow_drop_down";
+        subNavText.innerHTML = "More";
+        closeSubnav()
+        return true;
+    }
+    
+    subNavImage.innerHTML = "arrow_drop_up";
+    subNavText.innerHTML = "Close";
+    showSubnav()
+    return true;
+}
+
+function closeSubnav() {
+    const foundSubnavs = Array.from(document.getElementsByClassName('subnav-item'));
+    foundSubnavs.forEach(subnav => {
+        if (subnav == foundSubnavs[0]) subnav.outerHTML = ` <section id="subnavarea"></section>`;
+        else subnav.remove()
+    });
+}
+
+function showSubnav() {
+    const ele = `
+        <li class="subnav-item nav-item pointerCursor" id="navSection10">
+            <div id="page7Nav" class="nav-link" onclick="switchNav(2)">
+                <span class="material-symbols-outlined nav-button";>person</span>
+                <span class="link-text pointerCursor" id="page7">Profile</span>
+            </div>
+        </li>
+        <li class="subnav-item nav-item pointerCursor" id="navSection9">
+            <div id="page9Nav" class="nav-link" onclick="switchNav(9)">
+                <span class="material-symbols-outlined nav-button";>bookmarks</span>
+                <span class="link-text pointerCursor" id="page9">Bookmarks</span>
+            </div>
+        </li>
+        <li class="subnav-item nav-item pointerCursor" id="navSection7">
+            <div id="page7Nav" class="nav-link" onclick="switchNav(7)">
+                <span class="material-symbols-outlined nav-button";>Settings</span>
+                <span class="link-text pointerCursor" id="page7">Settings</span>
+            </div>
+        </li>
+    `;
+
+    document.getElementById('subnavarea').outerHTML = ele;
+    return true;
 }
 
 async function signOut() {
@@ -393,27 +454,36 @@ async function checkLogin() {
 async function switchNav(pageVal) {
     switch (pageVal) {
         // SEARCH
-        case 1:
+        case 1: // live chat
             window.location.href = `/live-chat`
             break;
-        case 2:
+        case 2: // user page
             profile()
             break;
-        case 3:
+        case 3: // switch debug
             debugModeSwitch()
             break;
-        case 4:
+        case 4: // create post
             showModal(`
                 <h1>Create a new Post</h1>
                 <textarea class="postTextArea" id="newPostTextArea"></textarea>
                 <button class="buttonStyled" onclick="createPost()">Upload Post</button>
             `, true)
             break;
-        case 5:
+        case 5: // home
             window.location.href='/'
             break;
-        case 7: 
+        case 6: // notifications
+            window.location.href='/?notifications'
+            break;
+        case 7: // settings
             window.location.href='/?settings'
+            break;
+        case 8: // submenu
+            subnavBarAction()
+            break;
+        case 9: // bookmarks
+            window.location.href='/?bookmarks'
             break;
         default:
             break;

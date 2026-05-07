@@ -16,9 +16,7 @@
 var getUrl = window.location;
 var baseUrl = getUrl .protocol + "//" + getUrl.host + "/" + getUrl.pathname.split('/')[1];
 var pathArray = window.location.pathname.split( '/' );
-var apiURL = `${config ? `${config.current == "prod" ? config.prod.api_url : config.dev.api_url}` : 'https://interact-api.novapro.net/v1' }`
-var hostedUrl = `${config ? `${config.current == "prod" ? config.prod.hosted_url : config.dev.hosted_url}` : 'https://interact.novapro.net/' }`
-// var params = new URLSearchParams(window.location.search)
+
 var prevIndexID = 0;
 var followingFollowerData = {
     userID: null,
@@ -26,13 +24,6 @@ var followingFollowerData = {
     userData: null,
     currentlyBuilding: false,
     type: 0
-}
-
-// API HEADERS
-var headers = {
-    'Content-Type': 'application/json',
-    "devtoken" : "6292d8ae-8c33-4d46-a617-4ac048bd6f11",
-    "apptoken" : "3610b8af-81c9-4fa2-80dc-2e2d0fd77421"
 }
 
 // VARIBLES
@@ -47,6 +38,15 @@ var userData = {
     userProfile: null,
     userUpdates: null,
 }
+var stopLoadingFeed = false; // this is used for drawing the circle, could use buildingFeed, but that includes other stuff
+var userProfieIndexData = {
+    indexID: null,
+    prevIndexID: null,
+    nextIndexID: null,
+    building: false,
+}
+var aiSuggestions = [];
+var amountSuggestions = 0;
 // LOCAL STORAGE
 var LOCAL_STORAGE_LOGIN_USER_TOKEN ='social.loginUserToken'
 var LOCAL_STORAGE_LOGINS='social.loginAccounts'
@@ -58,6 +58,18 @@ var articleComponentsStore = []
 var articleComponentsEditor = []
 var articleComponentsEditorIndex = 0
 // let loginUserToken = localStorage.getItem(LOCAL_STORAGE_LOGIN_USER_TOKEN)
+var foundCategories = [];
+var mediaUploadLinks = [];
+
+var profileLikeIndexData = {
+    indexID: null,
+    prevIndexID: null,
+    nextIndexID: null,
+    building: false,
+}
+
+updateMargin();
+window.addEventListener('resize', updateMargin);
 const fakeArticleData = { title: 'this will be a test', topic: 'Test Topic', components: [{  type: { id: 0, order: 0, name: 'Header', description: 'Add a header to your article.', placeholder: 'New Header...'}, value: 'this is a article', options: { 'font_size': { dbName: 'font_size', value: '12' }, alignment: { dbName: 'alignment', value: 'center' }, 'padding_bottom': { dbName: 'padding_bottom', value: '4' }, indent: { dbName: 'indent', value: '4' } } }, { type: { id: 1, order: 1, name: 'Sub header', description: 'Add a sub header to your article.', placeholder: 'New Subheader...' }, value: 'I will use this as a test data lol', options: { 'font_size': { dbName: 'font_size', value: '12' }, alignment: { dbName: 'alignment', value: 'center' }, 'padding_bottom': { dbName: 'padding_bottom', value: '4' }, indent: { dbName: 'indent', value: '4' } } }, { type: { id: 2, order: 2, name: 'Paragraph', description: 'Add a compontent of text like a paragraph to your article.', placeholder: 'New Paragraph...' }, value: 'this data will be saved as articleData on the frontend to provide to the backend for me to send mtulple times ', options: { 'font_size': { dbName: 'font_size', value: '12' }, alignment: { dbName: 'alignment', value: 'center' }, 'padding_bottom': { dbName: 'padding_bottom', value: '4' }, indent: { dbName: 'indent', value: '4' } } } ]}
 
 function checkifMobile() {
@@ -98,9 +110,9 @@ async function checkURLParams() {
     const ifPostPage = params.has("posting");
     const ifUserEdit = params.has("userEdit");
     const ifSettings = params.has("settings");
-    const ifEmailSettings = params.has("emailSettings");
-    const ifThemeSettings = params.has("themeEditor");
-    const ifThemeDiscovery = params.has("themeDiscovery")
+    const ifNotificationPage = params.has("notifications")
+    const ifBookmarksPage = params.has("bookmarks")
+    const ifSearchPage = params.has("searchPage")
     const ifCreateArticle = params.has("createArticle")
     const ifViewArticles = params.has("viewArticles")
 
@@ -142,27 +154,21 @@ async function checkURLParams() {
         paramsInfo.paramsFound = true
 
         settingsPage()
-    } else if (ifEmailSettings) {
+    } else if (ifNotificationPage) {
         paramsFound = true
         paramsInfo.paramsFound = true
 
-        settingsPage();
-        changeEmailPage();
-        document.getElementById("emailSettings").scrollIntoView();
-    } else if (ifThemeSettings) {
+        notificationsPage();
+    }else if (ifBookmarksPage) {
         paramsFound = true
         paramsInfo.paramsFound = true
 
-        settingsPage();
-        editThemePanel(headers.userid);
-        document.getElementById("themeEditor").scrollIntoView();
-    } else if (ifThemeDiscovery) {
+        bookmarksPage();
+    } else if (ifSearchPage) {
         paramsFound = true
         paramsInfo.paramsFound = true
-
-        settingsPage();
-        await viewThemesDiscovery()
-        document.getElementById("themeDiscovery").scrollIntoView();
+        // const searchSearching = params.get('search')
+        activeSearchBar();
     } else if (ifCreateArticle) {
         paramsFound = true
         paramsInfo.paramsFound = true
@@ -175,7 +181,45 @@ async function checkURLParams() {
         viewArticles();
     }
    
-    return paramsInfo
+
+// Update margin based on screen size
+function updateMargin() {
+    console.log("updating margin")
+    const root = document.documentElement;
+    const headerHeight = document.getElementsByClassName("main-header")[0]?.clientHeight ?? 0;
+    const feedHeaderHeight = document.getElementsByClassName("possibleFeeds")[0]?.clientHeight ?? 0;
+    const navWidth = document.getElementsByClassName("navbar-nav")[0]?.clientWidth ?? 0;
+    if (debug) console.log(`Header Height: ${headerHeight}, Feed Header Height: ${feedHeaderHeight}, Nav Width: ${navWidth}`);
+    if (debug) console.log(`Screen Width: ${window.innerWidth}, Screen Height: ${window.innerHeight}`);
+   
+    const screenWidth = window.innerWidth - navWidth;
+    const screenHeight = window.innerHeight - headerHeight - feedHeaderHeight;
+    const ratio = screenWidth / screenHeight;
+
+    // set margin based on screen ratio
+    if (ratio >= 1.4) {
+        root.style.setProperty('--mainMarginSides', '20%');
+    } else if (ratio >= 1.0) {
+        root.style.setProperty('--mainMarginSides', '10%');
+    } else {
+        root.style.setProperty('--mainMarginSides', '5%');
+    }
+}
+
+// makes it easy to render postElement without having to do a lot of work
+function postElementCreateFullEasy(postData, hideParent=false, hideReplies=false) {
+    return postElementCreate({
+        post: postData.postData,
+        user: postData.userData, 
+        hideParent: hideParent,
+        hideReplies: hideReplies,
+        pollData: postData.type?.poll=="included" ? postData.pollData : null,
+        voteData: postData.type?.vote=="included" ? postData.voteData : null,
+        quoteData: postData.type?.quote=="included" ? postData.quoteData : null,
+        coposterData: postData.type?.coposter=="included" ? postData.coposterData : null,
+        tagData: postData.type?.tag=="included" ? postData.tagData : null,
+        extraData: postData.type?.extra=="included" ? postData.extraData : {},
+    })
 }
 
 function postElementCreate({
@@ -188,9 +232,14 @@ function postElementCreate({
     quoteData,
     coposterData,
     tagData,
-    extraData
+    extraData,
+    postData,
+    userData
 }) {
-    if (!post) return;
+    if (!post && postData) post = postData;
+    if (!user && userData) user = userData;
+
+    if (!post) return "";
     if (post.deleted) {
         const ele = `
             <div class="postContent posts-style" id="postContentArea_${post._id}">
@@ -202,11 +251,10 @@ function postElementCreate({
 
         return ele;
     }
-
     if (!extraData) extraData = { }
     var timesince
     if (post.timePosted) timesince = checkDate(post.timePosted)
-    const imageContent = checkForImage(post.content, tagData)
+    const imageContent = checkForImage(escapeHtml(post.content), tagData)
     const owner = post.userID == currentUserLogin.userID ? true : false;
 
     const options = {
@@ -225,7 +273,7 @@ function postElementCreate({
             ${user ? `
             <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️ ' : ''}` : '>Unknown User'} | ${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
             `:''}
-            <div class="postContent posts-style" id="postContentArea_${post._id}">
+            <div class="postContent" id="postContentArea_${post._id}">
                 <div class="textAreaPost posts_content-style">
                     <p id="postContent_${post._id}">${imageContent.content}</p>
                     ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
@@ -245,25 +293,28 @@ function postElementCreate({
                         <p onclick="viewParentPost('${post._id}', '${post.replyData.postID}')" id="parentViewing_${post._id}">This was a reply, click here to see.</p>
                     ` : ``}
                 `: ``}
-                <div>
-                    <p><span class="pointerCursor ${ user && (post.userID == currentUserLogin.userID )? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️' : ''}` : '>Unknown User'}</span>
-                    ${coposterData && coposterData[0] ? `${coposterData.map(function(coposter) {
-                        return `, <span class="spacer_2px pointerCursor ${ coposter._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${coposter ? ` onclick="userHtml('${coposter._id}')"> ${coposter.displayName} @${coposter.username}${coposter.verified ? ' ✔️ ' : ''}` : '>Unknown User'}</span>`
-                    }).join(" ")}`:``}
-                    </p>
-                    <p class="spacer_2px pointerCursor ${ user && (post.userID == currentUserLogin.userID )? "ownUser-style" : "otherUser-style"}">${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
+                <div class="post-header">
+                    ${user?.profileURL ? `<img onclick="userHtml('${post.userID}')" src="${user.profileURL}" alt="${user.displayName}" class="profile-image">` : ""}
+                    <div class="post-user-info">
+                        <p>
+                            <span class="pointerCursor ${ user && (post.userID == currentUserLogin.userID )? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}${user.verified ? ' ✔️' : ''}` : '>Unknown User'}</span>
+                            ${coposterData && coposterData[0] ? `${coposterData.map(function(coposter) {
+                                return `, <span class="spacer_2px pointerCursor ${ coposter._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${coposter ? ` onclick="userHtml('${coposter._id}')"> ${coposter.displayName} @${coposter.username}${coposter.verified ? ' ✔️ ' : ''}` : '>Unknown User'}</span>`
+                            }).join(" ")}`:``}
+                        </p>
+                        <p class="spacer_2px pointerCursor ${ user && (post.userID == currentUserLogin.userID )? "ownUser-style" : "otherUser-style"}">${timesince} | ${timeSinceData.sinceOrUntil == "current" ? "just posted" : `${timeSinceData.sinceOrUntil == "since" ? timeSinceData.value + " ago" : timeSinceData.value}`}</p>
+                    </div>
                 </div>
                 <div class="postContent" id="postContentArea_${post._id}">
                     <div class="textAreaPost posts_content-style">
                         <p id="postContent_${post._id}">${imageContent.content}</p>
                         ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
                     </div>
-                    ${post.replyingPostID ? `<a class="replyingPost" href="#postElement_${post.replyingPostID}">Press here</a>` : ``}
-                    ${quoteData && quoteData.quotePost ? `<hr><div>${postElementCreate({post: quoteData.quotePost, user: quoteData.quoteUser, type: "basic"})}</div>` : ''}
                     <div class="PostAttachments">
                         ${imageContent.image ? `<div>${imageContent.attachments.map(function(attachment) {return `${attachment}`}).join(" ")}</div>`:''}
                     </div>
                 </div>
+                ${quoteData && quoteData.quotePost ? `<hr><div>${postElementCreate({post: quoteData.quotePost, user: quoteData.quoteUser, type: "basic"})}</div>` : ''}
                 ${post.pollID ? `
                     <div class="poll_option posts-style" id="pollContainer_${post._id}">
                     ${pollData ? `
@@ -272,9 +323,12 @@ function postElementCreate({
                     </div>
                 ` : `` }
                 <div class="debug">
+                    <p><u>Debug Info</u></p>
+                    ${post.hasCategory ? `<p>Category: ${post.category} - ${post.subCats.map(function(subcat) { return `${subcat}`}).join(", ")}</p>` : ``}
                     <p onclick="copyToClipboard('${post._id}')">postID: ${post._id}</p>
                     <p onclick="copyToClipboard('${post.userID}')">userID: ${post.userID}</p>
                     ${post.indexID ? `<p onclick="copyToClipboard('${post.indexID}')">indexID: ${post.indexID}</p>` : `` }
+                    ${post.userPostIndexID ? `<p onclick="copyToClipboard('${post.userPostIndexID}')">userPostIndexID: ${post.userPostIndexID}</p>` : `` }
 
                     ${coposterData && coposterData[0] ? `${coposterData.map(function(coposter) {
                         return ` <p onclick="copyToClipboard('${coposter._id}')">coposter ${coposter.username}: ${coposter._id}</p>`
@@ -285,6 +339,7 @@ function postElementCreate({
                     <p onclick="likePost('${post._id}')" class="${extraData.liked == true ? 'ownUser-style likedColour':'posts_action-style'}" id="likePost_${post._id}">${styleLikedButton(extraData.liked, post.totalLikes ?? 0)}</p>
                     <p onclick="replyPost('${post._id}')" class="posts_action-style">${styleReplyButton(post.totalReplies)}</p>
                     <p onclick="quotePost('${post._id}')" class="posts_action-style">${styleQuoteButton(post.totalQuotes)}</p>
+                    <p id="aisummaryaction_${post._id}" onclick="aiSummaryAction('${post._id}')" class="posts_action-style">${styleSummaryButton()}</p>
                     ${!mobileClient ? `
                         ${post.userID == currentUserLogin.userID ? `
                             <p onclick="deletePost('${post._id}')" class="posts_action-style">${styleDeleteButton()}</p>
@@ -293,7 +348,7 @@ function postElementCreate({
                             </p>
                         ` : ''}
                     ` : ''}
-                    <p id="popupactions_${post._id}" class="posts_action-style" onclick="popupActions('${post._id}', '${post.userID}', '${options.hideParent}', '${options.hideReplies}', ${owner}, ${extraData.pinned}, ${extraData.saved}, ${extraData.followed})">${styleActionButton()}</p>
+                    <p id="popupactions_${post._id}" class="posts_action-style" data-postid="${post._id}" data-userid="${post.userID}" data-hideparent="${options.hideParent}" data-hidereplies="${options.hideReplies}" data-owner="${owner}" data-pinned="${extraData.pinned}" data-saved="${extraData.saved}" data-followed="${extraData.followed}" onclick="popupActions(this)">${styleActionButton()}</p>
                 </div>
             </div>
         </div>
@@ -306,6 +361,16 @@ function postElementCreate({
     return element;
 }
 
+function styleSummaryButton() {
+    var returnElement = `<span>`;
+    returnElement+=`<span class="material-symbols-outlined">rocket_launch</span>`
+    return returnElement + `</span>`
+}
+function styleSummaryCloseButton() {
+    var returnElement = `<span>`;
+    returnElement+=`<span class="material-symbols-outlined">rocket</span>`
+    return returnElement + `</span>`
+}
 function styleLikedButton(liked, totalLikes) {
     var returnElement = `<span>`;
     if (totalLikes) returnElement+=`<span>${totalLikes}</span>`
@@ -356,41 +421,163 @@ function removeColorOption(pollID, optionID) {
     document.getElementById(elementID).classList.remove("voted");
 }
 
-async function popupActions(postID, userID, hideParent, hideReplies, owner, pinned=false, saved=false, followed=false) {
-    var elementPopup = document.getElementById(`popupOpen_${postID}`);
+async function popupActions(elem/*postID, userID, hideParent, hideReplies, owner, pinned=false, saved=false, followed=false */) {
+    const postID = elem.dataset.postid;
+    const userID = elem.dataset.userid;
+    const hideParent = elem.dataset.hideparent === ("true" || true) ? true : false //? elem.dataset.hideparent : false;
+    const hideReplies = elem.dataset.hidereplies === ("true" || true) ? true : false //? elem.dataset.hideparent : false;;
+    const owner = elem.dataset.owner === ("true" || true) ? true : false //? elem.dataset.owner : false;
+    const pinned = elem.dataset.pinned === ("true" || true) ? true : false //? elem.dataset.pinned : false;
+    const saved = elem.dataset.saved === ("true" || true) ? true : false //? elem.dataset.saved : false;
+    const followed = elem.dataset.followed === ("true" || true) ? true : false //? elem.dataset.followed : false;
+
+    if (debug) console.log({ postID, userID, hideParent, hideReplies, owner, pinned, saved, followed });
+
+    const existingPopup = document.getElementById(`popupOpen_${postID}`);
+    const triggerButton = document.getElementById(`popupactions_${postID}`);
+
+    const openedEditHistory = document.getElementById(`editHistoryOpened_${postID}`);
+    const openedLikes = document.getElementById(`likesOpened_${postID}`);
+    const openedReplies = document.getElementById(`repliesOpened_${postID}`);
+    const openedQuotes = document.getElementById(`quotesOpened_${postID}`);
+
+    // If already open, close it
+    if (existingPopup) {
+        triggerButton.innerHTML = styleActionButton(false);
+        return existingPopup.remove();
+    } else {
+        triggerButton.innerHTML = styleActionButton(true);
+    }
+
+    // Get the position of the button that triggered the popup
+    const rect = triggerButton.getBoundingClientRect();
+
+    // Create the popup
+    const popup = document.createElement("div");
+    popup.id = `popupOpen_${postID}`;
+    popup.className = "popup-context-menu";
+    popup.style.position = "absolute";
+    popup.style.top = `${rect.bottom + window.scrollY}px`;
+    popup.style.left = `${rect.left + window.scrollX}px`;
+    popup.style.zIndex = 9999;
+    popup.style.background = "var(--main-nav-color)";
+    popup.style.border = "2px solid var(--main-border-color)";
+    popup.style.padding = "10px";
+    popup.style.boxShadow = "0 2px 10px rgba(0,0,0,0.1)";
+    popup.style.borderRadius = "15px";
+    popup.style.textAlign = "left";
+
+    // Set the inner HTML
+    popup.innerHTML = `
+        ${owner && mobileClient ? `
+            <p><strong>Owner Actions</strong></p>
+            <hr>
+            <p onclick="deletePost('${postID}')">
+                <span class="material-symbols-outlined">delete</span>
+                <span>Delete Post</span>
+            </p>
+            <p onclick="editPost('${postID}')">
+                <span class="material-symbols-outlined">edit</span>
+                <span>Edit Post</span>
+            </p>
+        ` : ``}
+        <p><strong>Menu Actions</strong></p>
+        <hr>
+        <p class="pointerCursor" onclick="${pinned ? `unpinPost('${postID}')` : `pinPost('${postID}')`}">
+            ${pinned ? `
+                <span class="material-symbols-outlined">keep_off</span>
+                <span id="pin_post_${postID}">Unpin from Profile</span>    
+            ` : `
+                <span class="material-symbols-outlined">keep</span>
+                <span id="pin_post_${postID}">Pin to Profile</span>
+            `}
+        </p>
+        <p class="pointerCursor" onclick="${saved ? `unsaveBookmark('${postID}')` : `saveBookmark('${postID}')`}">
+            ${saved ? `
+                <span class="material-symbols-outlined">bookmark_remove</span>
+                <span id="saveBookmark_${postID}">Unsave from Bookmarks</span>
+            ` : `
+                <span class="material-symbols-outlined">bookmark_add</span>
+                <span id="saveBookmark_${postID}">Save to Bookmarks</span>
+            `}
+        </p>
+        ${!owner ? `
+            <p class="pointerCursor" onclick="${followed ? `unFollowUser('${userID}', 'followUserPostMenu_${postID}')` : `followUser('${userID}', 'followUserPostMenu_${postID}')`}">
+                ${followed ? `
+                    <span class="material-symbols-outlined">person_remove</span>
+                    <span id="followUserPostMenu_${postID}">Unfollow User</span>
+                ` : `
+                    <span class="material-symbols-outlined">person_add</span>
+                    <span id="followUserPostMenu_${postID}">Follow User</span>
+                `}
+            </p>
+        ` : ``}
+        <p class="pointerCursor" onclick="copyPostLink('${postID}')">
+            <span class="material-symbols-outlined">add_link</span>
+            <span id="post_copy_${postID}">Copy Post Link</span>
+        </p>
+        <p class="pointerCursor" onclick="showEditHistory('${postID}')">
+            <span class="material-symbols-outlined">history</span>
+            <span id="editHistory_${postID}">${!openedEditHistory ? "View Edit History" : "Close Edit History"}</span>
+        </p>
+        <p class="pointerCursor" onclick="showLikes('${postID}')">
+            <span class="material-symbols-outlined">recent_actors</span>
+            <span id="likedBy_${postID}">${!openedLikes ? "View Likes" : "Close Likes"}</span>
+        </p>
+        ${hideReplies !== true ? `
+            <p class="pointerCursor" onclick="viewReplies('${postID}')">
+                <span class="material-symbols-outlined">reply_all</span>
+                <span id="replies_${postID}">${!openedReplies ? "Check Replies" : "Close Replies"}</span>
+            </p>
+            <p class="pointerCursor" onclick="viewQuotes('${postID}')">
+                <span class="material-symbols-outlined">record_voice_over</span>
+                <span id="quotes_${postID}">${!openedQuotes ? "Check Quotes" : "Close Quotes"}</span>
+            </p>
+        ` : ``}
+    `;
+
+    // Close popup when clicking outside
+    const clickAway = (e) => {
+        if (!popup.contains(e.target) && e.target !== triggerButton) {
+            popup.remove();
+            triggerButton.innerHTML = styleActionButton(false);
+            document.removeEventListener("click", clickAway);
+        }
+    };
+    setTimeout(() => document.addEventListener("click", clickAway), 0); // delay to avoid immediate close
+
+    document.body.appendChild(popup);
+}
+
+
+async function aiSummaryAction(postID, userID) {
+    var elementPopup = document.getElementById(`aisummaryOpen_${postID}`);
     if (elementPopup) {
-        document.getElementById(`popupactions_${postID}`).innerHTML = styleActionButton(false)
+        document.getElementById(`aisummaryaction_${postID}`).innerHTML = styleSummaryButton(false)
         return elementPopup.remove();
     } else {
-        document.getElementById(`popupactions_${postID}`).innerHTML = styleActionButton(true)
+        document.getElementById(`aisummaryaction_${postID}`).innerHTML = styleSummaryCloseButton(true)
     }
 
     document.getElementById(`postElement_${postID}`).innerHTML+=`
-        <div id="popupOpen_${postID}" class="publicPost posts-style no-select" style="position: element(#popupactions_${postID});">
-            ${owner && mobileClient? `
-                <p>Owner Actions</p>
-                <p>---</p>
-                <p onclick="deletePost('${postID}')">delete post</p>
-                <p id='editButton_${postID}'>
-                    <p onclick="editPost('${postID}')">edit post</p>
-                </p>
-            ` : ``}
-            <p>Menu Actions</p>
-            <p>---</p>
-            <p class="pointerCursor" onclick="${pinned===true ? `unpinPost('${postID}')` : `pinPost('${postID}')` }" id="pin_post_${postID}">${pinned===true ? `Unpin from Profile` : `Pin to Profile` }</p>
-            <p class="pointerCursor" onclick="${saved===true ? `unsaveBookmark('${postID}')` : `saveBookmark('${postID}')`}" id="saveBookmark_${postID}">${saved===true ? `Remove from Bookmarks`:`Save to Bookmarks`}</p>
-            <p class="pointerCursor" id="followUser_${postID}" onclick=
-            ${owner ? `` : `${followed===true ? 
-                `"unFollowUser('${userID}', 'followUser_${postID}')">Unfollow User` :
-                `"followUser('${userID}', 'followUser_${postID}')">Follow User`
-            }</p>`}
-            <p class="pointerCursor" onclick="copyPostLink('${postID}')" id="post_copy_${postID}">Copy Post Link</p>
-            <p class="pointerCursor" onclick="showEditHistory('${postID}')" id="editHistory_${postID}">Check Edit History</p>
-            <p class="pointerCursor" onclick="showLikes('${postID}')" id="likedBy_${postID}">Check Who Liked</p>
-            ${hideReplies != true ? `<p class="pointerCursor" onclick="viewReplies('${postID}')" id="replies_${postID}">Check Replies</p>` : ``}
-            ${hideReplies != true ? `<p class="pointerCursor" onclick="viewQuotes('${postID}')" id="quotes_${postID}">Check Quotes</p>` : ``}
+        <div id="aisummaryOpen_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
+            <p id="aisummaryOpenResult_${postID}">Please wait... Loading AI Summary</p>
         </div>
     `;
+
+
+    const summaryData = await sendRequest(`/ai/summary/${postID}`, {
+        method: 'GET'
+    });
+
+    if (!summaryData || summaryData.error || !summaryData.response) return document.getElementById(`aisummaryOpenResult_${postID}`).innerText = "Error while loading AI Summary, please try again later.";
+    document.getElementById(`aisummaryOpenResult_${postID}`).innerHTML = `
+    <div class="inline">
+        <p>AI Summary</p>
+        <hr class="rounded">
+        ${summaryData.totalPosts > 1 ? `<p>Based on ${summaryData.totalPosts} posts</p>` : ``}
+        <p>${summaryData.response}</p>
+    </div>`;
 };
 
 function copyPostLink(postID) {
@@ -401,17 +588,18 @@ function copyPostLink(postID) {
 
 async function pinPost(postID) {
     const req = await sendRequest(`/users/edit/pins/${postID}`, { method: 'POST' });
-    if (req.error) return
-
-    showModal(`<p>Success!</p>`)
-    
+    if (req.error) return document.getElementById(`pin_post_${postID}`).innerText = "Error while pinning post, please try again later.";
+    document.getElementById(`pin_post_${postID}`).innerText = "Pinned";
+    document.getElementById(`pin_post_${postID}`).parentElement.onclick = () => unpinPost(postID);
+    document.getElementById(`popupactions_${postID}`).dataset.pinned = true;
 }
 
 async function unpinPost(postID) {
     const req = await sendRequest(`/users/edit/pins/${postID}`, { method: 'DELETE' });
-    if (req.error) return
-
-    showModal(`<p>Success!</p>`)
+    if (req.error) return document.getElementById(`pin_post_${postID}`).innerText = "Error while unpinning post, please try again later.";
+    document.getElementById(`pin_post_${postID}`).innerText = "Unpinned"
+    document.getElementById(`pin_post_${postID}`).parentElement.onclick = () => pinPost(postID);
+    document.getElementById(`popupactions_${postID}`).dataset.pinned = false;
 }
 
 async function unpinAllPosts() {
@@ -434,7 +622,13 @@ async function followUser(userID, eleIdChange) {
 
     if (eleIdChange) {
         document.getElementById(eleIdChange).innerText="Unfollow User";
-        document.getElementById(eleIdChange).onclick = () => unFollowUser(userID, eleIdChange);
+
+        if (eleIdChange.startsWith("followUserPostMenu_")) {
+            document.getElementById(eleIdChange).parentElement.onclick = () => unFollowUser(userID, eleIdChange);
+            const postID = eleIdChange.split("_")[1];
+            document.getElementById(`popupactions_${postID}`).dataset.followed = true;
+        }
+        else document.getElementById(eleIdChange).onclick = () => unFollowUser(userID, eleIdChange);
     } else {
         showModal(`<p>Unfollowed User!</p>`);
     }
@@ -446,7 +640,13 @@ async function unFollowUser(userID, eleIdChange) {
 
     if (eleIdChange) {
         document.getElementById(eleIdChange).innerText="Follow User";
-        document.getElementById(eleIdChange).onclick = () => followUser(userID, eleIdChange);
+        if (eleIdChange.startsWith("followUserPostMenu_")) {
+            document.getElementById(eleIdChange).parentElement.onclick = () => followUser(userID, eleIdChange);
+            const postID = eleIdChange.split("_")[1];
+            document.getElementById(`popupactions_${postID}`).dataset.followed = false;
+        }
+        else document.getElementById(eleIdChange).onclick = () => followUser(userID, eleIdChange);
+
     } else {
         showModal(`<p>Unfollowed User!</p>`);
     }
@@ -458,8 +658,9 @@ async function viewParentPost(postID, parentPostID) {
         return document.getElementById(`openedParent_${postID}`).remove();
     }
 
-    const postData = await sendRequest(`/posts/get/${parentPostID}`, { method: "GET" });
-
+    const postFound = await sendRequest(`/posts/get/full/${parentPostID}`, { method: "GET" });
+    if (!postFound || postFound.error) return "";
+    const {postData, userData} = postFound;
     if (postData.deleted == true || !postData.userID) {
         //document.getElementById()
         document.getElementById(`parent_${postID}`).innerHTML = `
@@ -474,11 +675,9 @@ async function viewParentPost(postID, parentPostID) {
         return;
     }
 
-    const userData = await sendRequest(`/users/get/basic/${postData.userID}`, { method: 'GET', });
-   
     const postEle = postElementCreate({post: postData, user: userData});
     document.getElementById(`parent_${postID}`).innerHTML = `
-        <div class="publicPost areaPost posts-style" id="openedParent_${postID}">${postEle}</div>
+        <div class="" id="openedParent_${postID}">${postEle}</div>
     `;
     document.getElementById(`parentViewing_${postID}`).innerText = "Close parent post.";
 
@@ -489,8 +688,9 @@ async function viewQuotes(postID) {
         document.getElementById(`quotes_${postID}`).innerText = "Check Quotes";
         return document.getElementById(`quotesOpened_${postID}`).remove();
     }
+    document.getElementById(`quotes_${postID}`).innerText = "Close Quotes";
 
-    const quoteData = await sendRequest(`/posts/quotes/${postID}`, { method: 'GET', });
+    const quoteData = await sendRequest(`/posts/quotes/${postID}`, { method: 'GET', ignoreError: true });
     if (quoteData.error) {
         document.getElementById(`postElement_${postID}`).innerHTML+=`
             <div id="quotesOpened_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
@@ -516,8 +716,6 @@ async function viewQuotes(postID) {
             ${ele}
         </div>
     `;
-
-    document.getElementById(`quotes_${postID}`).innerText = "Close Quotes";
 }
 
 // async function 
@@ -528,7 +726,9 @@ async function viewReplies(postID) {
         return document.getElementById(`repliesOpened_${postID}`).remove();
     }
 
-    const replyData = await sendRequest(`/posts/replies/${postID}`, { method: 'GET', });
+    document.getElementById(`replies_${postID}`).innerText = "Close replies";
+
+    const replyData = await sendRequest(`/posts/replies/full/${postID}`, { method: 'GET',ignoreError: true });
     if (replyData.error) {
         document.getElementById(`postElement_${postID}`).innerHTML+=`
             <div id="repliesOpened_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
@@ -543,8 +743,9 @@ async function viewReplies(postID) {
 
     var ele = ``;
     for (const reply of replyData.replies) {
-        const userData = await sendRequest(`/users/get/basic/${reply.userID}`, { method: 'GET' });
-        ele+=postElementCreate({post: reply, user: userData, hideParent: true });
+        ele+=postElementCreateFullEasy(reply, true);
+        // const userData = await sendRequest(`/users/get/basic/${reply.userID}`, { method: 'GET' });
+        // ele+=postElementCreate({post: reply, user: userData, hideParent: true });
     }
 
     document.getElementById(`postElement_${postID}`).innerHTML+=`
@@ -555,7 +756,6 @@ async function viewReplies(postID) {
         </div>
     `;
 
-    document.getElementById(`replies_${postID}`).innerText = "Close replies";
     // get message
     // postElementCreate
 }
@@ -566,8 +766,13 @@ async function saveBookmark(postID, list) {
         listname: list ? list : "main"
     }
     const res = await sendRequest(`/posts/save/`, { method: 'POST', body });
-    if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.error}`;
-    document.getElementById(`saveBookmark_${postID}`).innerText="Saved"
+    if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.msg}`;
+    document.getElementById(`saveBookmark_${postID}`).innerText="Saved";
+    // parent must be updated to do new function
+
+    document.getElementById(`saveBookmark_${postID}`).parentElement.onclick = () => unsaveBookmark(postID);
+    document.getElementById(`saveBookmark_${postID}`).parentElement.childNodes[0].innerText = "bookmark_remove"
+    document.getElementById(`popupactions_${postID}`).dataset.saved = true;
 }
 
 async function unsaveBookmark(postID, list, where) {
@@ -576,33 +781,80 @@ async function unsaveBookmark(postID, list, where) {
         listname: list ? list : "main"
     }
     const res = await sendRequest(`/posts/unsave/`, { method: 'DELETE', body });
-    if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.error}`;
+    if (res.error) return document.getElementById(`saveBookmark_${postID}`).innerText = `Error: ${res.msg}`;
     if (!where) document.getElementById(`saveBookmark_${postID}`).innerText="Unsaved"
     if (where == "bookmarks") document.getElementById(`bookmarkView_${postID}`).remove()
+    document.getElementById(`saveBookmark_${postID}`).parentElement.onclick = () => saveBookmark(postID);
+
+    document.getElementById(`popupactions_${postID}`).dataset.saved = false;
 }
 
 async function showLikes(postID) {
-    const likedBy = await sendRequest(`/posts/likes/${postID}`, { method: 'GET' });
-    if (!likedBy || !likedBy.peopleLiked) return document.getElementById(`likedBy_${postID}`).innerHTML = `Could not find any people who liked the post.`;
+    if (document.getElementById(`likesOpened_${postID}`)) {
+        document.getElementById(`likedBy_${postID}`).innerText = "View Likes";
+        return document.getElementById(`likesOpened_${postID}`).remove();
+    }
+    document.getElementById(`likedBy_${postID}`).innerText = "Close Likes";
 
-    var newElement = `<p>Liked By:</p>`;
-    for (const people of likedBy.peopleLiked) {
-        newElement+=`<p onclick="userHtml('${people.userID}')">${people.username}</p>`
-    };
+    const likeData = await sendRequest(`/posts/likes/${postID}`, { method: 'GET', ignoreError: true });
+    if (likeData.error) {
+        document.getElementById(`postElement_${postID}`).innerHTML+=`
+            <div id="likesOpened_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
+                <p>Likes</p>
+                <p>---</p>
+                There are no likes yet on this post.
+            </div>
+        `;
+        if (debug) console.log("no likes")
+        return ;
+    }
+    
+    var ele = ``;
+    for (const userInfoLike of likeData.peopleLiked) {
+        ele+=`<p onclick="userHtml('${userInfoLike.userID}')">${userInfoLike.userData?.displayName} @${userInfoLike.username}</p>`;
+    }
 
-    document.getElementById(`likedBy_${postID}`).innerHTML=newElement;
+    document.getElementById(`postElement_${postID}`).innerHTML+=`
+        <div id="likesOpened_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
+            <p>Likes</p>
+            <p>---</p>
+            ${ele}
+        </div>
+    `;
 }
 
 async function showEditHistory(postID) {
-    const editData = await sendRequest(`/posts/edits/${postID}`, { method: 'GET' });
-    if (!editData || !editData.edits) return document.getElementById(`editHistory_${postID}`).innerHTML = `Could not find any edits.`;
+    if (document.getElementById(`editHistoryOpened_${postID}`)) {
+        document.getElementById(`editHistory_${postID}`).innerText = "View Edit History";
+        return document.getElementById(`editHistoryOpened_${postID}`).remove();
+    }
+    document.getElementById(`editHistory_${postID}`).innerText = "Close Edit History";
+    
+    const editData = await sendRequest(`/posts/edits/${postID}`, { method: 'GET', ignoreError: true });
+    if (editData.error) {
+        document.getElementById(`postElement_${postID}`).innerHTML+=`
+            <div id="editHistoryOpened_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
+                <p>Edit History</p
+                <p>---</p>
+                There is no edit history for this post.
+            </div>
+        `;
+        if (debug) console.log("no edit history")
+        return ;
+    }
 
-    var newElement = `<p>Edit History:</p>`;
+    var ele =``;
     for (const edit of editData.edits.reverse()) {
-        newElement+=`<p>${edit.content}</p>`
+        ele+=`<p>${edit.content}</p>`
     };
 
-    document.getElementById(`editHistory_${postID}`).innerHTML=newElement;
+    document.getElementById(`postElement_${postID}`).innerHTML+=`
+        <div id="editHistoryOpened_${postID}" class="publicPost posts-style" style="position: element(#popupactions_${postID});">
+            <p>Edit History</p>
+            <p>---</p>
+            ${ele}
+        </div>
+    `;
 };
 
 function getTime() {
@@ -753,6 +1005,8 @@ async function userPage(userSearch) {
 // /*
 
 async function createPostModal() {
+    createPostPage(true);
+    return null;
     await showModal(`
         <div id="postingModel">
         <h1 class="font_h1-style">Create a new Post</h1>
@@ -777,9 +1031,12 @@ async function socialTypePost(customInputID, forCoposter=false) {
     const foundTags = await findTag(content)
     if (debug) console.log(foundTags)
 
+    const outputDivBox = customInputID ? `foundTaggings_${customInputID}` : "foundTaggings";
+    if (debug) console.log("input div output", outputDivBox)
+
     if (foundTags.found == false) {
         if (document.getElementById('taggingsOpened')) {
-            document.getElementById('foundTaggings').innerHTML=""
+            document.getElementById(outputDivBox).innerHTML=""
         }
         return false;
     };
@@ -808,7 +1065,7 @@ async function socialTypePost(customInputID, forCoposter=false) {
     }
     
     if (debug) console.log(foundTags)
-    document.getElementById('foundTaggings').innerHTML=`
+    document.getElementById(outputDivBox).innerHTML=`
         <div id="taggingsOpened"></div>
         ${taggings}
     `
@@ -820,7 +1077,7 @@ async function autoCompleteCoposter(username, userID) {
 
     // replaces with new value
     contentArgs[contentArgs.length-1] = `@${username} `;
-    document.getElementById('foundTaggings').innerHTML=""
+    document.getElementById('foundTaggings_coPostersInput').innerHTML=""
 
     document.getElementById('coPostersInput').value = contentArgs.join(" ")
     document.getElementById('coPostersInput').focus()
@@ -856,7 +1113,7 @@ async function autoCompleteUser(username) {
     // replaces with new value
     if (contentArgs[contentArgs.length-1].startsWith("#")) contentArgs[contentArgs.length-1] = `${username} `;
     else contentArgs[contentArgs.length-1] = `@${username} `;
-    document.getElementById('foundTaggings').innerHTML=""
+    document.getElementById('foundTaggings').innerHTML="" // only for taggings
 
     
     document.getElementById('newPostTextArea').value = contentArgs.join(" ")
@@ -919,7 +1176,7 @@ function loginSplashScreen() {
 // USER PROFILE PAGE
 async function profile() {
     checkLogin()
-    removeSearchBar()
+    // removeSearchBar()
     searching = true
 
     userHtml(currentUserLogin.userID)
@@ -947,10 +1204,14 @@ async function userEditV2() {
 
     for (const update of userData.userUpdates) {
         var value = document.getElementById(`userEdit_${update.dbName}_text`).value
-        console.log(value)
+        if ((!value || value==update.currentValue) && update.dbName == "profileURL") {
+            const file = await uploadFile(true)
+            if (!file || file.error) continue;
+            value = `${apiURL}/cdn${file.cdnURL}`;
+        }
 
         if (!value || (update.currentValue && update.currentValue == value)) continue;
-        if (update.type == "Date") value = convertDateToEpoch(value)
+        if (update.type == "Date") value = convertDateToEpoch(value);
 
         editBody[update.dbName] = value;
     }
@@ -999,6 +1260,12 @@ async function userEdit(action) {
     var tempHeaders = {};
 
     for (const actionData of actions) {
+        if (actionData == "profileImage") {
+            const file = await uploadFile("profileImage")
+            if (!file || file.error) return console.log(file)
+            tempHeaders[`new${actionData.action.toLowerCase()}`] = `${apiURL}${file.cdnURL}`;
+            continue;
+        }
         tempHeaders[`new${actionData.action.toLowerCase()}`] = actionData.value
     }
 
@@ -1013,13 +1280,12 @@ async function userEdit(action) {
 }
 
 async function postHtml(postID) {
-    const postData = await sendRequest(`/posts/get/${postID}`, { method: 'GET' })
+    const postData = await sendRequest(`/posts/get/full/${postID}`, { method: 'GET' })
     if (!postData || postData.deleted) return console.log("error with post");
 
-    const userData = await sendRequest(`/users/get/basic/${postData.userID}`, { method: 'GET' })
-    
-    const ele = postElementCreate({post: postData, user: userData});
+    const ele = postElementCreateFullEasy(postData);
     document.getElementById("mainFeed").innerHTML = ele
+    addDebug()
 
     return 
     /*
@@ -1040,143 +1306,259 @@ async function getFullUserData(userSearch) {
     return profileData;
 }
 
-function settingsPage() {
-    changeHeader("?settings")
+function settingsPage(toChangeHeader=true, toReset=false, subCategory) {
+    const hash = window.location.search.split("=")[1];
+  
+    if ((toChangeHeader && !hash) || (toChangeHeader && toReset)) changeHeader("?settings");
+
+        console.log("settingsPage", hash, toChangeHeader, toReset)
 
     const ele = `
         <div id="settingsPage">
-            <div class="" id="settingsPageContent">
-                <div class="menu menu-style">
-                    <h1 class="font_h1-style">Settings</h1>
-                </div>
-                <div class="inline">
-                    <div class="menu menu-style">
-                        <p>View your profile. As shown to other users.</p>
-                        <button class="menuButton menuButton-style" onclick="profile()">View Profile</button>
-                        <hr class="rounded">
-                        <p>Edit your public profile.</p>
-                        <button class="menuButton menuButton-style" onclick="userEditPage()">Edit Profile</button>
-                    </div>
-                    <div class="menu menu-style">
-                        <p><b>Notifications</b></p>
-                        <div>
-                            <button class="menuButton menuButton-style" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
-                            <div id="notificationsDiv"></div>
-                        </div>
-                        <div>
-                            <button class="menuButton menuButton-style" id="showSubscriptionsButton" onclick="showSubscriptions()">Show Subscriptions</button>
-                            <div id="subscriptionsDiv"></div>
-                        </div>
-                    </div>
-                    <div class="menu menu-style">
-                        <p><b>Bookmarks</b></p>
-                        <button class="menuButton menuButton-style" id="showBookmarksButton" onclick="showBookmarks()">Show Bookmarks</button>
-                        <div id="bookmarksdiv"></div>
-                    </div>
-                    <div id="feedSettings" class="menu menu-style">
-                        <p><b>Feed</b></p>
-                        <button class="menuButton menuButton-style" onclick="changeFeedSettings()">Feed Settings</p>
-                    </div>
-                    <div id="feedPopup"></div>
-                    <div id="searchSetting" class="menu menu-style">
-                        <p><b>Search</b></p>
-                        <button class="menuButton menuButton-style" onclick="changeSearchSettings()">Search Settings</p>
-                    </div>
-                    <div id="searchSettingPopup"></div>
-                    <div id="themeEditor" class="menu menu-style"><p><b>Client Theme</b></p>
-                        <button class="menuButton menuButton-style" onclick='editThemePanel("${headers.userid}")'>Open Editor</button>
-                        <button class="menuButton menuButton-style" onclick='createTheme()'>Create Theme</button>
-                        <button class="menuButton menuButton-style" onclick='viewThemes("${headers.userid}")'>Existing Themes</button>
-                        <button class="menuButton menuButton-style" onclick='unsetThemeFrontend()'>Unset Theme</button>
-                        <button class="menuButton menuButton-style" onclick='viewThemesDiscovery()'>Discover Themes</button>
-                    </div> 
-                    <div id="userThemeEditor"></div>
-                    <div class="menu menu-style">
-                        <p><b>Privacy</b></p>
-                        <button class="menuButton menuButton-style" onclick="openPrivacyPage()">Open Privacy Page</p>
-                    </div>
-                    <div id="privacyPopup"></div>
-                    <div id="emailSettings" class="menu menu-style">
-                        <p><b>Email</b></p>
-                        <button class="menuButton menuButton-style" onclick="changeEmailPage()">Email Settings</p>
-                    </div>
-                    <div id="emailPopup"></div>
-                    <div class="menu menu-style">
-                        <p><b>Password</b></p>
-                        <button class="menuButton menuButton-style"  onclick="changePasswordPage()">Change Password</p>
-                    </div>
-                    <div id="passwordPopup"></div>
-                    <div class="menu menu-style">
-                        <p><b>User Login</b></p>
-                        <p>Sign into another account.</p>
-                        <button class="menuButton menuButton-style" onclick="redirectBegin()">Login</button>
-                        <hr class="rounded">
-                        <p><b>Switch Login</b></p>
-                        <p>Switch to another account.</p>
-                        <button class="menuButton menuButton-style" onclick="switchAccountPage()">View Accounts</button>
-                        <hr class="rounded">
-                        <p><b>Sign Out</b></p>
-                        <p>Open your sign out options.</p>
-                        <button class="menuButton menuButton-style" onclick="signOutPage()">Sign Out</button>
-                        <div id="signOutConfirm"></div>
-                    </div>
-                    <div class="menu menu-style">
-                        <p>Delete your account.</p>
-                        <button class="menuButton menuButton-style" onclick="deleteAccPage()">Delete Account</button>
-                        <div id="deleteAccConfirm"></div>
-                    </div>
-                    <div class="menu menu-style">
-                        <p><b>Other Pages</b></p>
-                        <p>These are other pages that are related to interact.</p>
-                        <button class="menuButton menuButton-style" onclick="generateRelatedPages()">Show Pages</button>
-                        <div id="generateRelatedPages"></div>
-                    </div>
-                    <div class="menu menu-style">
-                        <p><b>DevMode</b></p>
-                        <p>Enable / Disable dev mode. This will allow you to see more information about the different elements of Interact.<br><br>
-                        To view change live, open inspect element, and run <b>switchNav(3)</b><br><br>
-                        You can quickly copy values by pressing the IDs. This will copy the ID to your clipboard.</p>
-                        <button class="menuButton menuButton-style" onclick="devModePage()">Dev Mode Settings</button>
-                        <div id="devModeConfirm"></div>
-                    </div>
-                    <div class="menu menu-style">
-                        <p><b>Developer</b></p>
-                        <p>Access your developer account, and any apps that has access to your account</p>
-                        <button class="menuButton menuButton-style" id="showDevOptionsButton" onclick="showDevOptions()">Show Dev Settings</button>
-                        <div id="showDevDiv"></div>
-                    </div>
-                </div>
+            <div id="settingsHeader">
+                <div class="menu menu-style areaPost"><h1 class="font_h1-style">Settings</h1></div>
             </div>
-            <div id="settingsContent"></div>
+            <div id="settingsContent">
+                <div class="menu menu-style areaPost settingsCategory" onclick="openSettingsCategoryPage('accounts')"><p>👤 Accounts - Manage Accounts on Interact Website</p></div>
+                <div class="menu menu-style areaPost settingsCategory" onclick="openSettingsCategoryPage('feed')"><p>📰 Feed - Adjust Your Feed and Search to Your Liking</p></div>
+                <div class="menu menu-style areaPost settingsCategory" onclick="openSettingsCategoryPage('theme')"><p>🎨 Theme - Adjust Your Default Client</p></div>
+                <div class="menu menu-style areaPost settingsCategory" onclick="openSettingsCategoryPage('privacy')"><p>🔐 Privacy - Adjust Your Privacy Settings</p></div>
+                <div class="menu menu-style areaPost settingsCategory" onclick="openSettingsCategoryPage('developer')"><p>👨‍💻 Developer - Learn and Create using Interact API</p></div>
+                <div class="menu menu-style areaPost settingsCategory" onclick="openSettingsCategoryPage('email')"><p>📧 Email - Adjust Your Email Settings</p></div>
+                <div class="menu menu-style areaPost settingsCategory" onclick="openSettingsCategoryPage('other')"><p>📄 Other Pages - View Other Pages Related to Interact</p></div>
+            </div>
         </div>
     `;
 
     document.getElementById("mainFeed").innerHTML = ele;
     devMode();
+    if ((hash && !toReset) || subCategory) return openSettingsCategoryPage(hash ? hash : subCategory);
 
     return true;
 }
 
+async function openSettingsCategoryPage(category) {
+    const backBtn = `<div class="menu menu-style settingsCategory" onclick="settingsPage(true, true)"><p>Back to Settings Page</p></div>`
+    const headerTitle = `<div class="menu menu-style areaPost"><h1 class="font_h1-style">${firstLetterUpperCase(category)} ${category != "other" ? "Settings" : "Pages" }</h1></div>`
+    let header = `${headerTitle}${backBtn}`;
+    document.getElementById("settingsHeader").innerHTML = header;
+    document.getElementById("settingsContent").innerHTML = `<div class="menu menu-style areaPost"><p>Loading ${firstLetterUpperCase(category)} Settings...</p></div>`;
+    changeHeader(`?settings=${category}`)
+
+    let content = "";
+    switch (category) {
+        case "accounts":
+            content += profileSettingsCategoryPage();
+            break;
+        case "feed":
+            content += await feedSettingsCategoryPage();
+            break;
+        case "theme":
+            content += themeSettingsCategoryPage();
+            break;
+        case "privacy":
+            content += await privacySettingsCategoryPage();
+            break;
+        case "email":
+            content += await emailSettingsCategoryPage();
+            break;
+        case "developer":
+            content += await developerSettingsCategoryPage();
+            break;
+        case "other":
+            content += otherSettingsCategoryPage();
+            break;
+        default:
+            content += `<div class="menu menu-style"><p>Unknown category: '${category}'. Please report this to the developers, or check spelling.</p></div>`;
+            break;
+    }
+
+    document.getElementById("settingsContent").innerHTML = content;
+
+    if (category == "privacy") {
+        document.getElementById("userEdit_privacySettings").addEventListener("submit", function (e) { e.preventDefault()})
+    } else if (category == "email") {
+        if (document.getElementById("userEdit_emailSettings")) document.getElementById("userEdit_emailSettings").addEventListener("submit", function (e) { e.preventDefault()})
+        document.getElementById("userEdit_email").addEventListener("submit", function (e) { e.preventDefault()})
+        document.getElementById("userEdit_password").addEventListener("submit", function (e) { e.preventDefault()})
+        document.getElementById("userEdit_password_remove").addEventListener("submit", function (e) { e.preventDefault()})
+    }
+
+    devMode();
+}
+
+function profileSettingsCategoryPage() {
+    const ele = `
+        <div class="menu menu-style">
+            <p>View your profile. As shown to other users.</p>
+            <button class="menuButton menuButton-style" onclick="profile()">View Profile</button>
+            <hr class="rounded">
+            <p>Edit your public profile.</p>
+            <button class="menuButton menuButton-style" onclick="userEditPage()">Edit Profile</button>
+        </div>
+        <div class="menu menu-style">
+            <p><b>Interact Accounts</b></p>
+            <p>Sign into another account.</p>
+            <button class="menuButton menuButton-style" onclick="redirectBegin()">Login</button>
+            <hr class="rounded">
+
+            <p><b>Switch Login</b></p>
+            <p>Switch to another account.</p>
+            <button class="menuButton menuButton-style" onclick="switchAccountPage()">View Accounts</button>
+            <hr class="rounded">
+
+            <p><b>Sign Out</b></p>
+            <p>Open your sign out options.</p>
+            <button class="menuButton menuButton-style" onclick="signOutPage()">Sign Out</button>
+        </div>
+        <div id="signOutConfirm"></div>
+        <div class="menu menu-style">
+            <p><b>Delete Your Account</b></p>
+            <button class="menuButton menuButton-style" onclick="deleteAccPage()">Delete Account</button>
+        </div>
+        <div id="deleteAccConfirm"></div>
+        <div class="menu menu-style">
+            <p><b>Change Your Password</b></p>
+            <button class="menuButton menuButton-style" onclick="changePasswordPage()">Change Password</p>
+        </div>
+        <div id="passwordPopup"></div>
+    `
+    return ele;
+}
+
+async function feedSettingsCategoryPage() {
+    const changeFeedSettingsUI = await changeFeedSettings();
+    const changePersonalizedFeedUI = await changePersonalizedFeed();
+    const changeSearchSettingsUI = await changeSearchSettings();
+    const ele = `
+        <div class="menu menu-style" id="changeFeedSettingsUI">
+            ${changeFeedSettingsUI}
+        </div>
+        <div class="menu menu-style">
+            ${changePersonalizedFeedUI}
+        </div>
+        <div class="menu menu-style" id="changeSearchSettingsUI">
+            ${changeSearchSettingsUI}
+        </div>
+    `;
+    return ele;
+}
+
+function themeSettingsCategoryPage() {
+    const ele = `
+        <div id="themeEditor" class="menu menu-style"><p><b>Client Theme</b></p>
+            <button class="menuButton menuButton-style" onclick='editThemePanel("${headers.userid}")'>Open Editor</button>
+            <button class="menuButton menuButton-style" onclick='createTheme()'>Create Theme</button>
+            <button class="menuButton menuButton-style" onclick='viewThemes("${headers.userid}")'>Existing Themes</button>
+            <button class="menuButton menuButton-style" onclick='unsetThemeFrontend()'>Unset Theme</button>
+            <button class="menuButton menuButton-style" onclick='viewThemesDiscovery()'>Discover Themes</button>
+        </div> 
+        <div id="userThemeEditor"></div>
+    `;
+    return ele;
+}
+
+async function privacySettingsCategoryPage() {
+    const openPrivacyPageUI = await openPrivacyPage();
+    const ele = `
+        <div class="menu menu-style">
+            <p>Note: This feature is unfinished, and will have a later updates for better functionality.</p>
+        </div>
+        <div class="menu menu-style" id="privacySettingsUI">
+            ${openPrivacyPageUI}
+        </div>
+    `;
+    return ele;
+}
+
+function updateUIDevMode() {
+    const devModePageUI = devModePage();
+    document.getElementById("devModeStatus").innerHTML = devModePageUI;
+}
+
+async function developerSettingsCategoryPage() {
+    const devModePageUI = devModePage();
+    const showDevOptionsUI = await showDevOptions();
+    const ele = `
+        <div class="menu menu-style">
+            <p><b>DevMode</b></p>
+            <p>Enable / Disable dev mode. This will allow you to see more information about the different elements of Interact.<br><br>
+            To view change live, open inspect element, and run <b>switchNav(3)</b><br><br>
+            You can quickly copy values by pressing the IDs. This will copy the ID to your clipboard.</p>
+        </div>
+        <div id="devModeStatus" class="menu menu-style">
+            <div>${devModePageUI}</div>
+        </div>
+        <div class="menu menu-style">
+            <p><b>Developer</b></p>
+            <p>Access your developer account, and any apps that has access to your account</p>
+        </div>
+        <div class="menu menu-style">
+            <div id="showDevDiv">${showDevOptionsUI}</div>
+        </div>
+    `;
+    return ele;
+}
+
+async function emailSettingsCategoryPage() {
+    const changeEmailPageUI = await changeEmailPage();
+
+    const ele = `
+        <div class="menu menu-style">
+            ${changeEmailPageUI}
+        </div>
+    `;
+    return ele;
+}
+
+function otherSettingsCategoryPage() {
+    const generatedReleatedUI = generateRelatedPages();
+    const ele = `
+        <div class="menu menu-style areaPost settingsCategory" onclick="switchNav(6)"><p>Notifications - Check out your notifications and subscriptions</p></div>
+        <div class="menu menu-style areaPost settingsCategory" onclick="switchNav(9)"><p>Bookmarks - Check out your bookmarks</p></div>
+        ${generatedReleatedUI}
+    `
+    return ele;
+}
+
+function bookmarksPage() {
+    changeHeader("?bookmarks")
+    const ele = `
+        <div id="bookmarksPage">
+            <div class="menu menu-style">
+                <h1>Bookmarks</h1>
+            </div>
+            <div class="menu menu-style">
+                <button class="menuButton menuButton-style" id="showBookmarksButton" onclick="showBookmarks()">Show Bookmarks</button>
+                <div id="bookmarksdiv"></div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById("mainFeed").innerHTML = ele;
+    showBookmarks()
+}
+
 function generateRelatedPages() {
     const related = [
-        { name: "Analytics", url: "https://interact-analytics.novapro.net" },
-        { name: "Interact Info", url: "https://novapro.net/interact/" },
-        { name: "Admin Page", url: "/admin/" },
-        { name: "Interact Staff", url: "/staff/" },
-        { name: "GitHub", url: "https://github.com/social-novapro/" },
-        { name: "Nova Productions", url: "https://novapro.net/" },
-        { name: "dkravec site", url: "https://dkravec.net/" },
+        { name: "Analytics", url: "https://interact-analytics.novapro.net", description: "Check out Analytics about Interact" },
+        { name: "Interact Info", url: "https://novapro.net/interact/", description: "Check out the product page on novapro.net" },
+        { name: "Admin Page", url: "/admin/", description: "Check out the admin page, where you can see some runtime info" },
+        { name: "Interact Staff", url: "/staff/", description: "Check out the Interact staff page" },
+        { name: "GitHub", url: "https://github.com/social-novapro/", description: "Check out the social-novapro github page, where you can find many open source repos" },
+        { name: "Nova Productions", url: "https://novapro.net/", description: "Learn about the company that created Interact." },
+        { name: "dkravec site", url: "https://dkravec.net/", description: "Learn about me - Daniel Kravec, the creator of Interact." },
     ];
 
     var ele = '';
 
     for (const rel of related) {
         ele+=`
-            <button class="userInfo buttonStyled" onclick="relatedPagesSwitch('${rel.url}')">${rel.name}</button>
+            <div class="menu menu-style areaPost settingsCategory" onclick=relatedPagesSwitch('${rel.url}')"><p>${rel.name} - ${rel.description}</p></div>
         `
     }
 
-    document.getElementById("generateRelatedPages").innerHTML=ele;
+   return ele;
 }
 
 function relatedPagesSwitch(page) {
@@ -1200,7 +1582,7 @@ function removeDeleteAccConfirm() {
 
 function signOutPage() {
     const ele = `
-        <div class="menu menu-stye" id="signOutPage">
+        <div class="menu menu-style">
             <p><b>Sign Out</b></p>
             <p>Are you sure you want to sign out?</p>
             <button class="menuButton menuButton-style"onclick="signOut()">Sign Out</p>
@@ -1210,8 +1592,8 @@ function signOutPage() {
     `;
 
     document.getElementById("signOutConfirm").innerHTML = ele;
-    document.getElementById("signOutPage").classList.add("menu");
-    document.getElementById("signOutPage").classList.add("menu-style");
+    // document.getElementById("signOutPage").classList.add("menu");
+    // document.getElementById("signOutPage").classList.add("menu-style");
     return true;
 }
 
@@ -1223,7 +1605,7 @@ async function switchAccountPage() {
     if (!loginsParsed[0]) return showModal("<p>No other accounts found</p>")
 
     var ele = `
-        <div class="menu menu-style" id="switchAccountPage">
+        <div class="menu menu-style">
             <p><b>Switch Account</b></p>
             <p>Choose an account to switch to</p>
             <div class="inline">
@@ -1235,11 +1617,9 @@ async function switchAccountPage() {
             <button class="menuButton menuButton-style" onclick="switchAccount('${login.userID}')">${preview}</button>
         `;
     }
-    ele += `</div>`;
+    ele += `<button class="menuButton menuButton-style" onclick="removeSignOutConfirm()">Cancel</button></div></div>`;
 
     document.getElementById("signOutConfirm").innerHTML = ele;
-    document.getElementById("signOutPage").classList.add("menu");
-    document.getElementById("signOutPage").classList.add("menu-style");
 }
 
 async function miniPreviewUser(userID) {
@@ -1251,9 +1631,10 @@ async function miniPreviewUser(userID) {
 
 async function deleteAccPage() {
     const ele = `
-        <div class="" id="deleteAccPage">
+        <div class="menu menu-style">
             <p><b>Delete Account</b></p>
             <p>Are you sure you want to delete your account?<br>This will send an email and you will need to confirm.</p>
+            <hr class="rounded">
             <div class="signInDiv">
                 <form id="userEdit_password_delete" class="contentMessage">
                     <label for="userEdit_email_pass_delete"><p>Password</p></label>
@@ -1267,8 +1648,6 @@ async function deleteAccPage() {
     `;
     
     document.getElementById("deleteAccConfirm").innerHTML = ele;
-    document.getElementById("deleteAccConfirm").classList.add("menu");
-    document.getElementById("deleteAccConfirm").classList.add("menu-style");
     document.getElementById("userEdit_password_delete").addEventListener("submit", function (e) { e.preventDefault()})
 }
 
@@ -1290,25 +1669,114 @@ async function requestDeleteAcc() {
     return res;
 }
 
-function devModePage() {
-    const ele = `
-        <div class="menu menu-style" id="devModePage">
-            <p><b>Dev Mode</b></p>
-            <p>Dev Mode is ${debug ? "enabled" : "disabled"}</p>
-            <p>Are you sure you want to enter dev mode?</p>
-            <button class="menuButton menuButton-style" onclick="switchDevMode()">Dev Mode</button>
-            <button class="menuButton menuButton-style" onclick="removeDevModeConfirm()">Cancel</button></div>
-        </div>
+function firstLetterUpperCase(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+}
+async function changePersonalizedFeed() {
+    // get all categories
+    /*if (!foundCategories || !foundCategories[0]) */foundCategories = await sendRequest(`/users/personalize`, { method: 'GET' });
+    if (!foundCategories || foundCategories.error) return console.log("error with categories");
+
+    var ele = `
+        <p><b>Personalization Settings</b></p>
+        <p>Choose what categories you want to see in your feed.</p>
+        <hr class="rounded">                    
     `;
 
-    document.getElementById("devModeConfirm").innerHTML = ele;
-    return true;
+    for (const category of foundCategories) {
+        ele+=`
+            <p style="text-align:left; padding-left:11%">${firstLetterUpperCase(category.name)} - <span id="categoryValue_${category.id}">Value ${category.value}</span> - <span id="revealButton_${category.id}" onclick="viewSubcategories('${category.id}')">View Subcategories</span></p>
+            <div class="slider-labels">
+                <span>0</span>
+                <input
+                    type="range"
+                    id="feedSettings_${category.id}"
+                    class="menu-style sliderInput"
+                    min="0"
+                    max="10"
+                    value="${category.value}"
+                    onchange="updateCategory('${category.id}')"
+                >
+                <span>10</span>
+            </div>
+            ${category.subCategories && category.subCategories[0] ? `
+                <div style="display: none" id="feedSettings_${category.id}_subcategories">
+                    <hr class="rounded">                    
+                    ${category.subCategories.map(subCategory => {
+                        return `
+                            <span>${subCategory.name}, </span>
+                        `;
+                    }).join('')}
+                </div>
+               
+            ` : ``}
+            <div class="spacer_5px"></div>
+            <div class="spacer_5px"></div>
+        `;
+    }
+
+
+    return ele;
+}
+
+function viewSubcategories(id) {
+    if (document.getElementById(`feedSettings_${id}_subcategories`).style.display == "block") {
+        document.getElementById(`feedSettings_${id}_subcategories`).style.display = "none";
+        document.getElementById(`revealButton_${id}`).innerText = "Reveal Subcategories";
+        return;
+    }
+
+    document.getElementById(`feedSettings_${id}_subcategories`).style.display = "block";
+    document.getElementById(`revealButton_${id}`).innerText = "Hide Subcategories";
+}
+
+async function updateCategory(id) {
+    const value = document.getElementById(`feedSettings_${id}`).value;
+    const body = {
+        categoryID: id,
+        value: value
+    }
+
+    const res = await sendRequest(`/users/personalize/`, {
+        method: 'POST',
+        body: body
+    });
+
+    if (!res || res.error) return console.log("error with categories");
+    
+    if (devMode) console.log("Updated category", id, value)
+    document.getElementById(`categoryValue_${id}`).innerText = value;
+    console.log(body)
+}
+
+function revealSubcategories(id) {
+    const ele = document.getElementById(`feedSettings_${id}_subcategories`);
+    const reveal = document.getElementById(`reveal_subcategories_${id}`);
+
+    if (ele.style.display == "none") {
+        ele.style.display = "block";
+        reveal.innerText = "Hide Subcategories";
+    }
+    else {
+        ele.style.display = "none";
+        reveal.innerText = "Reveal Subcategories";
+    }
+}
+
+function devModePage() {
+    const ele = `
+        <p>Dev Mode is ${debug ? "enabled" : "disabled"}</p>
+        <button class="menuButton menuButton-style" onclick="switchDevMode()">Dev Mode</button>
+        <button class="menuButton menuButton-style" onclick="removeDevModeConfirm()">Cancel</button></div>
+    `;
+
+    return ele;
 }
 
 function switchDevMode() {
     debugModeSwitch()
     devMode();
-    devModePage()
+    updateUIDevMode()
 }
 
 async function userEditPage() {
@@ -1330,15 +1798,16 @@ async function userEditHtmlV2(userID) {
 
     if (profileData?.displayName) document.title = `${profileData?.displayName} | Interact`
 
-    console.log(updateData)
     var ele = `
         <div class="userEdit">
             <div class="menu menu-style">
                 <h1 class="font_h1-style">Edit Profile</h1>
             </div>
+
             <div class="menu menu-style">
-                <p><b>Save any changes made</b></p>
-                <button class="menuButton menuButton-style" onclick="userEditV2()">Save</button>
+                <p><b>Go Back or Save Changes</b></p>
+                <button class="menuButton menuButton-style" onclick="userHtml('${userID}')"">Go Back</button>
+                <button class="menuButton menuButton-style" onclick="userEditV2()">Save Changes</button>
             </div>
     `
 
@@ -1363,10 +1832,11 @@ async function userEditHtmlV2(userID) {
                 <p><b>${update.title}</b></p>
                 <p>${update.description}</p>
                 <p>Current: ${update.currentValue || "No value set"}</p>
-                ${update.dbName=="profileURL" && update.currentValue != null? `<img src="${update.currentValue}" class="profileImage">` : ""}
+                ${update.dbName=="profileURL" && update.currentValue != null? `<img width="30%" height="30%" src="${update.currentValue}" class="profileImage">` : ""}
                     <p id="userEdit_update_${update.dbName}"></p>
                     <form id="userEdit_${update.dbName}" class="contentMessage" onsubmit="userEditV2Specific('${update.action}')">
-                    <input type="text" id="userEdit_${update.dbName}_text" class="userEditForm menu-style" placeholder="${update.currentValue || update.title}" value="${update.currentValue || ""}">
+                    <div><input type="text" id="userEdit_${update.dbName}_text" class="userEditForm menu-style" placeholder="${update.currentValue || update.title}" value="${update.currentValue || ""}"></div>
+                    ${update.dbName=="profileURL" ? `<div><input type="file" id="interactFile" class="menuButton menuButton-style"></div>` : ""}
                 </form>
             </div>
         `
@@ -1432,6 +1902,7 @@ async function userEditHtml(userID) {
                 ${profileData.userData.profileURL ? `<img src="${profileData.userData.profileURL}" class="profileImage">` : "No image set"}
                 <form id="userEdit_profileImage" class="contentMessage" onsubmit="userEdit('profileImage')">
                     <input id="userEdit_profileImage_text" type="text" class="userEditForm menu-style" placeholder="Profile Image URL">
+                    <input type="file" id="interactFile" class="menuButton menuButton-style">
                 </form>
             </div>
             <div class="menu menu-style">
@@ -1504,10 +1975,6 @@ async function userEditHtml(userID) {
         document.getElementById("userEdit_profileImage").addEventListener("submit", function (e) { e.preventDefault()})
     }
     return true; 
-}
-
-function escapeHtml(text) {
-    return text.replace(/"/g, '&quot;');
 }
 
 function unescapeHtml(text) {
@@ -1814,7 +2281,6 @@ function getThemeChanges(themeID, possibleThemeEdits, ignoreLock) {
 
     if (!ignoreLock) {
         const changeLock = document.getElementById(`themeSetting_locked`).value;
-        console.log(changeLock)
         if (changeLock) reqBody.push({ option: "locked", value: changeLock == 1 ? true : false});
     }
 
@@ -1923,11 +2389,12 @@ async function followingFollowerHtml(userID, type=0) {
     followingFollowerData.userID=userID;
     // type, 0=following, 1=followers
     const followData = await followingFollowerList(userID, type);
-    console.log(followData)
     if (!followData) return; //showModal(`<p>Error: ${userList.code}, ${userList.msg}</p>`);
 
     if (followData.prevIndexID) followingFollowerData.prevIndexID = followData.prevIndexID;
     if (followData.userData) followingFollowerData.userData = followData.userData;
+
+    followingFollowerData.currentlyBuilding = true;
 
     document.getElementById("mainFeed").innerHTML =  `
         <div class="menu menu-style">
@@ -1969,36 +2436,40 @@ function listFollowingFollower() {
     var ele = ``;
 
     for (const data of followingFollowerListStore) {
-        const user = data.userData;
-        const follow = data.followData;
-
-        var timesince
-        if (user.creationTimestamp) timesince = checkDate(user.creationTimestamp)
-
-        var timesinceFollow
-        if (follow.timestamp) timesinceFollow = checkDate(follow.timestamp)
-
-        ele += `
-            <div class="publicPost posts-style">
-                <p class="${user._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" onclick="userHtml('${user._id}')"> ${user.displayName} @${user.username} | ${user.creationTimestamp ? timesince : '' }</p>
-                <p>${user.description ? user.description : "no description"}</p>
-                <p>Following: ${user.followingCount} | Followers: ${user.followerCount}</p>
-                ${user._id == currentUserLogin.userID ? `` : `
-                    <p id="follow_search_id_${user._id}" onclick=
-                    ${user.followed===true ? 
-                        `"unFollowUser('${user._id}', 'follow_search_id_${user._id}')">Unfollow User` :
-                        `"followUser('${user._id}', 'follow_search_id_${user._id}')">Follow User`
-                    }</p>
-                `}
-                <p class="debug" onclick="copyToClipboard('${user._id}')">${user._id}</p>
-               ${follow.timestamp ? `<p>Followed: ${timesinceFollow}</p>` : ``}
-            </div>
-        `;
+        ele += followingFollowerSingleElement(data.userData, data.followData);
     }
 
     ele+=`<div id="addToBottomFollowingFollower"></div>`;
     document.getElementById("followingFollowerList").innerHTML = ele;
     followingFollowerData.currentlyBuilding=false;
+}
+
+function followingFollowerSingleElement(user, follow) {
+    if (!user) return `<p>Error: No user data found</p>`;
+    if (!follow) return `<p>Error: No follow data found</p>`;
+    var timesince
+    if (user.creationTimestamp) timesince = checkDate(user.creationTimestamp)
+
+    var timesinceFollow
+    if (follow.timestamp) timesinceFollow = checkDate(follow.timestamp)
+
+    return ` 
+        <div class="publicPost posts-style">
+            ${follow.current != true ? `<p><i>Not current, might have unfollowed</i></p>` : ``}
+            <p class="${user._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" onclick="userHtml('${user._id}')"> ${user.displayName} @${user.username} | ${user.creationTimestamp ? timesince : '' }</p>
+            <p>${user.description ? user.description : "no description"}</p>
+            <p>Following: ${user.followingCount} | Followers: ${user.followerCount}</p>
+            ${user._id == currentUserLogin.userID ? `` : `
+                <p id="follow_search_id_${user._id}" onclick=
+                ${user.followed===true ? 
+                    `"unFollowUser('${user._id}', 'follow_search_id_${user._id}')">Unfollow User` :
+                    `"followUser('${user._id}', 'follow_search_id_${user._id}')">Follow User`
+                }</p>
+            `}
+            <p class="debug" onclick="copyToClipboard('${user._id}')">${user._id}</p>
+            ${follow.timestamp ? `<p>Followed: ${timesinceFollow}</p>` : ``}
+        </div>
+    `
 }
 
 async function nextFollowingFollowerList() {
@@ -2030,7 +2501,26 @@ async function userHtml(userSearch) {
     if (profileData.userData) followingFollowerData.userData = profileData.userData;
 
 
+    if (profileData.included.userPostIndexData) {
+        userProfieIndexData.indexID = profileData.userPostIndexData.indexID;
+        if (profileData.userPostIndexData.prevIndexID) userProfieIndexData.prevIndexID = profileData.userPostIndexData.prevIndexID;
+        if (profileData.userPostIndexData.nextIndexID) userProfieIndexData.nextIndexID = profileData.userPostIndexData.nextIndexID;
+    } else {
+        profileData.prevIndexID = null;
+        profileData.nextIndexID = null;
+        profileData.totalPosts = 0;
+    }
+
+    if (profileData.included.likeIndexData) {
+        profileLikeIndexData.indexID = profileData.likeIndexData.indexID;
+        if (profileData.likeIndexData.prevIndexID) profileLikeIndexData.prevIndexID = profileData.likeIndexData.prevIndexID;
+        if (profileData.likeIndexData.nextIndexID) profileLikeIndexData.nextIndexID = profileData.likeIndexData.nextIndexID;
+    }
+
     document.getElementById("mainFeed").innerHTML =  `
+        <div class="menu menu-style">
+            <h1>Profile</h1>
+        </div>
         ${clientUser ? `
             <div class="menu menu-style">
                 <p><b>Edit Profile</b></p>
@@ -2133,10 +2623,24 @@ async function userHtml(userSearch) {
                 })
             }).join(" ")}
         ` : ``}
+        <!-- Likes, TO FIX UI OF PROFILE, SELECTABLE, PINS, BADGES, POSTS, like mobile -->
+        ${profileData.included.likes ? `
+            <div class="menu menu-style">
+                <p><b>Likes</b></p>
+                <p>${profileData.userData.likedCount}</p>
+                <div id="likeRenderActionButtons"> 
+                    ${likesRenderActionButtons()}
+                </div>
+            </div>
+            <hr class="rounded">
+            <div id="likesRenderPage">
+                ${likesRenderPage(profileData.likesData)}
+            </div>
+        ` : ``}
         ${!profileData.postData.error ? `
             <div class="menu menu-style">
                 <p><b>Posts</b></p>
-                <p>${profileData.postData.length}</p>
+                <p>${profileData.userData.totalPosts}</p>
             </div>
             <hr class="rounded">
             ${profileData.postData.map(function(post) {
@@ -2151,10 +2655,97 @@ async function userHtml(userSearch) {
                     extraData: post.type?.extra=="included" ? post.extraData : {},
                 })                
             }).join(" ")}
+            ${profileData.included.userPostIndexData && profileData.userPostIndexData.prevIndexID ? `
+                <div id="addToBottomProfile"></div>
+            `: ``}
         ` : ``}
     `
 
+    devMode()
     return;
+}
+function likesRenderActionButtons() {
+    return `
+        ${profileLikeIndexData.prevIndexID ? `<button class="menuButton menuButton-style" onclick="loadProfileLikeIndex('prev')">Previous Page</button>` : ''}
+        ${profileLikeIndexData.nextIndexID ? `<button class="menuButton menuButton-style" onclick="loadProfileLikeIndex('next')">Next Page</button>` : ''}
+    `
+}
+
+async function loadProfileLikeIndex(direction) {
+    if (profileLikeIndexData.currentlyBuilding) return;
+    profileLikeIndexData.currentlyBuilding = true;
+
+    var likesData = null;
+
+    if (direction == 'prev') {
+        if (!profileLikeIndexData.prevIndexID) return;
+        likesData = await sendRequest(`/users/likes/index/${profileLikeIndexData.prevIndexID}`, { method: 'GET' });
+    } else if (direction == 'next') {
+        if (!profileLikeIndexData.nextIndexID) return;
+        likesData = await sendRequest(`/users/likes/index/${profileLikeIndexData.nextIndexID}`, { method: 'GET' });
+    }
+
+    if (!likesData || likesData.error) return showModal(`<p>Error: ${likesData.code}, ${likesData.msg}</p>`);
+    
+    profileLikeIndexData.indexID = likesData._id;
+    profileLikeIndexData.prevIndexID = likesData.prevIndexID ?? null;
+    profileLikeIndexData.nextIndexID = likesData.nextIndexID ?? null;
+    
+    document.getElementById("likesRenderPage").innerHTML = likesRenderPage(likesData.postsLiked);
+    document.getElementById("likeRenderActionButtons").innerHTML = likesRenderActionButtons();
+    profileLikeIndexData.currentlyBuilding = false;
+}
+
+function likesRenderPage(likesData) {
+    if (!likesData || likesData.error) return '';//showModal(`<p>Error: ${likesData.code}, ${likesData.msg}</p>`);
+
+    return `
+        ${likesData.map(function(like) {
+            return postElementCreate({
+                post: like.postData,
+                user: like.userData, 
+                pollData: like.type?.poll=="included" ? like.pollData : null,
+                voteData: like.type?.vote=="included" ? like.voteData : null,
+                quoteData: like.type?.quote=="included" ? like.quoteData : null,
+                coposterData: like.type?.coposter=="included" ? like.coposterData : null,
+                tagData: like.type?.tag=="included" ? like.tagData : null,
+                extraData: like.type?.extra=="included" ? like.extraData : {},
+            })
+        }).join(" ")}
+    `
+}
+
+async function addNextIndexProfile() {
+    console.log("BUILDING NEXT USERPOSTINDEX")
+    userProfieIndexData.currentlyBuilding = true;
+    if (!userProfieIndexData.prevIndexID) return;
+
+    const nextIndexData = await sendRequest(`/users/get/userPosts/${userProfieIndexData.prevIndexID}`, { method: 'GET' })
+    if (!nextIndexData || nextIndexData.error) return;
+
+    const myEle = `
+        ${nextIndexData.posts.map(function(post) {
+            return postElementCreate({
+                post: post.postData, 
+                user: post.userData,
+                pollData: post.type?.poll=="included" ? post.pollData : null,
+                voteData: post.type?.vote=="included" ? post.voteData : null,
+                quoteData: post.type?.quote=="included" ? post.quoteData : null,
+                coposterData: post.type?.copost=="included" ? post.coposterData : null,
+                tagData: post.type?.tag=="included" ? post.tagData : null,
+                extraData: post.type?.extra=="included" ? post.extraData : {},
+            })                
+        }).join(" ")}
+        <div id="addToBottomProfile"></div>
+    `;
+    
+    userProfieIndexData.indexID = nextIndexData.index._id;
+    userProfieIndexData.prevIndexID = nextIndexData.index.prevIndexID ?? null;
+    userProfieIndexData.nextIndexID = nextIndexData.index.nextIndexID ?? null;
+
+    document.getElementById("addToBottomProfile").outerHTML = myEle;
+    userProfieIndexData.currentlyBuilding = false;
+    devMode()
 }
 
 function showBadges() {
@@ -2265,11 +2856,6 @@ async function openPrivacyPage(privacyDataFound) {
     if (debug) console.log(privacyData);
 
     var ele = `
-        <div class="menu menu-style">
-            <p><b><br>Privacy Settings</b></p>
-            <p>This feature is unfinished, and will have a later update for better functionality.</p>
-            <p>Currently only privating posts works.</p>
-            <hr class="rounded">
         <form id="userEdit_privacySettings">
     `;
 
@@ -2294,15 +2880,12 @@ async function openPrivacyPage(privacyDataFound) {
     }
 
     ele += `
-            </form>
-            <button class="menuButton menuButton-style" onclick="updatePrivacySettings()">Update Settings</button>
-            <div id="completed_change_pass"></div>
-        </div>
+        </form>
+        <button class="menuButton menuButton-style" onclick="updatePrivacySettings()">Update Settings</button>
+        <div id="completed_change_pass"></div>
     `;
     
-    document.getElementById("privacyPopup").innerHTML = ele;
-    document.getElementById("userEdit_privacySettings").addEventListener("submit", function (e) { e.preventDefault()})
-
+    return ele;
 }
 
 async function updatePrivacySettings() {
@@ -2324,7 +2907,9 @@ async function updatePrivacySettings() {
     });
 
     if (!res || res.error) return null;
-    openPrivacyPage(res)
+    const updatedUI = await openPrivacyPage(res)
+    document.getElementById("privacySettingsUI").innerHTML = updatedUI;
+    document.getElementById("userEdit_privacySettings").addEventListener("submit", function (e) { e.preventDefault()})
 }
 
 async function changePasswordPage() {
@@ -2366,36 +2951,53 @@ async function fetchClientEmailData() {
     return res
 }
 
+
 async function changeFeedSettings() {
     const allowed = await getPossibleFeeds();
     if (!allowed) return alert("Error getting feeds")
     const getPref = await getPrefAPI()
     const currentDefaultOption = allowed.find(allow => allow.name === getPref.preferredFeed);
     const selectedDate = getTimeSince(getPref.timestamp)
-    
+
     var ele = `
-        <div class="menu menu-style">
-            <p><b>Change your default feed</p></b>
-            <hr class="rounded">
-            <p>Current default feed is:<br><b>${currentDefaultOption.niceName}</b> selected ${selectedDate.sinceOrUntil == "current" ? "just changed" : `${selectedDate.sinceOrUntil == "since" ? selectedDate.value + " ago" : selectedDate.value}`}
+        <p><b>Change your default feed</p></b>
+        <hr class="rounded">
+        <p>Current default feed is:<br><b>${currentDefaultOption.niceName}</b> selected ${selectedDate.sinceOrUntil == "current" ? "just changed" : `${selectedDate.sinceOrUntil == "since" ? selectedDate.value + " ago" : selectedDate.value}`}
     `;
+
     for (const feed of allowed) {
         if (!feed.speical) ele += `
         <div class="menu menu-style">
             <p>${feed.description}</p>
             <button class="menuButton menuButton-style ${getPref.preferredFeed==feed.name ? 'activeFeed' : ''}" onclick="changePref('${feed.name}')">${feed.niceName}</button>
+            ${feed.name == "personal" ? `
+                <div>
+                    <div class="spacer_5px"></div>
+                    <p>Reset personalized feed indexes and viewed posts</p>
+                    <button class="menuButton menuButton-style" onclick="resetPersonalizedFeed()" id="resetPersonalFeed">Reset Personalized Feed</button>
+                </div>
+            ` : ``}
         </div>
         `
     }
 
     ele +="</div>"
-    document.getElementById("feedPopup").innerHTML = ele;
+    return ele;
+}
+async function resetPersonalizedFeed() {
+    const reset = await sendRequest(`/feeds/personal/reset`, { method: "GET" });
+    if (!reset || reset.error) return alert(`An error occurred while resetting feed${reset.error? `: ${reset.msg}`: ""}`);
+    const changeFeedSettingsUI = await changeFeedSettings();
+    document.getElementById("changeFeedSettingsUI").innerHTML = changeFeedSettingsUI;
+    document.getElementById("resetPersonalFeed").innerHTML = "Reset Personalized Feed (Completed)";
+    document.getElementById("resetPersonalFeed").disabled = true;
 }
 
 async function changePref(feedName) {
     const changed = changePrefAPI(feedName);
     if (!changed || changed.error) alert(`An error occurred while changing${changed.error? `: ${changed.msg}`: ""}`);
-    await changeFeedSettings();
+    const changeFeedSettingsUI = await changeFeedSettings();
+    document.getElementById("changeFeedSettingsUI").innerHTML = changeFeedSettingsUI;
 }
 
 async function getPrefAPI() {
@@ -2413,8 +3015,8 @@ async function changePrefAPI(feedName) {
 
 async function changeSearchSettings() {
     const searchExport = await sendRequest('/search/setting', { method: 'GET' });
-    if (!searchExport) return alert("Error getting search settings");
-    else renderSearchSettings(searchExport);
+    if (!searchExport) alert("Error getting search settings");
+    else return renderSearchSettings(searchExport);
 }
 
 function renderSearchSettings(searchExport) {
@@ -2422,7 +3024,6 @@ function renderSearchSettings(searchExport) {
     const selectedDate = getTimeSince(searchExport.currentSearch.timestamp)
     
     var ele = `
-        <div class="menu menu-style">
             <p><b>Change your default search algorithm</p></b>
             <hr class="rounded">
             <p>Current default search is:<br><b>${currentDefaultOption.niceName}</b> selected ${selectedDate.sinceOrUntil == "current" ? "just changed" : `${selectedDate.sinceOrUntil == "since" ? selectedDate.value + " ago" : selectedDate.value}`}
@@ -2436,85 +3037,81 @@ function renderSearchSettings(searchExport) {
         `
     }
 
-    ele +="</div>"
-    document.getElementById("searchSettingPopup").innerHTML = ele;
+    return ele;
 }
 
 async function changeSearchPref(searchVersion) {
     const searchExport = await sendRequest('/search/setting', { method: 'POST', body: { newSearch: searchVersion} });
     if (!searchExport || searchExport.error) alert(`An error occurred while changing${changed.error? `: ${changed.msg}`: ""}`);
 
-    renderSearchSettings(searchExport);
+    const changeSearchSettingsUI = renderSearchSettings(searchExport);
+    document.getElementById("changeSearchSettingsUI").innerHTML = changeSearchSettingsUI;
 }
 
 async function changeEmailPage() {
     const emailData = await fetchClientEmailData();
-
-    const ele = `
-        <div class="menu menu-style">
-            <div> 
-                <p><b>Current Email Settings</b></p>
-                <hr class="rounded">
-                <p>Current Email: ${emailData.email}</p>
-                <p>Email Verified: ${emailData.verified}</p>
-                ${emailData.verified && emailData.timestampVerified ? `
-                    <p>Verified Since: ${checkDate(emailData.timestampVerified)}</p>
-                ` : ``}
-                ${emailData.emailSetting != emailData.email ? `
-                    <p>Attempting Verification for: ${emailData.emailSetting}</p>
-                ` : ``}
-                ${emailData.removeRequest ? `
-                    <p>Attempting Removal for: ${emailData.removeRequest}</p>
-                ` : ``}
-            </div>
-            <div>
-            <hr class="rounded">
-            <p><b>Email Notifications</b></p>
-                ${emailData.verified ? `
-                    <div id="emailSettingOptions"></div>
-                ` : `
-                    <p>Email is not verified, can not change email settings</p>
-                `}
-            </div>
-            <div>
-                <hr class="rounded">
-                <p><b>Change Email</b></p>
-                <hr class="rounded">
-                <form id="userEdit_email" class="contentMessage" onsubmit="editEmailRequest()">
-                    <label for="userEdit_email_text"><p>New Email</p></label>
-                    <input type="email" id="userEdit_email_text" autocomplete="false" autofill="false" class="userEditForm menu-style" placeholder="New Email">
-                </form>
-                <form id="userEdit_password" class="contentMessage" onsubmit="editEmailRequest()">
-                    <label for="userEdit_email_pass"><p>Password</p></label>
-                    <input type="password" id="userEdit_email_pass" class="userEditForm menu-style" placeholder="Password">
-                </form>
-                <button class="menuButton menuButton-style" onclick="editEmailRequest()">Submit Email</button>
-                <p id="resultAddRequest"></p>
-            </div>
-            ${emailData.verified ? `
-            <div>
-                <hr class="rounded">
-                <p><b>Remove Email</b></p>
-                <hr class="rounded">
-                <form id="userEdit_password_remove" class="contentMessage" onsubmit="removeEmailRequest('${emailData.email}')">
-                    <label for="userEdit_email_pass_remove"><p>Password</p></label>
-                    <input type="password" id="userEdit_email_pass_remove" class="userEditForm menu-style" placeholder="Password">
-                </form>
-                <button class="menuButton menuButton-style" onclick="removeEmailRequest('${emailData.email}')">Remove Email</button>
-                <p id="resultRemoveRequest"></p>
-            </div> 
-            ` : ``}
-        </div>
-    `
-
+    var createEditEmailSettingsUI = ""
     if (emailData.verified) {
-        createEditEmailSettingsView(emailData.emailSettings);
+        createEditEmailSettingsUI = await createEditEmailSettingsView(emailData.emailSettings);
     }
 
-    document.getElementById("emailPopup").innerHTML = ele;
-    document.getElementById("userEdit_email").addEventListener("submit", function (e) { e.preventDefault()})
-    document.getElementById("userEdit_password").addEventListener("submit", function (e) { e.preventDefault()})
-    document.getElementById("userEdit_password_remove").addEventListener("submit", function (e) { e.preventDefault()})
+    const ele = `
+        <div> 
+            <p><b>Current Email Settings</b></p>
+            <hr class="rounded">
+            <p>Current Email: ${emailData.email}</p>
+            <p>Email Verified: ${emailData.verified}</p>
+            ${emailData.verified && emailData.timestampVerified ? `
+                <p>Verified Since: ${checkDate(emailData.timestampVerified)}</p>
+            ` : ``}
+            ${emailData.emailSetting != emailData.email ? `
+                <p>Attempting Verification for: ${emailData.emailSetting}</p>
+            ` : ``}
+            ${emailData.removeRequest ? `
+                <p>Attempting Removal for: ${emailData.removeRequest}</p>
+            ` : ``}
+        </div>
+        <div>
+        <hr class="rounded">
+        <p><b>Email Notifications</b></p>
+            ${emailData.verified ? `
+                <div id="emailSettingOptions">${createEditEmailSettingsUI}</div>
+            ` : `
+                <p>Email is not verified, can not change email settings</p>
+            `}
+        </div>
+        <div>
+            <hr class="rounded">
+            <p><b>Change Email</b></p>
+            <hr class="rounded">
+            <form id="userEdit_email" class="contentMessage" onsubmit="editEmailRequest()">
+                <label for="userEdit_email_text"><p>New Email</p></label>
+                <input type="email" id="userEdit_email_text" autocomplete="false" autofill="false" class="userEditForm menu-style" placeholder="New Email">
+            </form>
+            <form id="userEdit_password" class="contentMessage" onsubmit="editEmailRequest()">
+                <label for="userEdit_email_pass"><p>Password</p></label>
+                <input type="password" id="userEdit_email_pass" class="userEditForm menu-style" placeholder="Password">
+            </form>
+            <button class="menuButton menuButton-style" onclick="editEmailRequest()">Submit Email</button>
+            <p id="resultAddRequest"></p>
+        </div>
+        ${emailData.verified ? `
+        <div>
+            <hr class="rounded">
+            <p><b>Remove Email</b></p>
+            <hr class="rounded">
+            <form id="userEdit_password_remove" class="contentMessage" onsubmit="removeEmailRequest('${emailData.email}')">
+                <label for="userEdit_email_pass_remove"><p>Password</p></label>
+                <input type="password" id="userEdit_email_pass_remove" class="userEditForm menu-style" placeholder="Password">
+            </form>
+            <button class="menuButton menuButton-style" onclick="removeEmailRequest('${emailData.email}')">Remove Email</button>
+            <p id="resultRemoveRequest"></p>
+        </div> 
+        ` : ``} 
+    `
+
+    // document.getElementById("emailPopup").innerHTML = ele;
+    return ele;
 }
 
 async function createEditEmailSettingsView(emailSettings) {
@@ -2534,8 +3131,7 @@ async function createEditEmailSettingsView(emailSettings) {
 
     ele+=`</form><button class="menuButton menuButton-style" onclick="editEmailSettings()">Submit Email Settings</button>`;
     
-    document.getElementById("emailSettingOptions").innerHTML = ele;
-    document.getElementById("userEdit_emailSettings").addEventListener("submit", function (e) { e.preventDefault()})
+    return ele;
 }
 
 async function editEmailSettings() {
@@ -2561,7 +3157,6 @@ async function editEmailSettings() {
     for (item of changedItems) {
         newSettings.push({ option: item, value: document.getElementById(`emailSetting_${item}`).checked })
     }
-
     const res = await sendRequest(`/emails/settings`, {
         method: 'PUT',
         body: {
@@ -2570,7 +3165,8 @@ async function editEmailSettings() {
     });
     
     if (!res || res.error) return null;
-    createEditEmailSettingsView(res);
+    const createEditEmailSettingsUI = await createEditEmailSettingsView(res);
+    document.getElementById("emailSettingOptions").innerHTML = createEditEmailSettingsUI;
 }
 
 async function getPossibleEmailSettings() {
@@ -2649,8 +3245,8 @@ async function unsubUser(userID, username) {
 async function unsubAll() {
     const res = await sendRequest(`/notifications/unsubAll/`, { method: 'DELETE' });
 
-    if (!res || res.error) return document.getElementById(`subscriptionsDiv`).innerHTML=`error while unsubscribing`
-    else return document.getElementById(`subscriptionsDiv`).innerHTML=`Unsubscribed from all users.`
+    if (!res || res.error) return document.getElementById(`notificationsDiv`).innerHTML=`error while unsubscribing`
+    else return document.getElementById(`notificationsDiv`).innerHTML=`Unsubscribed from all users.`
 }
 
 function hideBookmarks() {
@@ -2662,7 +3258,8 @@ async function showBookmarks() {
     if (document.getElementById('bookmarksAreShown')) return hideBookmarks()
     document.getElementById('showBookmarksButton').innerHTML="Hide Bookmarks"
 
-    const res = await sendRequest(`/posts/bookmarks/`, { method: 'GET' });
+    const res = await sendRequest(`/posts/bookmarks/`, { method: 'GET', ignoreError: true });
+    if (!res || res.error) return document.getElementById("bookmarksdiv").innerHTML=`<div><hr class="rounded">No Bookmarks found.</div>`
 
     var obj = {} // { list: name, saves: [] }
     for (const list of res.lists) {
@@ -2680,21 +3277,18 @@ async function showBookmarks() {
         ele+=`
             <div>
                 <p>${listname}</p>
-                <hr class="rounded">
         `
         for (const save of list) {``
             if (debug) console.log(save)
             const newData = await getPostAndProfileData(save)
             ele+= `
-                <div class="menu menu-style" id="bookmarkView_${save}">
+                <hr class="rounded">
+
+                <div class="" id="bookmarkView_${save}">
                     ${newData.error ? `
                         <p>Deleted Post or Otherwise</p>
                     ` : `
-                        ${postElementCreate({
-                            post: newData.postData,
-                            user: newData.profileData,
-                            type : "basic"
-                        })}
+                        ${postElementCreate(newData)}
                     `}
                     <button class="menuButton menuButton-style" onclick="unsaveBookmark('${save}', null, 'bookmarks')">Remove ${newData.error ? `Broken` : ''} Bookmark</button>
                 </div>
@@ -2708,15 +3302,51 @@ async function showBookmarks() {
 }
 
 function hideSubscriptions() {
-    document.getElementById('subscriptionsDiv').innerHTML=""
+    document.getElementById('notificationsDiv').innerHTML=""
     document.getElementById('showSubscriptionsButton').innerHTML="Show Subscriptions"
 }
 
 async function showSubscriptions() {
     if (document.getElementById('subscriptionsAreShown')) return hideSubscriptions()
     document.getElementById('showSubscriptionsButton').innerHTML="Hide Subscriptions"
+    document.getElementById('showNotificationsButton').innerHTML="Show Notifications"
+
+    const res = await sendRequest(`/notifications/subscriptions/`, { method: 'GET', ignoreError: true });
+    if (!res || res.error) return document.getElementById('notificationsDiv').innerHTML=`No Subscriptions Found`
+
+    var ele = `<hr class="rounded" id="subscriptionsAreShown"><p>${res.length} Subscriptions</p><hr class="rounded">`
+    ele = ele+`<div><a id="unsuballbutton" onclick="unsubAll()">unsub from all users.</a><hr class="rounded"></div>`;
+
+    for (const sub of res.reverse()) {
+        const userData = await getUserDataSimple(sub._id) 
+        var timesince
+        if (userData.creationTimestamp) timesince = checkDate(userData.creationTimestamp)
     
-    const res = await sendRequest(`/notifications/subscriptions/`, { method: 'GET' });
+        ele = ele + `
+            <div id="subList_${userData._id}">
+                <div class="publicPost posts-style">
+                    <p class="${userData._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" onclick="userHtml('${userData._id}')"> ${userData.displayName} @${userData.username} | ${userData.creationTimestamp ? timesince : '' }</p>
+                    <p>${userData.description ? userData.description : "no description"}</p>
+                    <p>Following: ${userData.followingCount} | Followers: ${userData.followerCount}</p>
+                    ${userData._id == currentUserLogin.userID ? `` : `
+                        <p id="follow_search_id_${userData._id}" onclick=
+                        ${userData.followed===true ? 
+                            `"unFollowUser('${userData._id}', 'follow_search_id_${userData._id}')">Unfollow User` :
+                            `"followUser('${userData._id}', 'follow_search_id_${userData._id}')">Follow User`
+                        }</p>
+                    `}
+                    <a onclick="unsubUser('${userData._id}', '${userData.username}')">Unsubscribe from User</a>
+                    <p class="debug" onclick="copyToClipboard('${userData._id}')">${userData._id}</p>
+                </div>
+            </div>
+        `
+    }
+
+    document.getElementById("notificationsDiv").innerHTML=ele
+}
+
+async function showSubscriptionsV2() {
+    const res = await sendRequest(`/notificationCenter/subscriptions/`, { method: 'GET' });
     if (!res || res.error) return document.getElementById('showSubscriptionsButton').innerHTML=`error`
 
     var ele = `<hr class="rounded" id="subscriptionsAreShown"><p>${res.length} Subscriptions</p><hr class="rounded">`
@@ -2724,19 +3354,31 @@ async function showSubscriptions() {
 
     for (const sub of res.reverse()) {
         const userData = await getUserDataSimple(sub._id) 
+        var timesince
+        if (userData.creationTimestamp) timesince = checkDate(userData.creationTimestamp)
+    
         ele = ele + `
             <div id="subList_${userData._id}">
-                <div>
-                    <a onclick="userHtml('${userData._id}')">${userData.username}</a>
-                </div>
-                <div>
-                    <a onclick="unsubUser('${userData._id}', '${userData.username}')">unsub from user.</a>
+                <div class="publicPost posts-style">
+                    <p class="${userData._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" onclick="userHtml('${userData._id}')"> ${userData.displayName} @${userData.username} | ${userData.creationTimestamp ? timesince : '' }</p>
+                    <p>${userData.description ? userData.description : "no description"}</p>
+                    <p>Following: ${userData.followingCount} | Followers: ${userData.followerCount}</p>
+                    ${userData._id == currentUserLogin.userID ? `` : `
+                        <p id="follow_search_id_${userData._id}" onclick=
+                        ${userData.followed===true ? 
+                            `"unFollowUser('${userData._id}', 'follow_search_id_${userData._id}')">Unfollow User` :
+                            `"followUser('${userData._id}', 'follow_search_id_${userData._id}')">Follow User`
+                        }</p>
+                    `}
+                    <a onclick="unsubUser('${userData._id}', '${userData.username}')">Unsubscribe from User</a>
+                    <p class="debug" onclick="copyToClipboard('${userData._id}')">${userData._id}</p>
                 </div>
             </div>
         `
     }
 
-    document.getElementById("subscriptionsDiv").innerHTML=ele
+    document.getElementById("notificationsDiv").innerHTML=ele
+    devMode();
 }
 
 
@@ -2745,33 +3387,90 @@ function hideNotifications() {
     document.getElementById('showNotificationsButton').innerHTML="Show Notifications"
 }
 
+function notificationsPage() {
+    changeHeader("?notifications")
+    const ele = `
+        <div class="menu menu-style">
+            <h1>Notifications</h1>
+        </div>
+            <div class="menu menu-style">
+            <div>
+                <button class="menuButton menuButton-style" id="showNotificationsButton" onclick="showNotifications()">Show Notifications</button>
+                <button class="menuButton menuButton-style" id="showSubscriptionsButton" onclick="showSubscriptions()">Show Subscriptions</button>
+                <!--<button class="menuButton menuButton-style" id="notificationSettingsPage" onclick="notificationSettingsPage()">Show Settings</button>-->
+            </div>
+            <div>
+                <div id="notificationsDiv"></div>
+            </div>
+        </div>
+    `
+    document.getElementById("mainFeed").innerHTML = ele;
+    showNotifications();
+}
+
+async function notificationSettingsPage() {
+    const res = await sendRequest('/notificationCenter/preferences/', { method: 'GET' });
+    if (!res || res.error) return;
+
+    var ele = ``;
+    for (const system of res.systemPreferences) {
+        console.log(system)
+        ele+=notificationPreferenceSystem(system.preferences, system.preferences.sectionTypes, system.system)
+    }
+    document.getElementById("notificationsDiv").innerHTML = ele;
+}
+
+function notificationPreferenceSystem(userPreferences, sectionTypes, system) {
+    // if (!userPreferences || !sectionTypes || !system)
+    console.log(userPreferences)
+    return `
+        <div class="menu menu-style">
+            <div>
+                <p><b>${system.name}</b></p>
+                <p>${system.description}</p>
+                <button class="menuButton menuButton-style" onclick="revealNotifPrefrences('${system.systemType}')">Show Preferences</button>
+            </div>
+            <div id="notif_pref_${system.systemType}" style="display:none;>
+                <hr class="rounded">
+                <p><b>Preferences</b></p>
+                ${userPreferences.map((pref) => {
+                    return `
+                        <div class="menu menu-style">
+                            <p>${pref.setting.name}</p>
+                            <p>${pref.setting.description}</p>
+                            <p>Enabled: ${pref.setting.enabled}</p>
+                            <p>Last Updated: ${checkDate(pref.setting.timestampUpdated)}</p>
+                        </div>
+                    `
+                }).join(" ")}
+            </div>
+        </div>
+    `
+}
+
+function revealNotifPrefrences(systemType) {
+    const ele = document.getElementById(`notif_pref_${systemType}`);
+    if (ele.style.display == "none") ele.style.display = "";
+    else ele.style.display = "none";
+}
+
 async function showNotifications() {
-    if (document.getElementById('notificationsAreShown')) return hideNotifications()
+    const notificationAreShownID = `notificationsAreShown`
+    if (document.getElementById(notificationAreShownID)) return hideNotifications()
     document.getElementById('showNotificationsButton').innerHTML="Hide Notifcations"
+    document.getElementById('showSubscriptionsButton').innerHTML="Show Subscriptions"
 
-    const res = await sendRequest(`/notifications/getList`, { method: 'GET' });
-    if (!res || res.error) return document.getElementById('showNotificationsButton').innerHTML=`error`
+    const res = await sendRequest(`/notifications/getList`, { method: 'GET', ignoreError: true });
+    if (!res || res.error) return document.getElementById('notificationsDiv').innerHTML=`No Notifications Found`
     
-    var ele = `<hr class="rounded" id="notificationsAreShown"><p id="amount_notifications">${res.amountFound} Notifications</p><hr class="rounded">`
-    ele = ele+`<div><a id="dismissAll" onclick="dismissAll()">dismiss all notifications.</a><hr class="rounded"></div>`;
-    
-    /*
-        type: String (one)
-            1: someone followed
-            2: someone unfollowed
-            3: someone liked post
-            4: someone unliked post
-            5: someone posted
-            6: someone mentioned you
-
-        var returnData = {
-            amountFound: interactUserNotifications.notifications.length,
-            notifications: []
-        };
-    */
-
-    // console.log(res)
-
+    // var ele = `<hr class="rounded" id="notificationsAreShown"><p id="amount_notifications">${res.amountFound} Notifications</p><hr class="rounded">`
+    // ele = ele+`<div><a id="dismissAll" onclick="dismissAll()">dismiss all notifications.</a><hr class="rounded"></div>`;
+    var ele = `
+        <hr class="rounded" id="${notificationAreShownID}">
+        <p id="amount_notifications">${res.notifications.length} Notifications</p>
+        <hr class="rounded">
+        <div><a id="dismissAll" onclick="dismissAll()">dismiss all notifications.</a><hr class="rounded"></div>
+    `;
     var foundUsers = {};
 
     for (const notifi of res.notifications.reverse()) {
@@ -2805,6 +3504,48 @@ async function showNotifications() {
     document.getElementById("notificationsDiv").innerHTML=ele
 }
 
+async function showNotificationsV2(indexID) {
+    const notificationAreShownID = `notificationsAreShown${indexID ? `_${indexID}`: '' }`
+    if (document.getElementById(notificationAreShownID)) return hideNotifications()
+    document.getElementById('showNotificationsButton').innerHTML="Hide Notifcations"
+    document.getElementById('showSubscriptionsButton').innerHTML="Show Subscriptions"
+
+    const res = await sendRequest(`/notificationCenter/notifications/${indexID ? indexID : ''}`, { method: 'GET' });
+    if (!res || res.error) return document.getElementById('showNotificationsButton').innerHTML=`error`
+    
+    var ele = `
+        <hr class="rounded" id="${notificationAreShownID}">
+        <p id="amount_notifications">${res.notifs.length} Notifications</p>
+        ${res.prevIndex ? `<button class="menuButton menuButton-style" onclick="showNotifications('${res.prevIndex}')">Load previous notifications</button>` : ''}
+        ${res.nextIndex ? `<button class="menuButton menuButton-style" onclick="showNotifications('${res.nextIndex}')">Load next notificaitons</button>` : '' }
+        <hr class="rounded">
+        <div><a id="dismissAll" onclick="dismissAll()">dismiss all notifications.</a><hr class="rounded"></div>
+    `;
+
+    for (const notif of res.notifs.reverse()) {
+        ele+=`<div class="" id="notification_${notif._id}">`
+        
+        if (notif.notifSubType == 1) {
+            ele += postElementCreateFullEasy(notif.postData);
+        } else if (notif.notifSubType == 2) {
+            ele += followingFollowerSingleElement(notif.userData, notif?.followData);
+        }
+        
+        ele +=`
+                <div class="spacer_5px"></div>
+                <p class="debug">type: ${notif.notifType._id}</p>
+                <p>${notif.notifType.name}</p>
+                <p>${notif.subject}</p>
+                <button class="menuButton menuButton-style" onclick="dismissNotification('${notif._id}')">Dismiss Notification.</button>
+            </div>
+        `
+    }
+    
+    document.getElementById("notificationsDiv").innerHTML=ele
+    devMode();
+    return;
+}
+
 async function dismissNotification(notificationID) {
     const res = await sendRequest(`/notifications/dismiss/${notificationID}`, { method: 'DELETE' });
     if (!res || res.error) return ;
@@ -2827,12 +3568,24 @@ async function dismissAll() {
 }
 
 async function showPost(postID) {
-    const res = await sendRequest(`/posts/get/${postID}`, { method: 'GET' });
+    const res = await sendRequest(`/posts/get/full/${postID}`, { method: 'GET' });
     if (!res || res.error) return showModal("<p>Post was not found</p>")
 
-    const user = await getUserDataSimple(res.userID)
+    const user = res.userData
     if (debug) console.log(user)
-    const ele = postElementCreate({post: res, user: user})
+    const ele = postElementCreate(res)
+    // document.getElementById('mainFeed').innerHTML=ele
+    showModal(`<div><h1 class="font_h1-style">Post Found</h1><button class="menuButton menuButton-style" onclick="openPostSeperate('${postID}')">Open Post</button>${ele}</div>`)
+}
+
+async function openPostSeperate(postID) {
+    closeModal();
+    const res = await sendRequest(`/posts/get/full/${postID}`, { method: 'GET' });
+    if (!res || res.error) return showModal("<p>Post was not found</p>")
+
+    const user = res.userData
+    if (debug) console.log(user)
+    const ele = postElementCreate(res)
     document.getElementById('mainFeed').innerHTML=ele
 }
 
@@ -2840,11 +3593,6 @@ async function getUserDataSimple(userID) {
     const res = await sendRequest(`/users/get/basic/${userID}`, { method: 'GET' });
     if (!res || res.error) return 
     else return res
-}
-
-async function hideDevOptions() {
-    document.getElementById('showDevDiv').innerHTML=""
-    document.getElementById('showDevOptionsButton').innerHTML="Show Dev Settings"
 }
 
 function revealDevOptions(option, index){
@@ -2872,14 +3620,10 @@ function revealDevOptions(option, index){
 }
 
 async function showDevOptions() {
-    if (document.getElementById('showDevAreShown')) return hideDevOptions()
-    document.getElementById('showDevOptionsButton').innerHTML="Hide Developer Settings"
-
     const res = await sendRequest(`/get/developer/`, { method: 'GET' });
     if (!res || res.error) return document.getElementById(`showDevDiv`).innerText = "Error while requesting data"
 
     var firstEle = `
-        <hr class="rounded" id="showDevAreShown">
         <p>Account Status</p>
         <div class="menu menu-style">
             ${res.developer ? `<p>You have an Interact Developer Account</p>`:``}
@@ -2925,13 +3669,23 @@ async function showDevOptions() {
         for (const appToken of res.AppTokens.reverse()) {
             amount++;
             appTokensEle+=`
-                <div class="menu menu-style">
+                <div class="menu menu-style" id="appTokenCard_${appToken._id}">
                     <p>appToken #${amount} of ${res.AppTokens.length}</p>
-                    <p>app name: ${appToken.appName ? appToken.appName : `Unknown`}
+                    <p id="appNameLabel_${appToken._id}">app name: ${appToken.appName ? appToken.appName : `Unknown`}
                     ${appToken._id ? `<p>appToken: <p onclick="revealDevOptions('appTokens', ${amount})" id="appToken_${amount}" class="blur">${appToken._id}</p>`:``}
                     ${appToken._id ? `<p onclick="copyToClipboard('${appToken._id}')">Copy Token</p>` : ""}
                     <p>API Uses: ${appToken.APIUses? appToken.APIUses : `0`}
                     ${appToken.creationTimestamp ? `<p>Application created: ${checkDate(appToken.creationTimestamp)}</p>`:`<p>Unknown creation date</p>`}
+                    <hr class="rounded">
+                    <p><b>Edit App</b></p>
+                    <div class="searchSelect search menu-style">
+                        <input class="menu-style" id="editAppName_${appToken._id}" placeholder="New App Name" value="${appToken.appName ? appToken.appName.replace(/\"/g, '&quot;') : ``}">
+                    </div>
+                    <div class="searchSelect search menu-style">
+                        <input class="menu-style" id="editAppOrigin_${appToken._id}" placeholder="Allowed Origin (https://example.com)" value="${appToken.origin ? appToken.origin.replace(/\"/g, '&quot;') : ``}">
+                    </div>
+                    <button class="menuButton menuButton-style" onclick="editAppToken('${appToken._id}')">Save Changes</button>
+                    <p id="editAppTokenStatus_${appToken._id}"></p>
                 </div>
             `;
         };
@@ -2945,6 +3699,9 @@ async function showDevOptions() {
                 <p>Please input an application name</p>
                 <div class="searchSelect search menu-style">
                     <input class="menu-style" id="appName_AppTokenRequest" placeholder="Application Name:">
+                </div>
+                <div class="searchSelect search menu-style">
+                    <input class="menu-style" id="appOrigin_AppTokenRequest" placeholder="Allowed Origin (optional, https://example.com)">
                 </div>
                 <button class="menuButton menuButton-style" onclick="requestAppToken(${amount})">Generate Token</button>
             </div>
@@ -2967,14 +3724,14 @@ async function showDevOptions() {
     
     var ele = firstEle+devAccEle+appTokensEle+appAccessEle;
     
-    document.getElementById("showDevDiv").innerHTML=ele;
-    return;
+    return ele;
 };
 
 
 async function requestAppToken(amount) {
     const newAmount = amount+1;
     const appName = document.getElementById('appName_AppTokenRequest').value;
+    const appOrigin = document.getElementById('appOrigin_AppTokenRequest')?.value;
     if (debug) console.log(appName);
     const userDevToken = document.getElementById('devToken').innerText;
     if (debug) console.log(userDevToken);
@@ -2989,7 +3746,8 @@ async function requestAppToken(amount) {
     };
     const data = {
         appname: appName,
-        userdevtoken: userDevToken
+        userdevtoken: userDevToken,
+        apporigin: appOrigin ? appOrigin.trim() : undefined
     }
     const appTokenData = await sendRequest(`Priv/post/newAppToken`, {
         method: 'POST',
@@ -3015,6 +3773,9 @@ async function requestAppToken(amount) {
         <div class="searchSelect search menu-style">
             <input id="appName_AppTokenRequest" class="menu-style" placeholder="Application Name:">
         </div>
+        <div class="searchSelect search menu-style">
+            <input id="appOrigin_AppTokenRequest" class="menu-style" placeholder="Allowed Origin (optional, https://example.com)">
+        </div>
         <button class="menuButton menuButton-style" onclick="requestAppToken(${newAmount})">Generate Token</button>
     `
     document.getElementById('newAppToken').innerHTML=newRequestEle
@@ -3036,20 +3797,59 @@ async function requestDevToken() {
     document.getElementById('devAcc').innerHTML=newEle;
 };
 
+async function editAppToken(appToken) {
+    const appNameEle = document.getElementById(`editAppName_${appToken}`);
+    const appOriginEle = document.getElementById(`editAppOrigin_${appToken}`);
+    const statusEle = document.getElementById(`editAppTokenStatus_${appToken}`);
+
+    if (!appNameEle || !appOriginEle || !statusEle) return;
+
+    const newAppName = appNameEle.value ? appNameEle.value.trim() : "";
+    const newAppOrigin = appOriginEle.value ? appOriginEle.value.trim() : "";
+
+    if (!newAppName && !newAppOrigin) {
+        statusEle.innerText = "Please provide a new name or origin.";
+        return;
+    }
+
+    statusEle.innerText = "Saving...";
+
+    const res = await sendRequest(`/Priv/post/newAppToken`, {
+        method: 'PUT',
+        body: {
+            appToken,
+            newAppName: newAppName || undefined,
+            newAppOrigin: newAppOrigin || undefined,
+        }
+    });
+
+    if (!res || res.error) {
+        statusEle.innerText = `Failed${res && res.msg ? `: ${res.msg}` : ""}`;
+        return;
+    }
+
+    statusEle.innerText = "Saved";
+
+    const card = document.getElementById(`appTokenCard_${appToken}`);
+    if (card) {
+        const appNameLabel = document.getElementById(`appNameLabel_${appToken}`);
+        if (appNameLabel) appNameLabel.innerText = `app name: ${res.appName ? res.appName : 'Unknown'}`;
+        appNameEle.value = res.appName || "";
+        appOriginEle.value = res.origin || "";
+    }
+}
+
 async function getPostAndProfileData(postID) {
-    const postData = await sendRequest(`/posts/get/${postID}`, { method: 'GET', ignoreError: true});
+    const postData = await sendRequest(`/posts/get/full/${postID}`, { method: 'GET', ignoreError: true});
 
     if (!postData || postData.error) return {error: `${postData.error ? postData.error : "an unknown error"}`};
     if (debug) console.log(postData);
-
-    const profileData = await sendRequest(`/users/get/basic/${postData.userID}`, { method: 'GET', ignoreError: true});
-    if (!profileData || profileData.error) return {error: `${profileData.error ? profileData.error : "an unknown error"}`};
-
-    return { "postData" : postData, "profileData": profileData };
+    
+    return postData;
 }
 
 async function requestVerification() {
-    var input = document.getElementById('content_request_verification').value
+    var input = escapeHtml(document.getElementById('content_request_verification').value)
     if (debug) console.log(input)
 
     const data = { 
@@ -3068,20 +3868,72 @@ async function requestVerification() {
     })
 }
 
-function activeSearchBar() {
-    if (document.getElementById("searchArea").innerHTML) return;
+async function activeSearchBar(rerender=false) {
+    if (!rerender && document.getElementById("searchArea").innerHTML) return;
+
+    changeHeader("?searchPage")
     document.getElementById("searchArea").innerHTML = `
         <div class="searchSelect search menu-style">
             <input id="searchBarArea" class="menu-style" onkeyup="searchSocial()" placeholder="Search for Posts and Users...">
         </div>
     `
-    document.getElementById('navSection5').innerHTML = `
-        <div id="searchBar" class="nav-link" onclick="unactiveSearchBar()">
-            <span class="material-symbols-outlined nav-button";>search</span>
-            <span class="link-text pointerCursor" id="page6">Remove</span>
-        </div>
 
-    `
+    document.getElementById('mainFeed').innerHTML = loadingHTML("Searching...");
+
+    const exploreData = await sendRequest(`/search/v2/explore`, { method: 'GET' });
+    if (!exploreData || exploreData.error) {
+        document.getElementById('mainFeed').innerHTML = `<div class="menu menu-style">
+            <h1>Error while rendering explore page</h1>
+            <p>${exploreData.error ? exploreData.error : "An unknown error occurred"}</p>
+        </div>`;
+        return;
+    }
+
+    if (debug) console.log(exploreData)
+    const ele = `
+        ${exploreData.hashtagsFound?.length > 0 ? `<div><h1 class="publicPost posts-styles font_h1-style">Newest Hashtags</h1>` : ""}
+        ${exploreData.hashtagsFound?.map(function(hashtagFound) {
+            if (debug) console.log(hashtagFound)
+            return hashtagElementCreate({tag: hashtagFound.tagText})
+        }).join(" ")}
+        ${exploreData.usersFound.length > 0 ? `<div><h1 class="publicPost posts-styles font_h1-style">Newest Users</h1>` : ""}
+        ${exploreData.usersFound.reverse().map(function(user) {
+            var timesince
+            if (user.creationTimestamp) timesince = checkDate(user.creationTimestamp)
+
+            return `
+                <div class="publicPost posts-style">
+                    <p class="${user._id == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" onclick="userHtml('${user._id}')"> ${user.displayName} @${user.username} | ${user.creationTimestamp ? timesince : '' }</p>
+                    <p>${user.description ? user.description : "no description"}</p>
+                    <p>Following: ${user.followingCount} | Followers: ${user.followerCount}</p>
+                    ${user._id == currentUserLogin.userID ? `` : `
+                        <p id="follow_search_id_${user._id}" onclick=
+                        ${user.followed===true ? 
+                            `"unFollowUser('${user._id}', 'follow_search_id_${user._id}')">Unfollow User` :
+                            `"followUser('${user._id}', 'follow_search_id_${user._id}')">Follow User`
+                        }</p>
+                    `}
+                    <p class="debug" onclick="copyToClipboard('${user._id}')">${user._id}</p>
+                </div>
+            `
+        }).join(" ")}
+        ${exploreData.postsFound.length > 0 ? `<div><h1 class="publicPost posts-styles font_h1-style">Newest Posts</h1>` : ""}
+        ${exploreData.postsFound.reverse().map(function(postArray) {
+            return postElementCreate({
+                post: postArray.postData,
+                user: postArray.userData, 
+                pollData: postArray.type?.poll=="included" ? postArray.pollData : null,
+                voteData: postArray.type?.vote=="included" ? postArray.voteData : null,
+                quoteData: postArray.type?.quote=="included" ? postArray.quoteData : null,
+                coposterData: postArray.type?.copost=="included" ? postArray.coposterData : null,
+                tagData: postArray.type?.tag=="included" ? postArray.tagData : null,
+                extraDta: postArray.type?.extra=="included" ? postArray.extraData : null,
+            })
+        }).join(" ")}
+        ${exploreData.postsFound.length > 0 ? `</div>` : ""}
+    `;
+
+    document.getElementById('mainFeed').innerHTML = ele ;
 }
 
 function unactiveSearchBar() {
@@ -3206,7 +4058,7 @@ function listenForLoading() {
         if (angle >= 2 * Math.PI) {
             angle = 0;
         }
-        requestAnimationFrame(drawLoadingCircle);
+        if (!stopLoadingFeed) requestAnimationFrame(drawLoadingCircle);
     }
 
     drawLoadingCircle();
@@ -3236,6 +4088,7 @@ async function changeFeed(feedType) {
 async function getFeed(feedType) {
     const feedToUse = feedType || 'userFeed'
     buildingFeed=true
+    stopLoadingFeed = false;
 
     if (currentFeed && (feedToUse == currentFeedType)) return buildView(currentFeed)
     if (debug) console.log("loading feed")
@@ -3247,22 +4100,32 @@ async function getFeed(feedType) {
     listenForLoading();
     buildCopostRequests()
     var url = `/feeds/${feedToUse}`
-    if (feedToUse == "userFeed" || feedToUse=="allPosts") url+="/v2"
-    const data = await sendRequest(`${url}`, { method: 'GET' })
+    if (feedToUse == "userFeed" || feedToUse=="allPosts" || "personal") url+="/v2"
+    const data = await sendRequest(`${url}`, { method: 'GET', ignoreError: true })
+    changeFeedHeader(feedToUse);
+
     if (data.feedVersion == 2){
         currentFeedType = feedToUse;
-        currentFeed = data.posts.reverse()
-        prevIndexID = data.prevIndexID
+        currentFeed = data.posts.reverse();
+        prevIndexID = data.prevIndexID;
     
         if (params.paramsFound == false) {
             buildView(data.posts)
-            await changeFeedHeader(feedToUse);
             return;
         }
         else return
     }
 
-    if (!data || !data[0]) return showModal("<p>There was no data in the feed selected, please load a different feed</p>")
+    if (!data || !data[0]) {
+        stopLoadingFeed = true;
+        document.getElementById('mainFeed').innerHTML=`
+            <div id="loadingSection" class="loading menu menu-style">
+                <h1 class="h2-style">You've reached the end of the feed! Check out the other feeds or adjust your personalization settings!</h1>
+            </div>
+        `
+        return;
+        // return showModal("<p>There was no data in the feed selected, please load a different feed</p>")
+    }
     currentFeedType = feedToUse;
     currentFeed = data.reverse()
 
@@ -3437,6 +4300,7 @@ function handleIntersection(entries, observer) {
         if (entry.isIntersecting) {
             console.log('Bottom div is now in view!');
             if (document.getElementById("addToBottomFollowingFollower")) return nextFollowingFollowerList()
+            if (document.getElementById("addToBottomProfile")) return addNextIndexProfile();
             if (!buildingFeed) nextFeedPage(currentFeedType)
             // Do something when the bottom div is in view
         }
@@ -3477,7 +4341,7 @@ function editPost(postID, edited) {
     if (debug) console.log(oldMessage)
     document.getElementById(`postContentArea_${postID}`).innerHTML = `
         <form id="editPostForm" class="contentMessage"onsubmit="submitEdit('${postID}')">
-            <input type="text" id="editPostInput" class="contentMessage contentMessageFormEdit menu-style" value="${oldMessage}">
+            <input type="text" id="editPostInput" class="contentMessage contentMessageFormEdit menu-style" value="${escapeHtml(oldMessage)}">
         </form>
     `
     document.getElementById(`editButton_${postID}`).innerHTML=`<span onclick='cancelEdit("${postID}", "${oldMessage}", "${edited}")'>${styleEditButton(true)}</span>`
@@ -3493,7 +4357,7 @@ async function cancelEdit(postID, content, edited) {
 
     document.getElementById(`postContentArea_${postID}`).innerHTML = `
         <div class="textAreaPost posts_content-style">
-            <p id="postContent_${post._id}">${post.content}</p>
+            <p id="postContent_${post._id}">${escapeHtml(post.content)}</p>
             ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
         </div>
     `
@@ -3514,7 +4378,7 @@ async function submitEdit(postID) {
     
     if (!editData || editData.error) return false;
 
-    const imageContent = checkForImage(editData.new.content)
+    const imageContent = checkForImage(escapeHtml(editData.new.content))
 
     document.getElementById(`editButton_${postID}`).innerHTML=`<span onclick='editPost("${postID}")' class="posts_action-style">${styleEditButton()}</span>`
 
@@ -3528,57 +4392,47 @@ async function submitEdit(postID) {
         </div>
     `  
 }
+
 async function quotePost(postID) {
-    const post = await sendRequest(`/posts/get/${postID}`, { method: 'GET' })
-    if (!post || post.error) return false;
-    const user = await sendRequest(`/users/get/basic/${post.userID}`, { method: 'GET' })
-    if (!user || user.error) return false;
+    const postData = await sendRequest(`/posts/get/full/${postID}`, { method: 'GET', headers})
+    if (!postData || postData.error) return false;
+    const { postData:post, userData:user } = postData;
 
     await showModal(`
-        <h1>Create a new Post</h1>
+        <h1>Create a Quote Post</h1>
         <div class="postModalActions">
             <button class="menuButton menuButton-style" onclick="createPost({'quoteID':'${postID}'})">Upload Post</button>
             <button class="menuButton menuButton-style" onclick="closeModal()">Close</button>
+            <button onclick="getPostSuggestions('modal', '${postID}')" class="menuButton menuButton-style">Get Suggestion</button>
         </div>
         <hr class="rounded">
         <div class="post">
-            <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'}</p>
-            <div class="postContent" id="postContentArea_${post._id}">
-                <div class="textAreaPost">
-                    <p id="postContent_${post._id}">${post.content}</p>
-                    ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
-                </div>
-            </div>
+            <div>${postElementCreate({post: post, user: user, type: "basic"})}</div>
         </div>
         <textarea class="postTextArea" id="newPostTextArea"></textarea>
+        <div id="foundAIPostSuggestions"></div>
         <div id="foundTaggings"></div>
     `, "hide")
 }
 
 async function replyPost(postID) {
-    const post = await sendRequest(`/posts/get/${postID}`, { method: 'GET', headers})
-    if (!post || post.error) return false;
-
-    const user = await sendRequest(`/users/get/basic/${post.userID}`, { method: 'GET', headers })
-    if (!user || user.error) return false;
+    const postData = await sendRequest(`/posts/get/full/${postID}`, { method: 'GET', headers})
+    if (!postData || postData.error) return false;
+    const { postData:post, userData:user } = postData;
 
     await showModal(`
         <h1>Create a new Reply</h1>
         <div class="postModalActions">
             <button class="menuButton menuButton-style" onclick="createPost({'replyID':'${postID}'})">Upload Reply</button>
             <button class="menuButton menuButton-style" onclick="closeModal()">Close</button>
+            <button onclick="getPostSuggestions('modal', '${postID}')" class="menuButton menuButton-style">Get Suggestion</button>
         </div>
         <hr class="rounded">
         <div class="post">
-            <p class="pointerCursor ${post.userID == currentUserLogin.userID ? "ownUser-style" : "otherUser-style"}" ${user ? ` onclick="userHtml('${post.userID}')"> ${user.displayName} @${user.username}` : '>Unknown User'}</p>
-            <div class="postContent" id="postContentArea_${post._id}">
-                <div class="textAreaPost">
-                    <p id="postContent_${post._id}">${post.content}</p>
-                    ${post.edited ? `<p><i class="edited"> (edited)</i></p>` : `` }
-                </div>
-            </div>
+            <div>${postElementCreate({post: post, user: user, type: "basic"})}</div>
         </div>
         <textarea class="postTextArea" id="newPostTextArea"></textarea>
+        <div id="foundAIPostSuggestions"></div>
         <div id="foundTaggings"></div>
     `, "hide")
 }
@@ -3656,19 +4510,18 @@ async function addWritingToSeachBar(input) {
 
 function hashtagElementCreate(tag) {
     return `
-        <div class="publicPost posts-style">
+        <div class="publicPost posts-style" onclick="searchResult('${tag.tag}')">
             <p>${tag.tag}</p>
         </div>
     `
 }
 
 async function searchResult(input) {
-    console.log(input)
     if (!input) {
         if (debug) console.log("returning to feed")
-        changeHeader('')
+        changeHeader('?searchPage')
         addWritingToSeachBar('')
-        return getFeed()
+        return activeSearchBar(true)
     }
     if (currentSearch == input){
         if (debug) console.log("same search")
@@ -3676,7 +4529,6 @@ async function searchResult(input) {
     }
 
     var headerReplace = input;
-    console.log(headerReplace)
     
     currentSearch = input
     searching = true
@@ -3777,7 +4629,7 @@ async function searchResult(input) {
     searching = false
 }
 
-async function createPostPage() {
+async function createPostPage(useModal=false) {
     var preinput = false;
     var data = { };
     var paramsFound = [];
@@ -3870,29 +4722,34 @@ async function createPostPage() {
     if (debug) console.log("creating post")
 
     const ele = `
+        <div class="menu menu-style">
+            <h1>Create Post</h1>
+        </div>
         <div id="postPageDiv" class="menu menu-style">
-            <h1>Create a new Post</h1>
+            <p><b>Create a new Post</b></p>
             <div class="postPageInput">
             <textarea class="postTextArea" onkeyup="onTypePostPage()" id="newPostTextArea">${data?.content ? data.content : ""}</textarea>
             </div>
             <div class="mainActions">
-                <p class="publicPost menuButton menuButton-style" onclick="leavePostPage()">Back</p>
-                <p class="publicPost menuButton menuButton-style" onclick="publishFromPostPage()">Upload Post</p>
-                <p class="publicPost menuButton menuButton-style" id="pollCreationButton" onclick="showPollCreation()">Add Poll</p>
-                <p class="publicPost menuButton menuButton-style" id="pollCreationButton" onclick="showCoPostersCreation()">Add Co-Posters</p>
-                <div class="publicPost menuButton menuButton-style">
+                <div id="foundTaggings"></div>
+                <p class="menuButton menuButton-style" onclick="leavePostPage()">Back</p>
+                <p class="menuButton menuButton-style" id="publishFromPostPage" onclick="publishFromPostPage()">Upload Post</p>
+                <p class="menuButton menuButton-style" id="mediaCreationButton" onclick="showMediaCreation()">Add Media</p>
+                <p class="menuButton menuButton-style" id="pollCreationButton" onclick="showPollCreation()">Add Poll</p>
+                <p class="menuButton menuButton-style" id="coposterCreationButton" onclick="showCoPostersCreation()">Add Co-Posters</p>
+                <p class="menuButton menuButton-style" id="getSuggestionsButton" onclick="getPostSuggestions('main', '')">Get Suggestion</p>
+                <div class="menuButton menuButton-style">
                     <p onclick="exportPostHeaderURL()">Create Post Template</p>
                     <p id="postURL_preview"></p>
                     <p id="postURL_messageURL"></p>
                 </div>
             </div>
-            <div>
-                <iv id="addCoPoster"></div>
-                <input type="text" id="pollCreateLink" class="addPollOption menu-style" placeholder="Link Poll via ID" ${data.pollID ? `value="${data.pollID}"` : ""}></input>
-            </div>
-            <div id="pollCreate"></div>
-            <div id="foundTaggings"></div>
+            <input type="text" id="pollCreateLink" class="addPollOption menu-style" placeholder="Link Poll via ID" ${data.pollID ? `value="${data.pollID}"` : ""}></input>
+            <div id="foundAIPostSuggestions"></div>
+            <div id="mediaAdd"></div>
         </div>
+        <div id="coposterAddingArea"></div>
+        <div id="pollCreate"></div>
     `;
 
     document.getElementById("mainFeed").innerHTML = ele;
@@ -3919,6 +4776,28 @@ async function createPostPage() {
 };
 
 function showCoPostersCreation() {
+    if (debug) console.log("showing co-posters")
+    const coposterAddingArea = document.getElementById("coposterAddingArea");
+
+    if (coposterAddingArea.innerHTML!="") {
+        document.getElementById("coposterCreationButton").innerHTML = "Add Co-Posters"
+
+        coposterAddingArea.innerHTML = "";
+        return;
+    }
+    
+    coposterAddingArea.innerHTML = `
+        <hr class="rounded">
+        <div id="copostersShown" class="menu menu-style">
+            <h2>Add Coposters</h2><hr class="rounded">
+
+            <div id="addCoPoster">
+            </div>
+            <div id="foundTaggings_coPostersInput"></div>
+        </div>
+    `;
+
+    document.getElementById("coposterCreationButton").innerHTML = "Remove Co-Posters"
     const ele = `
         <div class="menu menu-style">
             <p>Co-Posters</p>
@@ -3928,18 +4807,6 @@ function showCoPostersCreation() {
     `;
 
     document.getElementById("addCoPoster").innerHTML = ele;
-}
-
-async function onTypeCoPosters() {
-    const input = document.getElementById('co-posters-input').value;
-    if (input == "") return document.getElementById('co-posters-div').innerHTML = "";
-    const foundTags = await findUserTag(content)
-    if (foundTags.found == false) {
-        if (document.getElementById('taggingsOpened')) {
-            document.getElementById('foundTaggings').innerHTML=""
-        }
-        return false;
-    };
 }
 
 function createPostPageHeaders() {
@@ -4143,6 +5010,99 @@ async function leavePostPage() {
     getFeed()
 }
 
+function pausePostUploadButton() {
+    if (debug) console.log("pausing post upload button")
+    document.getElementById('publishFromPostPage').innerHTML = "Please Wait"
+    document.getElementById('publishFromPostPage').onclick = null;
+}
+
+function resumePostUploadButton() {
+    if (debug) console.log("resuming post upload button")
+    document.getElementById('publishFromPostPage').innerHTML = "Upload Post"
+    document.getElementById('publishFromPostPage').onclick = publishFromPostPage;
+}
+
+function removeMediaCreation() {
+    if (debug) console.log("creating media")
+    document.getElementById("mediaAdd").innerHTML = "";
+    document.getElementById("mediaCreationButton").onclick=showMediaCreation;
+    document.getElementById("mediaCreationButton").innerHTML="Add Media";
+}
+
+function showMediaCreation() {
+    if (debug) console.log("creating media")
+    document.getElementById("mediaCreationButton").onclick=removeMediaCreation;
+    document.getElementById("mediaCreationButton").innerHTML="Remove Media";
+
+    const ele = `
+        <div class="menu menu-style">
+            <h1 class="font_h1-style">Add Media</h1>
+        </div>
+        <div class="menu menu-style">
+            <input type="file" id="interactFile" class="menuButton menuButton-style">
+            <button onclick="uploadFile()" id="uploadMedia" class="menuButton menuButton-style">Upload Media</button>
+        </div>
+    `
+    document.getElementById("mediaAdd").innerHTML = ele;
+}
+
+async function uploadFile(fromProfile=false) {
+    const fileInput = document.getElementById('interactFile');
+    const selectFile = fileInput.files[fileInput.files.length-1];
+    if (!selectFile) {
+        console.error('No file selected');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', selectFile);
+
+    if (debug) console.log('Uploading file:', selectFile);
+    try {
+        if (!fromProfile) pausePostUploadButton();
+        const fileType = await sendRequest('/cdn/fileType/' + selectFile.name, {method: "GET"});
+        if (debug) console.log(fileType);
+
+        if (fileType.error) {
+            console.error('Error verifying file:', fileType.error);
+            document.getElementById("mediaAdd").innerHTML = `<p>Error uploading file</p>`;
+            return;
+        }
+        
+        const finalRes = await sendRequest('/cdn/'+fileType.type, {
+            method: 'POST',
+            body: formData,
+            file: true
+        });
+
+        if (debug) console.log('finalRes:', finalRes);
+        
+        mediaUploadLinks.push(finalRes.cdnURL);
+        if (!fromProfile) {
+            document.getElementById('newPostTextArea').value = document.getElementById('newPostTextArea').value + `${config[config.current].api_url}/cdn${finalRes.cdnURL}`;
+            document.getElementById('newPostTextArea').focus()
+    
+            displayFile(`${apiURL}/cdn${finalRes.cdnURL}`);
+            resumePostUploadButton()
+        }
+        return finalRes;
+    } catch (error) {
+
+        document.getElementById("mediaAdd").innerHTML = `<p>Error uploading file</p>`;
+        resumePostUploadButton();
+        console.error('Error uploading file:', error);
+    }
+}
+
+function displayFile(fileURL) {
+    const fileContainer = document.getElementById('mediaAdd');
+    // fileContainer.innerHTML = ''; // Clear any previous content
+    const imageContent = checkForImage(fileURL)
+    const img = document.createElement('div');
+    img.innerHTML = imageContent.attachments.map(function(attachment) {return `${attachment}`}).join(" ");
+    fileContainer.appendChild(img);
+}
+
 function removePollCreation() {
     if (debug) console.log("removing poll")
     document.getElementById("pollCreate").innerHTML = "";
@@ -4160,7 +5120,8 @@ function showPollCreation() {
 
     var ele = `
         <hr class="rounded">
-        <h1>Create New Poll</h1>
+        <div class="menu menu-style">
+        <h2>Create New Poll</h2>
         <hr class="rounded">
         <div class="mainActions">
             <p class="publicPost menuButton menuButton-style" onclick="addExtraOption()">Add Another Option</p>
@@ -4169,11 +5130,12 @@ function showPollCreation() {
         <hr class="rounded">
         <div id="pollCreation">
             <div id="optionAmount"></div>
-            <div>
+            <div class="menu menu-style">
                 <p><u>Question</u></p>
                 <input type="text" id="pollCreateTitle" class="addPollOption menu-style" placeholder="Question">
             </div>
             <div id="options">${addOption(1)}${addOption(2)}</div>
+        </div>
         </div>
     `;
 
@@ -4243,7 +5205,7 @@ function addExtraOption() {
 function addOption(num) {
     const amount = num || checkPollOptionAmount()+1;
     return `
-        <div class="pollOption" id="option_${num}">
+        <div class="pollOption menu menu-style" id="option_${num}">
             <p><u>Option ${amount}</u></p>
             <input type="text" class="addPollOption menu-style" id="poll_option_${num}" placeholder="Option ${amount}">
         </div>
@@ -4345,6 +5307,38 @@ function editUser() {
             <button class="buttonStyled" onclick=renameUsername()>Edit Username</button>
         </div>
     `
+}
+
+// AI FEATURES
+// summary of post/thread
+async function getPostSuggestions(type, postID) {
+    const suggestionsDiv = document.getElementById('foundAIPostSuggestions');
+    const foundContent = document.getElementById('newPostTextArea').value;
+    suggestionsDiv.innerHTML = `<p>Loading Suggestion...</p>`;
+    
+    const suggestionPost = await sendRequest(`/ai/suggestion/${postID ? postID : ""}`, {
+        method: 'POST',
+        body: { content: foundContent }
+    });
+
+    if (!suggestionPost || suggestionPost.error) {
+        return suggestionsDiv.innerHTML = `<p>Suggestion Failed</p>`;
+    }
+    
+    aiSuggestions.push(suggestionPost.response);
+    foundAIPostSuggestions.innerHTML = `
+        <div class="publicPost posts-style">
+            <p>AI Suggestion</p>
+            <hr class="rounded">
+            <p onclick="useSuggestion(${amountSuggestions})">${suggestionPost.response}</p>
+        </div>
+    `;
+    amountSuggestions++;
+}
+
+function useSuggestion(suggestion) {
+    document.getElementById('newPostTextArea').value = aiSuggestions[suggestion];
+    document.getElementById('foundAIPostSuggestions').innerHTML = "";
 }
 
 // EDIT DISPLAY NAME
@@ -4660,15 +5654,26 @@ async function viewArticles() {
 }
 
 // For API Use
-async function sendRequest(request, { method, body, extraHeaders, ignoreError=false }) {
+async function sendRequest(request, { method, body, file, extraHeaders, ignoreError=false }) {
     // add "version" as a possible header, and .replace on the apiURL
     // or force the version be in the request
     var headersEdited = {};
 
-    if (extraHeaders) {
+    if (extraHeaders || file) {
         headersEdited = { ...headers };
-        for (const header in extraHeaders) {
-            headersEdited[header] = extraHeaders[header];
+        if (extraHeaders) {
+            for (const header in extraHeaders) {
+                headersEdited[header] = extraHeaders[header];
+            }
+        }
+
+        if (file) {
+            for (const header in headersEdited) {
+                if (header == 'Content-Type') {
+                    // remove header
+                    delete headersEdited[header];
+                }
+            }
         }
     }
 
@@ -4676,22 +5681,22 @@ async function sendRequest(request, { method, body, extraHeaders, ignoreError=fa
 
     const response = await fetch(`${apiURL}${request}`, {
         method: method || 'GET',
-        body: body ? JSON.stringify(body) : null,
-        headers : extraHeaders ? headersEdited : headers
+        body: body ? !file ? JSON.stringify(body) : body : null,
+        headers : extraHeaders || file ? headersEdited : headers
     });
     
     try {
         const data = await response.json();
         if (debug) console.log(data);
         if (data.error && !ignoreError) {
-            showModal(`<h1>Error</h1><p>${data.code}: ${data.msg}</p>`);
+            showModal(`<h1>Error Occurred</h1><p>${data.code}: ${data.msg}</p>`);
             return data;
         }
 
         return data;
     } catch(err) {
         if (!ignoreError) {
-            showModal(`<h1>Error</h1><p>Unknown Error.</p>`);
+            showModal(`<h1>Error Occurred</h1><p>Unknown Error.</p>`);
         }
         return { error : true };
     }
@@ -4700,6 +5705,7 @@ async function sendRequest(request, { method, body, extraHeaders, ignoreError=fa
 function getId(url) {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = url.match(regExp);
+    if (!match || match.length < 2) return undefined;
 
     return (match && match[2].length === 11) ? match[2] : undefined;
 }
@@ -4713,6 +5719,10 @@ function loadSpotify(amount, link) {
 function unloadSpotify(amount, link) {
     document.getElementById(`spotify_frame_${amount}`).innerHTML = `Click to load spotify link #${amount}`
     document.getElementById(`spotify_frame_${amount}`).onclick = `loadSpotify(${amount}, '${link}')`
+}
+
+function openImagePreview(imageURL) {
+    showModal(`<div><h1>Image</h1><hr class="rounded"h><img width="60%" height="60%" src="${imageURL}"></img></div>`)
 }
 
 function checkForImage(content, tags) {
@@ -4733,7 +5743,7 @@ function checkForImage(content, tags) {
                     (tag.tagTextOriginal == contentArgs[index])
                 ) {
                     if (tag.tagTextOriginal.startsWith("@")) {
-                        contentArgs[index] = `<a class="ownUser-style" onclick="userPage('${tag.tagTextOriginal.replace("@", "0")}')">${contentArgs[index]}</a>`
+                        contentArgs[index] = `<a class="ownUser-style" onclick="userPage('${tag.tagTextOriginal.replace("@", "")}')">${contentArgs[index]}</a>`
                     } else if (tag.tagTextOriginal.startsWith("#")) {
                         contentArgs[index] = `<a class="ownUser-style" onclick="searchResult('${tag.tagTextOriginal.replace("#", "1")}')">${contentArgs[index]}</a>`
                     }
@@ -4741,23 +5751,47 @@ function checkForImage(content, tags) {
             }
         }
         //if (contentArgs[index].includes(' ')) contentArgs[index] = contentArgs[index].replace(' ', '')
-        if (contentArgs[index].startsWith('https://')) {
+        if (contentArgs[index].startsWith('https://') || (config.current == 'dev' && contentArgs[index].startsWith('http://'))) {
             for (const imageFormat of imageFormats) {
                 if (contentArgs[index].endsWith(imageFormat)) {
                     foundImage = true
                    // contentArgs[index] = `<img class="messageImage" src="${contentArgs[index]}"></img>`
-                    attachments.push(`<img alt="userImage" class="messageImage" width="100px" src="${contentArgs[index]}"></img>`)
+                    attachments.push(`<img alt="userImage" class="messageImage" width="320px" src="${contentArgs[index]}" onclick="openImagePreview('${contentArgs[index]}')"></img>`)
                 }
             }
 
+            const videoId = getId(contentArgs[index]);
+            var foundVideo = false;
             for (const videoFormat of videoFormats) {
-                if (contentArgs[index].endsWith(videoFormat.urlEnd)) {
+                if (foundVideo || !contentArgs[index].includes(videoFormat.urlEnd)) {
+                }
+                else if (contentArgs[index].startsWith("http://localhost:5002/v1/cdn/static")) {
                     foundImage = true
+                    foundVideo = true
+                    const URL = contentArgs[index]
+                    var videoID = URL.replace("http://localhost:5002/v1/cdn/static/", "")
+                    
+                    const iframeHuelet = `<iframe src="http://localhost:5002/v1/video_embed/?embed=true&vuid=${videoID}" width="320" height="240" frameborder="0" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen="true"></iframe>`
+                    attachments.push(iframeHuelet)
+                }
+                else if (contentArgs[index].startsWith("https://interact-api.novapro.net/v1/cdn/static")) {
+                    foundImage = true
+                    foundVideo = true
+    
+                    const URL = contentArgs[index]
+                    var videoID = URL.replace("https://interact-api.novapro.net/v1/cdn/static/", "")
+                    
+                    const iframeHuelet = `<iframe src="https://interact-api.novapro.net/v1/video_embed/?embed=true&vuid=${videoID}" width="320" height="240" frameborder="0" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen="true"></iframe>`
+                    attachments.push(iframeHuelet)
+                }
+                else if (contentArgs[index].endsWith(videoFormat.urlEnd)) {
+                    // regular video 
+                    foundImage = true
+                    foundVideo = true
                     //contentArgs[index] = `\n<video width="320" height="240" controls><source src="${contentArgs[index]}" type="video/${videoFormat.type}"></video>`
                     attachments.push(`<video alt="uservideo" width="320" height="240" controls><source src="${contentArgs[index]}" type="video/${videoFormat.type}"></video>`)
                 }
             }
-            const videoId = getId(contentArgs[index]);
 
             if (videoId) {
                 foundImage = true
@@ -4765,7 +5799,15 @@ function checkForImage(content, tags) {
                // contentArgs[index] = iframeMarkup
                 attachments.push(iframeMarkup)
             }
+            // if (contentArgs[index].startsWith("https://interact.novapro.net/?videoID=") || contentArgs[index].startsWith("https://interact-api.novapro.net/v1/cdn/static")) {
+            //     foundImage = true
 
+            //     const URL = contentArgs[index]
+            //     var videoID = URL.replace("https://huelet.net/w/", "")
+
+            //     const iframeHuelet = `<iframe src="https://publish.huelet.net/?embed=true&vuid=${videoID}" width="320" height="240" frameborder="0" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen="true"></iframe>`
+            //     attachments.push(iframeHuelet)
+            // }
             if (contentArgs[index].startsWith("https://huelet.net/w/")) {
                 foundImage = true
 
